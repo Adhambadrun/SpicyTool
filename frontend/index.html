@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SpicyTool — Award Flight Search</title>
+<style>
+/* ================================================================
+   SpicyTool — Obsidian Crimson Precision
+   No external CDNs, fonts or scripts. Everything inline.
+   ================================================================ */
+:root{
+  --canvas:#0A0A0B; --s1:#141416; --s2:#1C1C1F; --s3:#26262B;
+  --border:#232328; --border2:#28282D; --border3:#323238;
+  --red:#E11D2E; --red-hover:#C31624; --red-soft:rgba(225,29,46,.12);
+  --red-glow:0 0 16px rgba(225,29,46,.28);
+  --green:#22C55E; --green-soft:rgba(34,197,94,.12); --green-border:rgba(34,197,94,.25);
+  --amber:#F59E0B; --amber-soft:rgba(245,158,11,.12); --amber-border:rgba(245,158,11,.25);
+  --text:#F4F4F5; --text2:#A1A1AA; --muted:#71717A;
+  --font-ui:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --r-sm:4px; --r-md:6px; --r-lg:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--canvas);color:var(--text);font-family:var(--font-ui);font-size:14px;line-height:20px;-webkit-font-smoothing:antialiased;min-height:100vh}
+::selection{background:var(--red);color:#fff}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select{font-family:inherit;color:var(--text)}
+.mono{font-family:var(--font-mono)}
+.wrap{max-width:1200px;margin:0 auto;padding:0 20px}
+
+/* scrollbars */
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:#111116}
+::-webkit-scrollbar-thumb{background:#3f3f4e;border-radius:9999px}
+::-webkit-scrollbar-thumb:hover{background:#5a5a6e}
+.no-scrollbar::-webkit-scrollbar{display:none}
+.no-scrollbar{scrollbar-width:none}
+
+/* ---------------- header ---------------- */
+header{position:sticky;top:0;z-index:50;background:rgba(13,13,17,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+.hd{display:flex;align-items:center;justify-content:space-between;height:60px;gap:16px}
+.logo{display:flex;align-items:center;gap:10px;font-size:19px;font-weight:700;letter-spacing:-.02em}
+.logo .flame{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#e11d2e,#991b1b);display:flex;align-items:center;justify-content:center;box-shadow:0 0 18px -4px rgba(225,29,46,.5)}
+.logo .flame svg{width:17px;height:17px}
+.logo .red{color:var(--red)}
+.badge-gds{font-family:var(--font-mono);font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--red);background:var(--red-soft);border:1px solid rgba(225,29,46,.3);border-radius:9999px;padding:3px 9px;text-transform:uppercase}
+.hd-right{display:flex;align-items:center;gap:10px}
+.live{display:flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--green);background:var(--green-soft);border:1px solid var(--green-border);border-radius:9999px;padding:4px 11px}
+.live .dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 1.8s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.5)}70%{box-shadow:0 0 0 7px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+.hd-note{color:var(--muted);font-size:12px}
+
+/* ---------------- search panel ---------------- */
+.search-panel{background:var(--s1);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px;margin-top:22px;box-shadow:0 12px 32px -8px rgba(0,0,0,.5)}
+.sp-grid{display:grid;grid-template-columns:1fr 34px 1fr 148px 178px 86px auto;gap:9px;align-items:end}
+.field{display:flex;flex-direction:column;gap:5px;position:relative;min-width:0}
+.field label{font-size:11px;font-weight:600;letter-spacing:.05em;color:var(--muted);text-transform:uppercase;padding-left:2px}
+.inp{display:flex;align-items:center;gap:8px;background:var(--s1);border:1px solid var(--border2);border-radius:var(--r-md);padding:9px 11px;transition:border-color .15s, box-shadow .15s}
+.inp:focus-within{border-color:var(--red);box-shadow:var(--red-glow)}
+.inp input{background:none;border:none;outline:none;width:100%;font-size:14px;font-weight:500}
+.inp input::placeholder{color:var(--muted)}
+.chip{flex-shrink:0;display:flex;align-items:center;gap:5px;background:#222227;border:1px solid #2F2F36;border-radius:var(--r-sm);padding:3px 7px;font-family:var(--font-mono);font-size:13px;font-weight:600;letter-spacing:.02em}
+.chip .x{color:var(--muted);font-size:12px;line-height:1;cursor:pointer;padding:0 1px}
+.chip .x:hover{color:var(--red)}
+.inp .icon{color:var(--muted);flex-shrink:0;display:flex}
+select.inp{appearance:none;background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2371717A' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;padding-right:28px;cursor:pointer}
+.swap-btn{width:38px;height:38px;border-radius:50%;background:var(--s2);border:1px solid #2E2E33;color:var(--text2);display:flex;align-items:center;justify-content:center;transition:all .2s;margin-bottom:1px;align-self:flex-end}
+.swap-btn:hover{background:var(--s3);color:var(--text);transform:rotate(180deg)}
+.btn-search{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--red);color:#fff;font-weight:600;font-size:14px;border-radius:var(--r-md);padding:11px 26px;transition:all .15s;box-shadow:0 4px 16px -4px rgba(225,29,46,.45);white-space:nowrap}
+.btn-search:hover{background:var(--red-hover);box-shadow:0 0 12px rgba(225,29,46,.35)}
+.btn-search:active{transform:scale(.98)}
+.btn-search:disabled{opacity:.55;cursor:wait}
+
+/* typeahead dropdown */
+.typeahead{position:absolute;top:calc(100% + 5px);left:0;right:0;background:var(--s2);border:1px solid var(--border3);border-radius:var(--r-lg);box-shadow:0 12px 32px -4px rgba(0,0,0,.65);z-index:60;overflow:hidden;display:none}
+.typeahead.open{display:block}
+.ta-item{display:flex;align-items:center;gap:11px;padding:9px 13px;cursor:pointer;border-left:2px solid transparent}
+.ta-item:hover,.ta-item.active{background:var(--s3);border-left-color:var(--red)}
+.ta-code{font-family:var(--font-mono);font-weight:700;font-size:14px;min-width:42px}
+.ta-meta{min-width:0}
+.ta-city{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ta-name{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ta-region{margin-left:auto;font-size:10px;font-family:var(--font-mono);color:var(--muted);border:1px solid var(--border2);border-radius:9999px;padding:2px 8px;flex-shrink:0}
+.ta-empty{padding:12px 14px;color:var(--muted);font-size:13px}
+
+/* ---------------- notice ---------------- */
+.notice{display:flex;gap:11px;align-items:flex-start;background:var(--amber-soft);border:1px solid var(--amber-border);border-radius:var(--r-lg);padding:12px 15px;margin-top:14px;font-size:12.5px;color:#d9b06a;line-height:18px}
+.notice svg{flex-shrink:0;margin-top:1px}
+.notice b{color:var(--amber)}
+
+/* ---------------- controls ---------------- */
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:20px 0 0}
+.ctl-label{font-size:12px;color:var(--muted);font-weight:600;margin-right:2px}
+.pills{display:flex;gap:4px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r-md);padding:3px}
+.pill{font-size:12px;font-weight:600;color:var(--text2);padding:5px 13px;border-radius:var(--r-sm);transition:all .12s;white-space:nowrap}
+.pill:hover{color:var(--text)}
+.pill.active{background:var(--s2);color:#fff;box-shadow:inset 0 -2px 0 var(--red)}
+.fchip{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--text);background:var(--s1);border:1px solid var(--border);border-radius:9999px;padding:5px 13px;transition:all .12s;white-space:nowrap}
+.fchip:hover{background:var(--s3);border-color:#383842}
+.fchip select{background:none;border:none;outline:none;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;appearance:none}
+.fchip select option{background:var(--s2);color:var(--text)}
+.fchip .cnt{font-family:var(--font-mono);font-size:10px;color:var(--red);background:var(--red-soft);border-radius:9999px;padding:1px 6px;min-width:18px;text-align:center}
+
+/* ---------------- provider progress ---------------- */
+.prog-wrap{margin:16px 0 0;background:var(--s1);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px 15px}
+.prog-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.prog-title{font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--text2);text-transform:uppercase}
+.prog-count{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.prog-bar{height:4px;background:var(--s3);border-radius:9999px;overflow:hidden}
+.prog-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--red),#ff6a5e);border-radius:9999px;transition:width .25s ease;box-shadow:0 0 10px rgba(225,29,46,.5)}
+.providers{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
+.pv{display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:10.5px;font-weight:500;color:var(--muted);border:1px solid var(--border2);border-radius:9999px;padding:3px 10px;transition:all .2s}
+.pv .st{width:6px;height:6px;border-radius:50%;background:var(--s3)}
+.pv.resolved{color:var(--text2)}
+.pv.resolved .st{background:var(--green)}
+.pv.zero{color:var(--muted)}
+.pv.zero .st{background:var(--muted)}
+.pv .n{color:var(--red);font-weight:600}
+
+/* ---------------- calendar ---------------- */
+.cal-wrap{margin:14px 0 0;background:var(--s1);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px 15px;display:none}
+.cal-wrap.show{display:block}
+.cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.cal-strip{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;overflow-x:auto;padding-bottom:4px}
+.cal-day{display:flex;flex-direction:column;align-items:center;gap:2px;border:1px solid var(--border2);border-radius:var(--r-md);padding:8px 4px;cursor:pointer;transition:all .12s;min-width:74px}
+.cal-day:hover{border-color:#383842;background:var(--s2)}
+.cal-day.sel{border-color:var(--red);background:var(--red-soft)}
+.cal-day.cheapest{border-color:var(--green-border);background:var(--green-soft)}
+.cal-day .dow{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase}
+.cal-day .d{font-family:var(--font-mono);font-size:12px;font-weight:700}
+.cal-day .pts{font-family:var(--font-mono);font-size:11px;color:var(--text2)}
+.cal-day.cheapest .pts{color:var(--green);font-weight:700}
+.cal-day .pts.none{color:var(--muted);font-weight:400}
+
+/* ---------------- results ---------------- */
+.results{display:flex;flex-direction:column;gap:10px;margin:16px 0 40px}
+.res-count{font-size:12.5px;color:var(--text2);margin-top:18px}
+.res-count b{color:var(--text)}
+.res-count .mono{color:var(--red)}
+
+.card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r-lg);padding:15px 16px;transition:border-color .15s;cursor:pointer;position:relative}
+.card:hover{border-color:#383842}
+.card.cheapest{border-color:var(--green-border)}
+.card-grid{display:grid;grid-template-columns:118px 148px 96px 1fr 96px 108px auto;gap:14px;align-items:center}
+.fare{background:var(--s2);border-radius:var(--r-md);padding:9px 10px;text-align:center;border:1px solid var(--border)}
+.fare .pts{font-family:var(--font-mono);font-size:17px;font-weight:700;letter-spacing:-.02em;line-height:22px}
+.fare .pts small{font-size:10px;font-weight:600;color:var(--muted);letter-spacing:0}
+.fare .fees{font-family:var(--font-mono);font-size:11px;color:var(--text2);margin-top:1px}
+.airline-col{display:flex;flex-direction:column;gap:3px;min-width:0}
+.al-code{width:26px;height:26px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.airline-col .row{display:flex;align-items:center;gap:8px}
+.airline-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.airline-meta{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-col{display:flex;flex-direction:column;gap:1px}
+.t-col .time{font-family:var(--font-mono);font-size:16px;font-weight:700;letter-spacing:-.01em}
+.t-col .apt{font-family:var(--font-mono);font-size:11px;color:var(--text2)}
+.t-col .d_date{font-size:10px;color:var(--muted)}
+.plusday{font-size:9px;font-weight:700;color:var(--amber);background:var(--amber-soft);border:1px solid var(--amber-border);border-radius:var(--r-sm);padding:0 4px;margin-left:5px;vertical-align:2px}
+.path{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:80px}
+.path .line{position:relative;width:100%;height:1.5px;background:#3F3F46;display:flex;align-items:center;justify-content:center}
+.path .line .jet{width:11px;height:11px;color:var(--red);background:var(--s1);border-radius:50%;display:flex;align-items:center;justify-content:center}
+.path .dur{font-family:var(--font-mono);font-size:11px;color:var(--text2)}
+.path .stops-lbl{font-family:var(--font-mono);font-size:10px;color:var(--muted)}
+.path .stops-lbl b{color:var(--amber);font-weight:600}
+.card-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.badges{display:flex;flex-wrap:wrap;gap:5px;justify-content:flex-end}
+.badge{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:10px;font-weight:600;letter-spacing:.03em;border-radius:var(--r-sm);padding:3px 8px;text-transform:uppercase;white-space:nowrap}
+.b-cabin{background:#222227;color:var(--text2);border:1px solid #2F2F36}
+.b-seats{background:var(--green-soft);color:var(--green);border:1px solid var(--green-border)}
+.b-seats.low{background:var(--amber-soft);color:var(--amber);border-color:var(--amber-border)}
+.b-mixed{background:var(--amber-soft);color:var(--amber);border:1px solid var(--amber-border)}
+.b-prov{background:var(--red-soft);color:#ff8d95;border:1px solid rgba(225,29,46,.3)}
+.b-cpp{background:transparent;color:var(--muted);border:1px dashed var(--border3)}
+.banks{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}
+.bank{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:10px;font-weight:600;color:var(--text2);background:var(--s2);border:1px solid var(--border2);border-radius:var(--r-sm);padding:2.5px 7px}
+.bank .swatch{width:7px;height:7px;border-radius:2px;flex-shrink:0}
+.bank.noninstant{border-style:dashed;color:var(--amber)}
+.bank.noninstant .ratio{color:var(--amber)}
+.expand-hint{position:absolute;top:10px;right:12px;color:var(--muted);transition:transform .2s}
+.card.open .expand-hint{transform:rotate(180deg);color:var(--red)}
+
+/* drawer */
+.drawer{display:none;margin-top:13px;border-top:1px solid var(--border);padding-top:13px}
+.card.open .drawer{display:block}
+.drawer-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.drawer-title{font-size:12.5px;font-weight:600;color:var(--text)}
+.drawer-title .mono{color:var(--text2)}
+.timeline{position:relative;padding-left:22px;display:flex;flex-direction:column;gap:0}
+.timeline::before{content:"";position:absolute;left:7px;top:12px;bottom:12px;width:1px;border-left:2px dashed #3F3F46}
+.seg{position:relative;padding:4px 0 4px 8px}
+.seg::before{content:"";position:absolute;left:-19px;top:11px;width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 0 3px var(--canvas)}
+.seg-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px}
+.seg-route{font-size:13px;font-weight:600}
+.seg-route .mono{color:var(--red)}
+.seg-flight{font-family:var(--font-mono);font-size:11px;color:var(--text2)}
+.seg-flight .op{color:var(--muted)}
+.seg-body{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:4px;font-size:12px;color:var(--text2)}
+.seg-body .k{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.seg-body .v{font-family:var(--font-mono);font-size:12px}
+.seg-body .v.cabin-y{color:var(--amber)}
+.layover-row{display:flex;align-items:center;gap:8px;margin:7px 0;padding:6px 10px;background:#111113;border-top:1px solid var(--border);border-bottom:1px solid var(--border);border-radius:var(--r-sm);font-size:11.5px;color:var(--text2)}
+.layover-row .mono{color:var(--amber);font-weight:600}
+.layover-row.tight .mono{color:var(--red)}
+.drawer-foot{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:12px;font-size:11px;color:var(--muted)}
+.drawer-foot .mono{color:var(--text2)}
+
+/* skeletons */
+@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+.skel{background:var(--s1);border:1px solid var(--border);border-radius:var(--r-lg);padding:15px 16px}
+.skel-row{display:flex;gap:14px;align-items:center}
+.skel-b{height:16px;border-radius:var(--r-sm);background:linear-gradient(90deg,var(--s1) 25%,var(--s3) 37%,var(--s1) 63%);background-size:800px 100%;animation:shimmer 1.3s infinite linear}
+
+/* empty / error states */
+.empty{border:1px dashed var(--border3);border-radius:var(--r-lg);padding:44px 20px;text-align:center;color:var(--text2)}
+.empty .big{font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px}
+.empty .sub{font-size:12.5px;color:var(--muted)}
+.err-banner{display:none;background:rgba(147,0,10,.15);border:1px solid rgba(255,180,171,.35);color:#ffb4ab;border-radius:var(--r-lg);padding:12px 15px;font-size:13px;margin-top:14px}
+.err-banner.show{display:block}
+
+/* footer */
+footer{border-top:1px solid var(--border);margin-top:30px;padding:22px 0 34px}
+.ft{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;font-size:11.5px;color:var(--muted)}
+.ft a{color:var(--text2);text-decoration:none}
+.ft a:hover{color:var(--red)}
+.ft .mono{font-size:10.5px}
+
+/* responsive */
+@media (max-width:1020px){
+  .sp-grid{grid-template-columns:1fr 1fr;gap:10px}
+  .sp-grid .swap-cell{display:none}
+  .btn-search{grid-column:1/-1}
+  .card-grid{grid-template-columns:104px 1fr auto;gap:10px}
+  .path{grid-column:1/-1;order:5;padding:4px 30px}
+  .t-col.arr{order:3}
+  .card-right{order:4;align-items:flex-start}
+  .badges,.banks{justify-content:flex-start}
+}
+@media (max-width:640px){
+  .sp-grid{grid-template-columns:1fr}
+  .hd-note{display:none}
+  .card-grid{grid-template-columns:1fr}
+  .fare{display:flex;justify-content:space-between;align-items:center;text-align:left}
+  .card-right{align-items:flex-start}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap hd">
+    <div class="logo">
+      <div class="flame">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 2c.5 3.2 2.2 4.3 3.8 6C17.5 9.8 18 11.6 18 13a6 6 0 1 1-12 0c0-1.5.6-2.9 1.6-4L9 11c0-2 1-3.6 3-5.4V2z" fill="#fff"/></svg>
+      </div>
+      <span>Spicy<span class="red">Tool</span></span>
+      <span class="badge-gds">Obsidian GDS</span>
+    </div>
+    <div class="hd-right">
+      <span class="hd-note" id="engineNote">Engine: 14 loyalty programs</span>
+      <div class="live"><span class="dot"></span>LIVE DATA</div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- search panel -->
+  <section class="search-panel">
+    <div class="sp-grid">
+      <div class="field" id="f-origin">
+        <label>From</label>
+        <div class="inp" id="inp-origin">
+          <span class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#71717A" stroke-width="2"/><path d="M12 7v10M7 12h10" stroke="#71717A" stroke-width="2" stroke-linecap="round"/></svg></span>
+          <input id="q-origin" type="text" placeholder="City or airport" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="typeahead" id="ta-origin"></div>
+      </div>
+      <div class="field swap-cell">
+        <label>&nbsp;</label>
+        <button class="swap-btn" id="btn-swap" title="Swap origin and destination" aria-label="Swap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M7 4v13m0 0l-3-3m3 3l3-3M17 20V7m0 0l3 3m-3-3l-3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div class="field" id="f-dest">
+        <label>To</label>
+        <div class="inp" id="inp-dest">
+          <span class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-5.1 7-11a7 7 0 1 0-14 0c0 5.9 7 11 7 11z" stroke="#71717A" stroke-width="2"/><circle cx="12" cy="10" r="2.6" stroke="#71717A" stroke-width="2"/></svg></span>
+          <input id="q-dest" type="text" placeholder="City or airport" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="typeahead" id="ta-dest"></div>
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input id="q-date" class="inp" type="date">
+      </div>
+      <div class="field">
+        <label>Cabin</label>
+        <select id="q-cabin" class="inp">
+          <option value="economy">Economy</option>
+          <option value="premium">Premium Economy</option>
+          <option value="business" selected>Business</option>
+          <option value="first">First</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Pax</label>
+        <select id="q-pax" class="inp">
+          <option>1</option><option>2</option><option>3</option><option>4</option>
+          <option>5</option><option>6</option><option>7</option><option>8</option><option>9</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>&nbsp;</label>
+        <button class="btn-search" id="btn-search">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#fff" stroke-width="2.4"/><path d="M20 20l-4-4" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>
+          Search awards
+        </button>
+      </div>
+    </div>
+    <div class="err-banner" id="err"></div>
+  </section>
+
+  <!-- honesty notice -->
+  <div class="notice">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 3.5v.5M10.3 3.9L2.8 17a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div><b>Data provenance:</b> no airline publishes a public award-availability API. Points totals and taxes are <b>chart-accurate</b>; seat availability is <b>modeled, not live</b>. Always confirm on the airline's own site before booking.</div>
+  </div>
+
+  <!-- controls -->
+  <section class="controls" id="controls" style="display:none">
+    <div class="pills" id="sortPills">
+      <button class="pill active" data-sort="points">Best</button>
+      <button class="pill" data-sort="value">Value</button>
+      <button class="pill" data-sort="duration">Fastest</button>
+      <button class="pill" data-sort="departure">Departure</button>
+    </div>
+    <span class="ctl-label">Filter:</span>
+    <div class="fchip">Alliance
+      <select id="f-alliance">
+        <option value="">Any</option>
+        <option>Star Alliance</option><option>SkyTeam</option><option>Oneworld</option>
+      </select>
+    </div>
+    <div class="fchip">Stops
+      <select id="f-stops"><option value="">Any</option><option value="0">Nonstop</option><option value="1">≤ 1</option></select>
+    </div>
+    <div class="fchip">Bank
+      <select id="f-bank">
+        <option value="">Any</option>
+        <option value="AMEX">Amex MR</option><option value="CHASE">Chase UR</option>
+        <option value="CAPONE">Cap One</option><option value="CITI">Citi TYP</option>
+        <option value="BILT">Bilt</option><option value="MARRIOTT">Bonvoy</option>
+      </select>
+    </div>
+    <div class="fchip">Program
+      <select id="f-program"><option value="">Any</option></select>
+      <span class="cnt" id="progCount">0</span>
+    </div>
+    <div class="fchip">Max pts
+      <input id="f-maxpts" type="number" min="0" step="5000" placeholder="—" style="width:64px;background:none;border:none;outline:none;font-size:12px;font-weight:600">
+    </div>
+    <div class="fchip">Max dur (h)
+      <input id="f-maxdur" type="number" min="0" step="1" placeholder="—" style="width:52px;background:none;border:none;outline:none;font-size:12px;font-weight:600">
+    </div>
+  </section>
+
+  <!-- provider progress -->
+  <section class="prog-wrap" id="progWrap" style="display:none">
+    <div class="prog-head">
+      <span class="prog-title">Querying loyalty programs</span>
+      <span class="prog-count" id="progCount"></span>
+    </div>
+    <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+    <div class="providers" id="providers"></div>
+  </section>
+
+  <!-- flexible dates -->
+  <section class="cal-wrap" id="calWrap">
+    <div class="cal-head">
+      <span class="prog-title">Flexible dates — cheapest 30 days</span>
+      <span class="prog-count" id="calNote"></span>
+    </div>
+    <div class="cal-strip no-scrollbar" id="calStrip"></div>
+  </section>
+
+  <div class="res-count" id="resCount" style="display:none"></div>
+  <section class="results" id="results"></section>
+
+</main>
+
+<footer>
+  <div class="wrap ft">
+    <span>SpicyTool — free, login-free award search. No accounts, no tracking, no paywall.</span>
+    <span>
+      <a href="/docs">API</a> &nbsp;·&nbsp;
+      <a href="/api/v2/providers">Providers</a> &nbsp;·&nbsp;
+      <a href="/api/v2/telemetry">Telemetry policy</a>
+    </span>
+    <span class="mono">SpicyTool Obsidian v1.0</span>
+  </div>
+</footer>
+
+<script>
+"use strict";
+/* ================================================================
+   SpicyTool frontend wiring — behavior only, design untouched.
+   ================================================================ */
+const $ = (id) => document.getElementById(id);
+
+const PROGRAM_SHORT = {
+  AC_AEROPLAN:"Aeroplan", UA_MILEAGEPLUS:"United", AV_LIFEMILES:"LifeMiles",
+  TK_MILESSMILES:"Turkish", SQ_KRISFLYER:"KrisFlyer", ET_SHEBAMILES:"Sheba",
+  AF_FLYINGBLUE:"Flying Blue", DL_SKYMILES:"Delta", VS_FLYINGCLUB:"Virgin",
+  BA_AVIOS:"BA Avios", QR_PRIVILEGECLUB:"Qatar", AA_AADVANTAGE:"American",
+  AS_MILEAGEPLAN:"Alaska", EK_SKYWARDS:"Emirates"
+};
+const ALLIANCE_COLOR = {"Star Alliance":"#4ae176","SkyTeam":"#ffb95f","Oneworld":"#ff8d95","Independent":"#e6bdb9"};
+const CABIN_LABEL = {economy:"Economy", premium:"Premium Eco", business:"Business", first:"First"};
+
+const state = {
+  origin: null, destination: null,
+  results: [],          // every award result streamed so far
+  seen: new Set(),      // result ids
+  streaming: false,
+  sort: "points",
+  filters: {alliance:"", stops:"", bank:"", program:"", maxpts:null, maxdur:null},
+  programCounts: {},
+  lastQuery: null,
+  cheapestPoints: null,
+  cheapestId: null
+};
+
+/* ---------------- helpers ---------------- */
+const fmtTime = (iso) => {
+  const [h, m] = iso.slice(11, 16).split(":").map(Number);
+  const ap = h >= 12 ? "PM" : "AM"; const hh = h % 12 === 0 ? 12 : h % 12;
+  return `${hh}:${String(m).padStart(2, "0")} ${ap}`;
+};
+const fmtDur = (min) => `${Math.floor(min / 60)}h ${String(min % 60).padStart(2, "0")}m`;
+const fmtDate = (iso) => new Date(iso + "T00:00:00").toLocaleDateString("en-US", {month:"short", day:"numeric", year:"numeric"});
+const fmtPts = (n) => n >= 1000 ? `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k` : String(n);
+const fmtFull = (n) => n.toLocaleString("en-US");
+const dayDiff = (a, b) => Math.round((new Date(b.slice(0,10)) - new Date(a.slice(0,10))) / 86400000);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------------- typeahead ---------------- */
+function makeTypeahead(inputEl, boxEl, onPick) {
+  let items = [], active = -1, debounce = null;
+
+  function render() {
+    if (!items.length) {
+      boxEl.innerHTML = `<div class="ta-empty">No airports match</div>`;
+      boxEl.classList.add("open");
+      return;
+    }
+    boxEl.innerHTML = items.map((a, i) => `
+      <div class="ta-item ${i === active ? "active" : ""}" data-i="${i}">
+        <span class="ta-code">${esc(a.code)}</span>
+        <span class="ta-meta">
+          <div class="ta-city">${esc(a.city)}, ${esc(a.country)}</div>
+          <div class="ta-name">${esc(a.name)}</div>
+        </span>
+        <span class="ta-region">${esc(a.region)}</span>
+      </div>`).join("");
+    boxEl.classList.add("open");
+    boxEl.querySelectorAll(".ta-item").forEach(el => {
+      el.addEventListener("mousedown", (e) => { e.preventDefault(); pick(+el.dataset.i); });
+    });
+  }
+
+  function pick(i) {
+    const a = items[i];
+    if (!a) return;
+    onPick(a);
+    close();
+  }
+
+  function close() { boxEl.classList.remove("open"); active = -1; }
+
+  inputEl.addEventListener("input", () => {
+    clearTimeout(debounce);
+    const q = inputEl.value.trim();
+    if (!q) { close(); return; }
+    debounce = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/v1/airports?q=${encodeURIComponent(q)}&limit=8`);
+        items = await res.json();
+        active = items.length ? 0 : -1;
+        render();
+      } catch { /* offline */ }
+    }, 110);
+  });
+
+  inputEl.addEventListener("keydown", (e) => {
+    if (!boxEl.classList.contains("open")) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); active = Math.min(active + 1, items.length - 1); render(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); active = Math.max(active - 1, 0); render(); }
+    else if (e.key === "Enter") { e.preventDefault(); if (active >= 0) pick(active); }
+    else if (e.key === "Escape") { close(); }
+  });
+  inputEl.addEventListener("blur", () => setTimeout(close, 120));
+  inputEl.addEventListener("focus", () => { if (inputEl.value.trim().length >= 2) inputEl.dispatchEvent(new Event("input")); });
+}
+
+function setAirport(kind, apt) {
+  state[kind] = apt;
+  const input = $(kind === "origin" ? "q-origin" : "q-dest");
+  const wrap = $(kind === "origin" ? "inp-origin" : "inp-dest");
+  wrap.querySelectorAll(".chip").forEach(c => c.remove());
+  const chip = document.createElement("span");
+  chip.className = "chip";
+  chip.innerHTML = `${esc(apt.code)}<span class="x" title="Change">×</span>`;
+  chip.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    clearAirport(kind);
+  });
+  wrap.appendChild(chip);
+  input.style.display = "none";
+  input.value = apt.city;
+}
+
+function clearAirport(kind) {
+  state[kind] = null;
+  const input = $(kind === "origin" ? "q-origin" : "q-dest");
+  const wrap = $(kind === "origin" ? "inp-origin" : "inp-dest");
+  wrap.querySelectorAll(".chip").forEach(c => c.remove());
+  input.style.display = "";
+  input.value = "";
+  input.focus();
+}
+
+makeTypeahead($("q-origin"), $("ta-origin"), (a) => setAirport("origin", a));
+makeTypeahead($("q-dest"), $("ta-dest"), (a) => setAirport("destination", a));
+
+/* swap origin <-> destination */
+$("btn-swap").addEventListener("click", () => {
+  const o = state.origin, d = state.destination;
+  clearAirport("origin");
+  clearAirport("destination");
+  if (d) setAirport("origin", d);
+  if (o) setAirport("destination", o);
+});
+
+/* default date: +30 days */
+(function () {
+  const d = new Date(); d.setDate(d.getDate() + 30);
+  $("q-date").value = d.toISOString().slice(0, 10);
+})();
+
+/* ---------------- search ---------------- */
+function showError(msg) { const el = $("err"); el.textContent = msg; el.classList.add("show"); }
+function clearError() { $("err").classList.remove("show"); }
+
+async function validateAirport(code, label) {
+  const res = await fetch(`/api/v1/airports?q=${encodeURIComponent(code)}&limit=1`);
+  const matches = await res.json();
+  if (!matches.length || matches[0].code !== code) throw new Error(`Unknown ${label} '${code}'`);
+}
+
+async function startSearch() {
+  clearError();
+  const date = $("q-date").value;
+  const cabin = $("q-cabin").value;
+  const pax = $("q-pax").value;
+
+  if (!state.origin || !state.destination) {
+    return showError("Pick both an origin and a destination from the suggestions.");
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return showError("Pick a departure date.");
+  if (state.origin.code === state.destination.code) {
+    return showError("Origin and destination must differ.");
+  }
+
+  state.results = []; state.seen = new Set(); state.streaming = true;
+  state.programCounts = {}; state.cheapestPoints = null; state.cheapestId = null;
+  state.lastQuery = { origin: state.origin.code, destination: state.destination.code, date, cabin, pax };
+
+  $("controls").style.display = "flex";
+  $("progWrap").style.display = "block";
+  $("calWrap").classList.remove("show");
+  $("resCount").style.display = "none";
+  $("progFill").style.width = "0%";
+  $("progCount").textContent = "connecting…";
+  renderProviders(Object.keys(PROGRAM_SHORT).map(c => ({code: c, state: "pending"})));
+  renderSkeletons();
+  $("btn-search").disabled = true;
+
+  const params = new URLSearchParams({
+    origin: state.origin.code, destination: state.destination.code,
+    date, cabin, passengers: pax
+  });
+
+  const es = new EventSource(`/api/v1/search/stream?${params}`);
+  let first = true;
+
+  es.addEventListener("start", () => { $("progCount").textContent = "streaming…"; });
+
+  es.addEventListener("program", (e) => {
+    const d = JSON.parse(e.data);
+    if (first) { $("results").innerHTML = ""; first = false; }
+    for (const r of d.results) {
+      if (!state.seen.has(r.id)) { state.seen.add(r.id); state.results.push(r); }
+    }
+    state.programCounts[d.program_code] = d.count;
+    setProvider(d.program_code, d.count > 0 ? "resolved" : "zero", d.count);
+    $("progFill").style.width = Math.round(d.progress * 100) + "%";
+    const resolved = Object.keys(state.programCounts).length;
+    $("progCount").textContent = `${resolved}/14 programs · ${state.results.length} fares`;
+    refreshProgramFilter();
+    renderResults();
+  });
+
+  es.addEventListener("complete", () => {
+    es.close();
+    state.streaming = false;
+    $("progFill").style.width = "100%";
+    $("progCount").textContent = `${state.results.length} award fares · done`;
+    $("btn-search").disabled = false;
+    renderResults();
+    loadCalendar();
+  });
+
+  es.onerror = () => {
+    es.close();
+    state.streaming = false;
+    $("btn-search").disabled = false;
+    if (first) {
+      $("results").innerHTML = "";
+      showError("The search stream ended unexpectedly. Check your connection and retry.");
+    }
+  };
+}
+$("btn-search").addEventListener("click", startSearch);
+[$("q-origin"), $("q-dest")].forEach(el => el.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !document.querySelector(".typeahead.open")) startSearch();
+}));
+
+/* ---------------- provider pills ---------------- */
+function renderProviders(list) {
+  $("providers").innerHTML = list.map(p => `
+    <span class="pv" id="pv-${p.code}"><span class="st"></span>${esc(PROGRAM_SHORT[p.code] || p.code)}</span>`).join("");
+}
+function setProvider(code, st, n) {
+  const el = $("pv-" + code);
+  if (!el) return;
+  el.className = "pv " + st;
+  el.innerHTML = `<span class="st"></span>${esc(PROGRAM_SHORT[code] || code)}${st === "resolved" ? ` <span class="n">${n}</span>` : ""}`;
+}
+
+/* ---------------- skeletons ---------------- */
+function renderSkeletons() {
+  let html = "";
+  for (let i = 0; i < 5; i++) {
+    html += `<div class="skel"><div class="skel-row">
+      <div class="skel-b" style="width:104px;height:44px"></div>
+      <div class="skel-b" style="width:130px;height:14px"></div>
+      <div class="skel-b" style="flex:1;height:14px"></div>
+      <div class="skel-b" style="width:90px;height:14px"></div>
+      <div class="skel-b" style="width:120px;height:26px"></div>
+    </div></div>`;
+  }
+  $("results").innerHTML = html;
+}
+
+/* ---------------- filtering & sorting ---------------- */
+function passesFilters(r) {
+  const f = state.filters;
+  if (f.alliance && r.alliance !== f.alliance) return false;
+  if (f.stops !== "" && r.route.stops > +f.stops) return false;
+  if (f.bank && !r.transfer_partners.some(p => p.bank === f.bank)) return false;
+  if (f.program && r.pricing.program_code !== f.program) return false;
+  if (f.maxpts && r.pricing.points > f.maxpts) return false;
+  if (f.maxdur && r.route.duration_minutes > f.maxdur * 60) return false;
+  return true;
+}
+function sortKey(r) {
+  switch (state.sort) {
+    case "value": return -(r.pricing.cents_per_point || 0);
+    case "duration": return r.route.duration_minutes;
+    case "departure": return r.route.departure_time;
+    default: return r.pricing.points * 10000 + r.pricing.cash_fees; // Best: points then fees
+  }
+}
+function visibleResults() {
+  return state.results.filter(passesFilters).sort((a, b) => sortKey(a) - sortKey(b));
+}
+
+function refreshProgramFilter() {
+  const sel = $("f-program");
+  const current = sel.value;
+  const codes = [...new Set(state.results.map(r => r.pricing.program_code))].sort();
+  sel.innerHTML = `<option value="">Any</option>` + codes.map(c =>
+    `<option value="${esc(c)}">${esc(PROGRAM_SHORT[c] || c)} (${state.programCounts[c] ?? "–"})</option>`).join("");
+  sel.value = codes.includes(current) ? current : "";
+  const total = Object.values(state.programCounts).reduce((a, b) => a + b, 0);
+  $("progCount").textContent = String(total);
+}
+
+/* ---------------- rendering ---------------- */
+function renderResults() {
+  const list = visibleResults();
+  const rc = $("resCount");
+  rc.style.display = "block";
+  if (!state.results.length && !state.streaming) {
+    rc.style.display = "none";
+    $("results").innerHTML = `<div class="empty">
+      <div class="big">No award space found</div>
+      <div class="sub">No program has modeled availability for this route, date and cabin.<br>Try a nearby date, another cabin, or a different routing.</div>
+    </div>`;
+    return;
+  }
+  if (!list.length) {
+    $("results").innerHTML = `<div class="empty">
+      <div class="big">No results match your filters</div>
+      <div class="sub">Loosen a filter to see the ${state.results.length} fares found.</div>
+    </div>`;
+    rc.innerHTML = `<b>0</b> of <b>${state.results.length}</b> fares shown`;
+    return;
+  }
+  const minPts = Math.min(...state.results.map(r => r.pricing.points));
+  rc.innerHTML = `<b>${list.length}</b> fares shown · cheapest <span class="mono">${fmtFull(minPts)}</span> pts · query <span class="mono">${esc(state.lastQuery.origin)}→${esc(state.lastQuery.destination)}</span> ${esc(state.lastQuery.date)} ${esc(CABIN_LABEL[state.lastQuery.cabin])}`;
+
+  $("results").innerHTML = list.map(r => cardHTML(r, r.pricing.points === minPts)).join("");
+  document.querySelectorAll(".card").forEach(card => {
+    card.addEventListener("click", (e) => {
+      if (e.target.closest("a")) return;
+      card.classList.toggle("open");
+    });
+  });
+}
+
+function cardHTML(r, isCheapest) {
+  const rt = r.route;
+  const dep = rt.segments[0];
+  const arr = rt.segments[rt.segments.length - 1];
+  const plusDep = dayDiff(rt.departure_time, rt.arrival_time);
+  const ac = ALLIANCE_COLOR[r.alliance] || "#e6bdb9";
+  const seats = r.seats_remaining;
+  const stops = rt.stops === 0 ? "Nonstop" : `${rt.stops} stop${rt.stops > 1 ? "s" : ""} · <b>${rt.layovers.map(l => l.airport).join(", ")}</b>`;
+  const banks = r.transfer_partners.map(p => `
+    <span class="bank ${p.instant ? "" : "noninstant"}" title="${esc(p.bank_name)} — ${p.instant ? "instant transfer" : "transfers in days (3:1)"}">
+      <span class="swatch" style="background:${esc(p.color)}"></span>${esc(p.bank)} ${fmtPts(p.required_points)}${p.instant ? "" : `<span class="ratio">3:1</span>`}
+    </span>`).join("");
+
+  const segs = rt.segments.map((s, i) => {
+    const lay = rt.layovers[i];
+    const layRow = lay ? `<div class="layover-row ${lay.minutes < 60 ? "tight" : ""}">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#71717A" stroke-width="2"/><path d="M12 7v5l3 3" stroke="#71717A" stroke-width="2" stroke-linecap="round"/></svg>
+        Layover <span class="mono">${fmtDur(lay.minutes)}</span> in ${esc(lay.airport)}${lay.minutes < 60 ? " — tight connection" : ""}
+      </div>` : "";
+    const cabinTag = s.cabin_class || r.cabin_class;
+    return `
+      <div class="seg">
+        <div class="seg-head">
+          <span class="seg-route"><span class="mono">${esc(s.origin)}</span> → <span class="mono">${esc(s.destination)}</span></span>
+          <span class="seg-flight">${esc(s.flight_number)}${s.marketing_carrier && s.marketing_carrier !== s.carrier ? ` <span class="op">· operated by ${esc(s.carrier)}, marketed by ${esc(s.marketing_carrier)}</span>` : ""}</span>
+        </div>
+        <div class="seg-body">
+          <span><span class="k">Depart</span> <span class="v">${fmtTime(s.departure_time)}</span></span>
+          <span><span class="k">Arrive</span> <span class="v">${fmtTime(s.arrival_time)}</span></span>
+          <span><span class="k">Duration</span> <span class="v">${fmtDur(s.duration_minutes)}</span></span>
+          <span><span class="k">Aircraft</span> <span class="v">${esc(s.aircraft)}</span></span>
+          <span><span class="k">Distance</span> <span class="v">${fmtFull(s.distance_miles)} mi</span></span>
+          <span><span class="k">Cabin</span> <span class="v ${cabinTag !== r.cabin_class ? "cabin-y" : ""}">${esc(CABIN_LABEL[cabinTag] || cabinTag)}</span></span>
+        </div>
+      </div>${layRow}`;
+  }).join("");
+
+  return `
+  <article class="card ${isCheapest ? "cheapest" : ""}" data-id="${esc(r.id)}">
+    <svg class="expand-hint" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="card-grid">
+      <div class="fare">
+        <div class="pts">${fmtFull(r.pricing.points)}<br><small>PTS + $${r.pricing.cash_fees.toFixed(2).replace(/\\.00$/, "")}</small></div>
+      </div>
+      <div class="airline-col">
+        <div class="row">
+          <span class="al-code" style="background:${ac}22;color:${ac};border:1px solid ${ac}55">${esc(r.airline_code)}</span>
+          <span class="airline-name">${esc(r.airline)}</span>
+        </div>
+        <span class="airline-meta">${esc(r.pricing.program_name)}</span>
+      </div>
+      <div class="t-col">
+        <span class="time">${fmtTime(rt.departure_time)}</span>
+        <span class="apt">${esc(rt.origin)}</span>
+        <span class="d_date">${fmtDate(rt.departure_time)}</span>
+      </div>
+      <div class="path">
+        <span class="dur">${fmtDur(rt.duration_minutes)}</span>
+        <div class="line"><span class="jet"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg></span></div>
+        <span class="stops-lbl">${rt.stops === 0 ? "Nonstop" : `${rt.stops} stop · <b>${rt.layovers.map(l => esc(l.airport)).join(", ")}</b>`}</span>
+      </div>
+      <div class="t-col arr">
+        <span class="time">${fmtTime(rt.arrival_time)}${plusDep > 0 ? `<span class="plusday">+${plusDep}d</span>` : ""}</span>
+        <span class="apt">${esc(rt.destination)}</span>
+        <span class="d_date">${fmtDate(rt.arrival_time)}</span>
+      </div>
+      <div class="t-col">
+        <span class="time" style="font-size:13px">${fmtFull(rt.distance_miles)}<span style="font-size:9px;color:var(--muted)"> MI</span></span>
+        <span class="d_date" style="margin-top:3px">${esc(rt.segments[0].aircraft.split(" ").slice(0,2).join(" "))}</span>
+      </div>
+      <div class="card-right">
+        <div class="badges">
+          <span class="badge b-cabin">${esc(CABIN_LABEL[r.cabin_class])}</span>
+          ${r.mixed_cabin ? `<span class="badge b-mixed">Mixed</span>` : ""}
+          ${seats > 0 ? `<span class="badge b-seats ${seats <= 1 ? "low" : ""}">${seats} seat${seats > 1 ? "s" : ""}</span>` : ""}
+          <span class="badge b-cpp" title="cents per point vs. estimated retail">${(r.pricing.cents_per_point || 0).toFixed(2)}¢/pt</span>
+        </div>
+        <div class="banks">${banks}</div>
+      </div>
+    </div>
+    <div class="drawer">
+      <div class="drawer-head">
+        <span class="drawer-title">Itinerary <span class="mono">${esc(r.flight_number)}</span> · ${esc(r.provenance.join(" + "))}</span>
+      </div>
+      <div class="timeline">${segs}</div>
+      <div class="drawer-foot">
+        <span>Alliance: <span class="mono">${esc(r.alliance)}</span></span>
+        <span>Total distance: <span class="mono">${fmtFull(rt.distance_miles)} mi</span></span>
+        <span>Taxes &amp; fees: <span class="mono">$${r.pricing.cash_fees.toFixed(2)}</span></span>
+        <span>Program: <span class="mono">${esc(r.pricing.program_name)}</span></span>
+        <span>Source: <span class="mono">${esc(r.source_provider)}</span></span>
+      </div>
+    </div>
+  </article>`;
+}
+
+/* ---------------- controls wiring ---------------- */
+document.querySelectorAll("#sortPills .pill").forEach(p => {
+  p.addEventListener("click", () => {
+    document.querySelectorAll("#sortPills .pill").forEach(x => x.classList.remove("active"));
+    p.classList.add("active");
+    state.sort = p.dataset.sort;
+    renderResults();
+  });
+});
+$("f-alliance").addEventListener("change", e => { state.filters.alliance = e.target.value; renderResults(); });
+$("f-stops").addEventListener("change", e => { state.filters.stops = e.target.value; renderResults(); });
+$("f-bank").addEventListener("change", e => { state.filters.bank = e.target.value; renderResults(); });
+$("f-program").addEventListener("change", e => { state.filters.program = e.target.value; renderResults(); });
+$("f-maxpts").addEventListener("input", e => { state.filters.maxpts = +e.target.value || null; renderResults(); });
+$("f-maxdur").addEventListener("input", e => { state.filters.maxdur = +e.target.value || null; renderResults(); });
+
+/* ---------------- calendar ---------------- */
+async function loadCalendar() {
+  if (!state.lastQuery) return;
+  const { origin, destination, date, cabin } = state.lastQuery;
+  const params = new URLSearchParams({ origin, destination, start_date: date, days: 30, cabin });
+  try {
+    const res = await fetch(`/api/v1/calendar?${params}`);
+    if (!res.ok) return;
+    const d = await res.json();
+    const days = d.calendar.filter(x => x.available);
+    if (!days.length) { $("calWrap").classList.remove("show"); return; }
+    const cheapest = Math.min(...days.map(x => x.points));
+    $("calStrip").innerHTML = d.calendar.map(x => {
+      const dt = new Date(x.date + "T00:00:00");
+      const cls = ["cal-day",
+        x.date === date ? "sel" : "",
+        x.available && x.points === cheapest ? "cheapest" : ""].join(" ");
+      return `<div class="${cls}" data-date="${esc(x.date)}" title="${x.available ? esc(x.program) + " · $" + x.cash_fees.toFixed(2) + " taxes" : "no availability"}">
+        <span class="dow">${dt.toLocaleDateString("en-US", {weekday:"short"})}</span>
+        <span class="d">${dt.getDate()}</span>
+        <span class="pts ${x.available ? "" : "none"}">${x.available ? fmtPts(x.points) : "—"}</span>
+      </div>`;
+    }).join("");
+    $("calNote").textContent = `cheapest: ${fmtFull(cheapest)} pts`;
+    $("calWrap").classList.add("show");
+    document.querySelectorAll(".cal-day").forEach(el => {
+      el.addEventListener("click", () => {
+        $("q-date").value = el.dataset.date;
+        startSearch();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    });
+  } catch { /* calendar is best-effort */ }
+}
+
+/* ---------------- boot ---------------- */
+(async function boot() {
+  try {
+    const res = await fetch("/api/v2/providers");
+    if (res.ok) {
+      const d = await res.json();
+      const on = d.providers.filter(p => p.enabled).length;
+      $("engineNote").textContent = `Engine: 14 loyalty programs · ${on}/${d.providers.length} providers live`;
+    }
+  } catch { /* same-origin best effort */ }
+})();
+</script>
+</body>
+</html>

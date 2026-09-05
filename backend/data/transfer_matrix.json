@@ -1,0 +1,159 @@
+{
+  "credit_cards": {
+    "AMEX": {"name": "Amex Membership Rewards", "short": "Amex MR", "color": "#006FCF"},
+    "CHASE": {"name": "Chase Ultimate Rewards", "short": "Chase UR", "color": "#117ACA"},
+    "CAPONE": {"name": "Capital One Miles", "short": "Cap One", "color": "#D22E35"},
+    "CITI": {"name": "Citi ThankYou Points", "short": "Citi TYP", "color": "#003B70"},
+    "BILT": {"name": "Bilt Rewards", "short": "Bilt", "color": "#00A0DF"},
+    "MARRIOTT": {"name": "Marriott Bonvoy", "short": "Bonvoy", "color": "#A61C31"}
+  },
+  "airline_programs": {
+    "AC_AEROPLAN": {
+      "name": "Air Canada Aeroplan",
+      "alliance": "Star Alliance",
+      "color": "#D31145",
+      "partners": {
+        "AMEX": {"ratio": 1.0, "instant": true},
+        "CHASE": {"ratio": 1.0, "instant": true},
+        "CAPONE": {"ratio": 1.0, "instant": true},
+        "CITI": {"ratio": 1.0, "instant": true},
+        "MARRIOTT": {"ratio": 0.3333, "instant": false}
+      }
+    },
+    "UA_MILEAGEPLUS": {
+      "name": "United MileagePlus",
+      "alliance": "Star Alliance",
+      "color": "#0033A0",
+      "partners": {
+        "MARRIOTT": {"ratio": 0.3333, "instant": false}
+      }
+    },
+    "AV_LIFEMILES": {
+      "name": "Avianca LifeMiles",
+      "alliance": "Star Alliance",
+      "color": "#E4002B",
+      "partners": {
+        "AMEX": {"ratio": 1.0, "instant": true},
+        "CAPONE": {"ratio": 1.0, "instant": true},
+        "CITI": {"ratio": 1.0, "instant": true},
+        "MARRIOTT": {"ratio": 0.3333, "instant": false}
+      }
+    },
+    "TK_MILESSMILES": {
+      "name": "Turkish Miles&Smiles",
+      "alliance": "Star Alliance",
+      "color": "#C70A0C",
+      "partners": {
+        "CAPONE": {"ratio": 1.0, "instant": true},
+        "CITI": {"ratio": 1.0, "instant": true},
+        "MARRIOTT": {"ratio": 0.3333, "instant": false}
+      }
+    },
+    "SQ_KRISFLYER": {
+      "name": "Singapore KrisFlyer",
+      "alliance": "Star Alliance",
+      "color": "#F0A800",
+      "partners": {
+        "AMEX": {"ratio": 1.0, "instant": true},
+        "CHASE": {"ratio": 1.0, "instant": true},
+        "CAPONE": {"ratio": 1.0, "instant": true},
+        "CITI": {"ratio": 1.0, "instant": true},
+        "MARRIOTT": {"ratio": 0.3333, "instant": false}
+      }
+    },
+    "ET_SHEBAMILES": {
+      "name": "Ethiopian ShebaMiles",
+      "alliance": "Star Alliance",
+      "color": "#6DA544",
+      "partners": {
+        "MARRIOTT": {"ratio": 0.3333, "instant": false}
+      }
+    },
+    "AF_FLYINGBLUE": {
+      "name": "Air France/KLM Flying Blue",
+      "alliance": "SkyTeam",
+      "color": "#002157",
+      "partners": {
+        "AMEX": {"ratio": 1.0, "instant": true},
+        "CHASE": {"ratio": 1.0, "instant": true},
+        "CAPONE": {"ratio": 1.0, "instant": true},
+        "CITI": {"ratio": 1.0, "instant": true},
+        "BILT": {"ratio": 1.0, "instant": true},
+        "MARRIOTT": {"ratio": 0.3333, "instant": false}
+      }
+    },
+    "DL_SKYMILES": {
+      "name": "Delta SkyMiles",
+      "alliance": "SkyTeam",
+      "color": "#C8102E",
+      "partners": {
+        "AMEX": {"ratio": 1.0, "instant": true},
+        "MARRIOTT": {"ratio": 0.3333, "instant": false}
+      }
+    },
+    "VS_FLYINGCLUB": {
+      "name": "Virgin Atlantic Flying Club",
+      "alliance": "SkyTeam",
+      "color": "#E10A17",
+      "partners": {
+        "AMEX": {"ratio": 1.0, "instant": true},
+        "CHASE": {"ratio": 1.0, "instant": true},
+        "CAPONE": {"ratio": 1.0, "instant": true},
+        "CITI": {"ratio": 1.0, "instant": true},
+        "MARRIOTT": {"ratio": 0.3333, "instant": false}
+      }
+    },
+    "BA_AVIOS": {
+      "name": "British Airways Executive Club",
+      "alliance": "Oneworld",
+      "color": "#075AAA",
+      "partners": {
+        "AMEX": {"ratio": 1.0, "instant": true},
+        "CHASE": {"ratio": 1.0, "instant": true},
+        "CAPONE": {"ratio": 1.0, "instant": true},
+        "CITI": {"ratio": 1.0, "instant": true},
+        "MARRIOTT": {"ratio": 0.3333, "instant": false}
+      }
+    },
+    "QR_PRIVILEGECLUB": {
+      "name": "Qatar Privilege Club Avios",
+      "alliance": "Oneworld",
+      "color": "#5C0632",
+      "partners": {
+        "AMEX": {"ratio": 1.0, "instant": true},
+        "CAPONE": {"ratio": 1.0, "instant": true},
+        "CITI": {"ratio": 1.0, "instant": true},
+        "MARRIOTT": {"ratio": 0.3333, "instant": false}
+      }
+    },
+    "AA_AADVANTAGE": {
+      "name": "American AAdvantage",
+      "alliance": "Oneworld",
+      "color": "#0078D2",
+      "partners": {
+        "BILT": {"ratio": 1.0, "instant": true},
+        "MARRIOTT": {"ratio": 0.3333, "instant": false}
+      }
+    },
+    "AS_MILEAGEPLAN": {
+      "name": "Alaska Mileage Plan",
+      "alliance": "Oneworld",
+      "color": "#0B2949",
+      "partners": {
+        "MARRIOTT": {"ratio": 0.3333, "instant": false}
+      }
+    },
+    "EK_SKYWARDS": {
+      "name": "Emirates Skywards",
+      "alliance": "Independent",
+      "color": "#D71920",
+      "partners": {
+        "AMEX": {"ratio": 1.0, "instant": true},
+        "CHASE": {"ratio": 1.0, "instant": true},
+        "CAPONE": {"ratio": 1.0, "instant": true},
+        "CITI": {"ratio": 1.0, "instant": true},
+        "MARRIOTT": {"ratio": 0.3333, "instant": false}
+      }
+    }
+  }
+}
