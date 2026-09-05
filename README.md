@@ -50,6 +50,21 @@ The UI is a pixel-faithful implementation of the repository's Stitch mockups
   Best/Fastest/Cheapest sort tabs, flight cards with the `w-24 h-11` fare
   tile, "$X Off Retail" savings badge, dashed timeline expansion and the
   `w-80` price-breakdown popover with the red **Get VI\*** CTA.
+- **Login screen** follows `code 3.html` (dark variant, matching the app's
+  dark-only runtime): `#111215` page, red announcement banner ("Welcome to
+  SpicyTool v3.0!…"), `#18191d` card with the logo + wordmark, email-only
+  form ("Enter your email to login.", "Sign In with Email"), and the mockup's
+  theme-toggle pill (dark active; light is visual-only — this build is
+  dark-only per `DESIGN.md`).
+- **Real logo** — the SpicyTool mark was extracted from the mockup render
+  (`screen 8.png` header, 32 CSS px) and inlined as a transparent PNG data
+  URI: 32px in both app headers and the login card, 28px in the login nav
+  (`w-7`), replacing the placeholder flame SVG.
+- **Demo sign-in** — clicking the avatar opens the login screen; a valid
+  email signs you into a *demo session only* (stored in `localStorage`,
+  avatar swaps to the `code 5` gradient-ring initials, dropdown offers Sign
+  out). **No credentials are verified, stored, or sent anywhere — there is
+  no auth backend**; the card says so.
 - All colors/radii/spacings/shadows are the computed equivalents of the
   mockups' Tailwind classes; fonts use the mockups' own stacks (Inter with
   system fallbacks — no external CDNs).

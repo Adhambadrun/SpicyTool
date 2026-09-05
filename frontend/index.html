@@ -330,6 +330,41 @@ button{font-family:inherit}
 .airline-logo svg{display:block}
 /* pricing popover total row */
 .pp-row.total{border-top:1px solid #252936;font-weight:600;margin-top:4px;padding-top:8px}
+
+/* ============== LOGO (extracted from mockup render screen 8) ============== */
+.logo-32{width:32px;height:32px;border-radius:8px;object-fit:contain;box-shadow:0 4px 6px -1px rgba(127,29,29,.2)}
+.logo-28{width:28px;height:28px;border-radius:6px;object-fit:contain}
+/* ============== LOGIN VIEW (code 3: dark login) ============== */
+body.in-login{background:#111215}
+#view-login{min-height:100vh;display:flex;flex-direction:column}
+.lg-banner{width:100%;background:#e11d2e;padding:8px 16px;text-align:center}
+.lg-banner p{font-size:12px;font-weight:500;letter-spacing:.025em;color:#fff}
+@media(min-width:640px){.lg-banner p{font-size:14px}}
+.lg-nav{width:100%;border-bottom:1px solid #23252a;padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
+.lg-wordmark{font-size:20px;font-weight:700;letter-spacing:-.025em;color:#fff}
+.lg-toggle-pill{display:flex;align-items:center;background:#1d1f24;padding:4px;border-radius:9999px;border:1px solid #2e3138}
+.lg-tgl{padding:6px;border-radius:9999px;background:none;border:none;color:#8e939e;cursor:pointer;display:flex;transition:color .15s}
+.lg-tgl:hover{color:#fff}
+.lg-tgl.on{background:#2a2d35;color:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.lg-main{flex:1;display:flex;align-items:center;justify-content:center;padding:16px}
+.lg-card{width:100%;max-width:430px;background:#18191d;border:1px solid #26282e;border-radius:12px;padding:40px 36px;box-shadow:var(--shadow-2xl);text-align:center}
+.lg-card-head{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.lg-brand-row{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.lg-title{font-size:24px;font-weight:700;letter-spacing:-.025em;color:#fff}
+.lg-sub{font-size:14px;color:#D1D5DB;font-weight:400;margin-bottom:24px}
+.lg-form{display:flex;flex-direction:column;gap:16px}
+.lg-input{width:100%;padding:10px 14px;background:#101114;border:1px solid #2b2e35;border-radius:6px;font-size:14px;color:#F3F4F6;font-family:inherit;transition:border-color .15s,box-shadow .15s}
+.lg-input::placeholder{color:#6B7280}
+.lg-input:focus{outline:none;border-color:#e11d2e;box-shadow:0 0 0 1px #e11d2e}
+.lg-submit{width:100%;background:#e11d2e;color:#fff;font-size:14px;font-weight:500;padding:10px 16px;border:none;border-radius:6px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:background .15s;font-family:inherit}
+.lg-submit:hover{background:#c01825}
+.lg-submit:active{background:#a6131e}
+.lg-err{font-size:12px;color:#F87171;text-align:left}
+.lg-note{margin-top:16px;font-size:11px;color:#6B7280}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+/* signed-in avatar — code 5 gradient ring + initials */
+.avatar-in{width:36px;height:36px;border-radius:9999px;background:linear-gradient(to top right,#E11D2E,#F59E0B);padding:1.5px;cursor:pointer;border:none;display:flex}
+.avatar-in span{width:100%;height:100%;border-radius:9999px;background:#18181D;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff}
 </style>
 </head>
 <body>
@@ -338,9 +373,7 @@ button{font-family:inherit}
 <div id="view-search">
   <header class="hdr-search">
     <div class="brand" id="brand-home" title="SpicyTool">
-      <span class="logo" aria-hidden="true">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2c1.5 3-1.2 4.4-2.4 6C8.2 9.8 8 11.6 8.6 13 6.7 12.6 5.6 11 5.9 9 4.2 10.4 3.2 12.6 3.2 15c0 4.9 3.9 8.8 8.8 8.8s8.8-3.9 8.8-8.8c0-5.9-6.3-8.1-8.8-13z" fill="#E11D2E"/><path d="M12 23.8c-2.6 0-4.8-2.1-4.8-4.8 0-2.5 2-3.6 3.3-5.2.8 1.4 2.4 1.8 3.4 3 .8.9 1.2 1.9 1.2 2.9 0 2.3-1.4 4.1-3.1 4.1z" fill="#fff" opacity=".92"/></svg>
-      </span>
+      <span class="logo" aria-hidden="true"><img alt="SpicyTool Logo" data-logo class="logo-32"></span>
       <span class="wordmark">Spicy<em>Tool</em></span>
     </div>
     <div class="hdr-right">
@@ -348,7 +381,7 @@ button{font-family:inherit}
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Programs
       </button>
-      <button type="button" class="avatar-btn" aria-label="User Account" title="Sign-in is not part of this demo build">
+      <button type="button" class="avatar-btn" id="avatar-search" aria-label="User Account" title="Sign in">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       </button>
     </div>
@@ -431,9 +464,7 @@ button{font-family:inherit}
   <header class="hdr-results">
     <div class="hdr-in">
       <div class="brand" id="brand-results" title="SpicyTool">
-        <span class="logo" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2c1.5 3-1.2 4.4-2.4 6C8.2 9.8 8 11.6 8.6 13 6.7 12.6 5.6 11 5.9 9 4.2 10.4 3.2 12.6 3.2 15c0 4.9 3.9 8.8 8.8 8.8s8.8-3.9 8.8-8.8c0-5.9-6.3-8.1-8.8-13z" fill="#E11D2E"/><path d="M12 23.8c-2.6 0-4.8-2.1-4.8-4.8 0-2.5 2-3.6 3.3-5.2.8 1.4 2.4 1.8 3.4 3 .8.9 1.2 1.9 1.2 2.9 0 2.3-1.4 4.1-3.1 4.1z" fill="#fff" opacity=".92"/></svg>
-        </span>
+        <span class="logo" aria-hidden="true"><img alt="SpicyTool Logo" data-logo class="logo-32"></span>
         <span class="wordmark">Spicy<em>Tool</em></span>
       </div>
       <div class="hdr-right-res">
@@ -445,7 +476,7 @@ button{font-family:inherit}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
           </button>
         </div>
-        <button type="button" class="avatar-btn" aria-label="User Account" title="Sign-in is not part of this demo build">
+        <button type="button" class="avatar-btn" id="avatar-results" aria-label="User Account" title="Sign in">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </button>
       </div>
@@ -494,6 +525,49 @@ button{font-family:inherit}
   </main>
 </div>
 
+<!-- ================= LOGIN VIEW (code 3) ================= -->
+<div id="view-login" hidden>
+  <header class="lg-banner" data-purpose="announcement-banner">
+    <p>Welcome to SpicyTool v3.0! SpicyTool Exclusive features are now live!</p>
+  </header>
+  <nav class="lg-nav" data-purpose="top-navigation">
+    <a class="brand" id="brand-login" href="#" aria-label="SpicyTool Home">
+      <img alt="SpicyTool Logo" data-logo class="logo-28">
+      <span class="lg-wordmark">SpicyTool</span>
+    </a>
+    <div data-purpose="theme-toggle">
+      <div class="lg-toggle-pill">
+        <button type="button" class="lg-tgl" aria-label="Light mode" title="Light mode — this build is dark-only (DESIGN.md)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        </button>
+        <button type="button" class="lg-tgl on" aria-label="Dark mode">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21.752 15.002A9 9 0 0110.998 4.248a9.003 9.003 0 0010.754 10.754z"/></svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+  <main class="lg-main">
+    <div class="lg-card" data-purpose="login-card">
+      <div class="lg-card-head">
+        <div class="lg-brand-row">
+          <img alt="SpicyTool Logo" data-logo class="logo-32">
+          <span class="lg-title">SpicyTool</span>
+        </div>
+        <p class="lg-sub">Enter your email to login.</p>
+      </div>
+      <form class="lg-form" id="login-form" data-purpose="login-form" novalidate>
+        <div>
+          <label class="sr-only" for="login-email">Email address</label>
+          <input id="login-email" name="email" type="email" class="lg-input" placeholder="name@spicytool.com" autocomplete="email" required>
+        </div>
+        <div class="lg-err" id="login-err" hidden></div>
+        <button type="submit" class="lg-submit">Sign In with Email</button>
+      </form>
+      <p class="lg-note">Demo sign-in — no credentials are verified, stored, or sent anywhere.</p>
+    </div>
+  </main>
+</div>
+
 <script>
 "use strict";
 /* ============================ constants ============================ */
@@ -532,6 +606,25 @@ function logoHTML(code, title){
   return `<span class="airline-logo" style="background:${carrierColor(code)}" title="${t}">${esc(code)}</span>`;
 }
 const $ = (id) => document.getElementById(id);
+const LOGO_SRC = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABGCAYAAABxLuKEAAAE+ElEQVR42u2cTUgbaRjH/0kUkugqG4tSCwoqEakRG/YiRmQFqbQHHU8SBDfFQypBpPEwsQg2e3CwSCUrlEoPUjT1UGiRUtQVVySgthRJUkqNISROKBLFFkqCH01mD0uyY2t3cU22fjz/SzLv+868k9887/MxL0TyQ9aPIH0tKSEgMEdSmvjgj7nfhfMM4+e6eglZDC0lAkNgCAyBITAEhsAQGAJDIjAEhsAQGAJDYAgMgSEwBIbAEJgk6c2bN7DZbPD7/QRGrIGBATx69Ih7+PAhgRGrsrISAHD58uUzAUYi3tQ/7k7kzs4O5HL5qYWRsp3I0wwlpVFpf38fXq/30L5gMIhoNJoY5/F4sLm5+dW4UCgEnuchCN823mg0ikAggKWlJQSDwX8c+1+VdtwLxGIxuFwuzM3N4dmzZ5KysjLhwYMHAIAPHz5gfn4ek5OTcLvd3OTkJDsxMQG73c7Fz29tbWW7urowMzODx48fw+12cwCQm5v76+joaDg3N/fAfG/fvoXFYvlFJpP9lJeXZ3r16hWnVCotWq1WUKvVkEql0Ov1yMrK+r4W4/f7sbi4iKmpKUkkEukX983Pz+P58+eJH9ve3p4RCoVw584dtrGxkQWAsbExrqenB0NDQxk1NTXo7e1lVSqVJRQK9d69e/fAXFtbWzAajRIAsNvtpvv378NisbCRSKTf4XBwTqcT79+/x+fPn7//UioqKsLNmzfR1NT0lT0zDIO+vr7EsV6vD3Mch+vXr+P27dsoKipiAGB9fR0TExPhGzduoLGxEd3d3QIALC8vS8TXe/LkCSKRSL9OpxuN+zOGYaBUKi0AUF1dDavVCpVKdXJ8jEKhOLRdfJNVVVV/TyyVory8vDQe6sWmX1hYCACIRCL9cb8EAB6PJ7FExdfRarUCAPA8fzZKgszMzH9t39/fT3xXq9UAAIfDIYnFYon24uJiAMDFixfPBhip9GjTV1dXJyzJ4XAcKEcAoKGh4eREpf9TGo0GNpuNZVlWcuvWLej1ejYYDILn+YyRkZFwfn7++QQT14ULF35rb283paWl4erVqyguLg4nO7lMGph4iPwyVIqd55eJ2O7u7oFPcW502Dmrq6vo7OzkBgcH2dra2pTCTxqYeETgeV4SjUYFmUwGAHC5XIkxgUAAJSUliWOfzwcAeP369XAsFjPFfc7a2lpijNfrhUajAQBMT08DAMxmM3fp0qV3KpVqVC6XQ6FQoKCgAHV1daioqDgZRaTT6cTw8DBWVlY4UW7DGI3GUp7nMT4+Ltne3u4HAKVSaWEYRmhqaoLVak0kfvFM9969e+EXL15gfHw80a5UKi0Gg0EwGAzw+XwwmUwZoVCo91v309PTwzY3Nx+7iExqdZ1qvXz5En19fRmDg4PhWCyGT58+YWdnB3t7e/j48SOmp6exu7uLsbGxY4M5Nc7X5XKho6OD6+joCJeVlR06RqfTwWw2n/485iiy2+1/Pcm0w5/l3t4eRkZGUF9ff77CtUajwezsLGw2G7e8vMyWlpYiPz8fGxsbcDqdWFlZ4VpaWti2traT9wYvlRIEAU+fPsXCwgIcDgcn7rt27RrLMAyuXLmStDd4p8r5iuunQCCA7Oxs5OTkHLm0OFPOV6z09PQD+VBK6jiQCAyBITAEhsAQGAJDYAgMgSEwJAJDYAgMgSEwJ0AS+ismshgCkwz9CcFK8Dix3DqfAAAAAElFTkSuQmCC";  /* extracted from the repo mockup render (screen 8) */
+/* demo auth (honest: nothing verified or sent anywhere) */
+const AUTH = {
+  get user(){ try { return JSON.parse(localStorage.getItem("st_user") || "null"); } catch { return null; } },
+  set user(v){ try { v ? localStorage.setItem("st_user", JSON.stringify(v)) : localStorage.removeItem("st_user"); } catch {} },
+};
+function initialsOf(email){
+  const loc = (email || "").split("@")[0];
+  const parts = loc.split(/[._-]+/).filter(Boolean);
+  return (parts.length > 1 ? parts[0][0] + parts[1][0] : loc.slice(0, 2)).toUpperCase() || "?";
+}
+function syncAvatar(){
+  const u = AUTH.user;
+  for (const id of ["avatar-search", "avatar-results"]){
+    const btn = $(id); if (!btn) continue;
+    if (u){ btn.innerHTML = `<span class="avatar-in"><span>${esc(initialsOf(u.email))}</span></span>`; btn.title = u.email + " (demo) — click for options"; }
+    else { btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`; btn.title = "Sign in"; }
+  }
+}
 const esc = (s) => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 /* ============================ state ============================ */
@@ -1239,6 +1332,18 @@ async function loadCalendar(){
 /* ============================ view wiring ============================ */
 function showSearchView(){ $("view-search").hidden = false; $("view-results").hidden = true; document.body.classList.remove("in-results"); }
 function showResultsView(){ $("view-search").hidden = true; $("view-results").hidden = false; document.body.classList.add("in-results"); window.scrollTo(0,0); }
+let prevView = "view-search";
+function showLoginView(){
+  prevView = $("view-results").hidden ? "view-search" : "view-results";
+  $("view-search").hidden = true; $("view-results").hidden = true; $("view-login").hidden = false;
+  document.body.classList.remove("in-results"); document.body.classList.add("in-login");
+  setTimeout(() => { const i = $("login-email"); if (i) i.focus(); }, 50);
+}
+function leaveLogin(){
+  $("view-login").hidden = true; document.body.classList.remove("in-login");
+  if (prevView === "view-results"){ $("view-search").hidden = true; $("view-results").hidden = false; document.body.classList.add("in-results"); }
+  else { $("view-search").hidden = false; $("view-results").hidden = true; }
+}
 function toast(msg){
   const t = document.createElement("div");
   t.className = "toast"; t.textContent = msg;
@@ -1256,6 +1361,8 @@ async function loadPrograms(){
   } catch { /* colors fall back to brand red */ }
 }
 function init(){
+  document.querySelectorAll("[data-logo]").forEach(img => { img.src = LOGO_SRC; });
+  syncAvatar();
   renderField("origin"); renderField("destination"); syncDate();
   for (const code of [...state.origins, ...state.destinations]) fetchAirports(code.toLowerCase());
   for (const members of Object.values(METRO)) for (const c of members) fetchAirports(c.toLowerCase());
@@ -1354,6 +1461,35 @@ function init(){
     state.ppop = null;
     renderResults();
   });
+  /* login (code 3) + avatar menu */
+  for (const id of ["avatar-search", "avatar-results"]){
+    const btn = $(id); if (!btn) continue;
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      const u = AUTH.user;
+      if (!u){ showLoginView(); return; }
+      openDD(btn, [
+        { label: u.email, sel: true },
+        "-",
+        { label: "Sign out" },
+      ], it => {
+        if (it.label === "Sign out"){ AUTH.user = null; syncAvatar(); toast("Signed out (demo session cleared)."); }
+      });
+    });
+  }
+  $("brand-login").addEventListener("click", e => { e.preventDefault(); leaveLogin(); });
+  $("login-form").addEventListener("submit", e => {
+    e.preventDefault();
+    const input = $("login-email"), err = $("login-err");
+    const v = input.value.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)){ err.textContent = "Enter a valid email address."; err.hidden = false; input.focus(); return; }
+    err.hidden = true;
+    AUTH.user = { email: v, at: Date.now() };
+    syncAvatar();
+    toast("Signed in as " + v + " — demo session, nothing is verified.");
+    leaveLogin();
+  });
+  $("login-email").addEventListener("input", () => { $("login-err").hidden = true; });
 }
 init();
 </script>
