@@ -845,6 +845,7 @@ function startSearch(){
   runSearch();
 }
 async function runSearch(){
+  closeTT(); closeDP(); closeDD();
   showResultsView();
   state.streaming = true; state.results = []; state.routes = []; state.expanded = null; state.ppop = null;
   state.filters = { stops:"any", airline:"", program:"", bank:"", premium:false, from:"", to:"", dep:"", arr:"", dur:0 };
@@ -1313,8 +1314,8 @@ function init(){
     });
   }
   /* trip tabs — round-trip combines both one-way legs (mixed programs allowed) */
-  $("tab-round").addEventListener("click", () => { setTrip("roundtrip"); openDP(); });
-  $("tab-oneway").addEventListener("click", () => { setTrip("oneway"); closeDP(); });
+  $("tab-round").addEventListener("click", e => { e.stopPropagation(); setTrip("roundtrip"); openDP(); });
+  $("tab-oneway").addEventListener("click", e => { e.stopPropagation(); setTrip("oneway"); closeDP(); });
   /* search */
   $("btn-search").addEventListener("click", startSearch);
   document.addEventListener("keydown", e => { if (e.key === "Enter" && $("view-search") && !$("view-search").hidden && !e.target.matches("input")) startSearch(); });
