@@ -65,14 +65,31 @@ The UI is a pixel-faithful implementation of the repository's Stitch mockups
   avatar swaps to the `code 5` gradient-ring initials, dropdown offers Sign
   out). **No credentials are verified, stored, or sent anywhere — there is
   no auth backend**; the card says so.
+- **Broker CPM pricing + "Modify programs" (code 15)** — the home-page
+  "Modify programs" pill opens the dark brokers dialog: per-program
+  **cost-per-mile** inputs (¢/mile, default **1.4**), program checkboxes,
+  Deselect all / Save as default. **Cash price = miles × the program's CPM +
+  taxes & fees** (round-trips price each leg with its own program's CPM).
+  CPMs and program selections persist in `localStorage`; deselected programs
+  are excluded from results. The "Ticket via SpicyTool.com" option is
+  mockup-only (red "coming soon" toast), as is the "Try Broad Search" promo
+  CTA.
+- **Itinerary page (code 13)** — clicking a fare tile opens a full itinerary
+  page in a new tab (and the price popover's **Get VI\*** opens the same page
+  as a pop-up window): announcement bar, live header, stepper,
+  Retail/Cost/Discount summary, per-leg segment timeline with layover
+  notices, and the Award Redemptions matrix — generated same-origin from that
+  result's data, no backend round-trip. Hovering a fare tile shows the
+  booking program(s) with points + taxes.
 - All colors/radii/spacings/shadows are the computed equivalents of the
   mockups' Tailwind classes; fonts use the mockups' own stacks (Inter with
   system fallbacks — no external CDNs).
 
-**Cost model (disclosed in-UI):** tile cash price = points valued at 1.0¢
-each + taxes; "Retail" is the engine's modeled estimate (miles × cabin
-rate); savings/discount compare the two. Both figures are labeled as
-modeled in the results-page notice and the price popover.
+**Cost model (disclosed in-UI):** tile cash price = miles × your broker CPM
+(per program, default 1.4¢ — see *Modify programs*) + taxes & fees; "Retail"
+is the engine's modeled estimate (miles × cabin rate); savings/discount
+compare the two. Both figures are labeled as modeled in the price popover and
+the itinerary page.
 
 ## What you get
 
@@ -89,9 +106,13 @@ modeled in the results-page notice and the price popover.
   different loyalty programs** — pairs are ranked by total points and marked
   `same_program`, with per-leg rows in the price breakdown. Filters apply to
   both legs (e.g. Nonstop = nonstop both ways).
-- **Airline logos** — 24 carriers render their official brand glyph (inline
-  SVG, simple-icons CC0, brand colors, luminance-aware contrast) in card and
-  timeline tiles; the remaining carriers use the mockup's monogram tiles.
+- **Airline logos — all 39 carriers covered.** 24 carriers render their
+  official brand glyph (inline SVG, simple-icons CC0, brand-color tiles,
+  luminance-aware contrast); 10 more render vector marks in their own brand
+  colors on white tiles (soaring-symbols collection); the last 5 (EgyptAir,
+  Austrian, Royal Jordanian, South African, Cathay Pacific) use official
+  raster wordmarks (Daisycon airline-logo feed) on white tiles. Unknown
+  future codes still fall back to monogram tiles.
 - Deterministic first-party engine: the same query always returns the same
   results; different dates differ.
 - **v1 API** — first-party engine: search, SSE streaming search (one event per
