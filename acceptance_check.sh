@@ -40,8 +40,11 @@ print(len(zeros)>0)")
 [ "$z" = "True" ] && ok "zero-result programs exist on this route" || bad "none"
 
 echo "== 6. cache hit: ~1700ms -> ~0ms =="
-curl -s 'localhost:8000/api/v2/search?origin=SFO&destination=NRT&date=2026-11-05&cabin=economy' > /tmp/c1.json
-curl -s 'localhost:8000/api/v2/search?origin=SFO&destination=NRT&date=2026-11-05&cabin=economy' > /tmp/c2.json
+# unique date per run so the first call is always a cache miss
+CACHE_DATE="2027-$(printf '%02d' $(( (RANDOM % 12) + 1 )))-$(printf '%02d' $(( (RANDOM % 28) + 1 )))"
+CACHE_Q="origin=SFO&destination=NRT&date=$CACHE_DATE&cabin=economy"
+curl -s "localhost:8000/api/v2/search?$CACHE_Q" > /tmp/c1.json
+curl -s "localhost:8000/api/v2/search?$CACHE_Q" > /tmp/c2.json
 $PY - <<'EOF'
 import json
 cold = json.load(open('/tmp/c1.json')); warm = json.load(open('/tmp/c2.json'))
