@@ -37,6 +37,28 @@ cd backend && python3 tests_integration.py   # 16 assertions, offline
 
 ---
 
+## Frontend — 1:1 mockup implementation
+
+The UI is a pixel-faithful implementation of the repository's Stitch mockups
+(no invented design tokens):
+
+- **Search screen** follows `code 7.html` / `code 12.html` ("Find your
+  flight"): `#0D0E10` canvas, `#141416` search card, 52px inputs with
+  `#2C2E35` IATA chips, round red Search CTA, calendar popover, promo card.
+- **Results screen** follows `code 8.html` ("Choose your flights"):
+  `#0D0E11` canvas, sticky header, 3-step stepper, filter-chip toolbar,
+  Best/Fastest/Cheapest sort tabs, flight cards with the `w-24 h-11` fare
+  tile, "$X Off Retail" savings badge, dashed timeline expansion and the
+  `w-80` price-breakdown popover with the red **Get VI\*** CTA.
+- All colors/radii/spacings/shadows are the computed equivalents of the
+  mockups' Tailwind classes; fonts use the mockups' own stacks (Inter with
+  system fallbacks — no external CDNs).
+
+**Cost model (disclosed in-UI):** tile cash price = points valued at 1.0¢
+each + taxes; "Retail" is the engine's modeled estimate (miles × cabin
+rate); savings/discount compare the two. Both figures are labeled as
+modeled in the results-page notice and the price popover.
+
 ## What you get
 
 - **78 airports** (real coordinates), **39 carriers** with real hubs,

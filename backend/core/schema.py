@@ -47,6 +47,7 @@ class Pricing(BaseModel):
     program_name: str
     program_code: str = ""
     cents_per_point: float = 0.0
+    retail_cash_usd: float = 0.0
 
 
 class TransferPartner(BaseModel):

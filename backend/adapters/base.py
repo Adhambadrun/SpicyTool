@@ -5,7 +5,7 @@ import hashlib
 
 from core import network, pricing
 from core.schema import AwardResult, Pricing, Route
-from providers.enrich import attach_transfer_partners, cpp as compute_cpp
+from providers.enrich import attach_transfer_partners, cash_estimate, cpp as compute_cpp
 
 # Deterministic per-cabin scarcity of award space.
 SCARCITY = {"economy": 0.72, "premium": 0.48, "business": 0.42, "first": 0.20}
@@ -118,6 +118,7 @@ class BaseAwardAdapter:
                 for seg in itin.segments:
                     seg.cabin_class = cabin  # type: ignore[assignment]
             result.pricing.cents_per_point = compute_cpp(result)
+            result.pricing.retail_cash_usd = cash_estimate(result)
             attach_transfer_partners(result)
             results.append(result)
 

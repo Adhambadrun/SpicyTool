@@ -16,6 +16,7 @@ from core.http_engine import HttpEngine, ProviderError
 from core.schema import AwardResult, Layover, Pricing, Route, Segment
 from providers.enrich import (
     attach_transfer_partners,
+    cash_estimate,
     cpp as compute_cpp,
     minutes_between,
     parse_dt,
@@ -197,6 +198,7 @@ class PointsYeah(BaseProvider):
             )
             result.pricing.program_code = resolve_program_code(result)
             result.pricing.cents_per_point = compute_cpp(result)
+            result.pricing.retail_cash_usd = cash_estimate(result)
             attach_transfer_partners(result)
             result.id = f"py-{abs(hash(result.dedupe_key())) % 10**10}"
             out.append(result)

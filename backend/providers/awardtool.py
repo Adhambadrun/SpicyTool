@@ -12,6 +12,7 @@ from core.http_engine import HttpEngine, ProviderError
 from core.schema import AwardResult, Layover, Pricing, Route, Segment
 from providers.enrich import (
     attach_transfer_partners,
+    cash_estimate,
     cpp as compute_cpp,
     minutes_between,
     resolve_program_code,
@@ -166,6 +167,7 @@ class AwardTool(BaseProvider):
             )
             provisional.pricing.program_code = resolve_program_code(provisional)
             provisional.pricing.cents_per_point = compute_cpp(provisional)
+            provisional.pricing.retail_cash_usd = cash_estimate(provisional)
             attach_transfer_partners(provisional)
             provisional.id = f"at-{abs(hash(provisional.dedupe_key())) % 10**10}"
             out.append(provisional)
