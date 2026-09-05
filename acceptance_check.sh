@@ -111,6 +111,34 @@ echo "== 13. frontend served same-origin =="
 c=$(curl -s -o /dev/null -w '%{http_code}' localhost:8000/)
 [ "$c" = "200" ] && ok "GET / -> 200 index.html" || bad "status $c"
 
+echo "== 14. multi-airport search (up to 3 per side) =="
+$PY - <<'EOF'
+import json, urllib.request, urllib.error
+def get(path):
+    try:
+        with urllib.request.urlopen('http://localhost:8000' + path) as r:
+            return r.status, json.load(r)
+    except urllib.error.HTTPError as e:
+        return e.code, json.load(e)
+
+s, d = get('/api/v1/search?origin=JFK,EWR,LGA&destination=LHR&date=2026-10-10&cabin=business')
+assert s == 200, s
+assert len(d['query']['routes']) == 3, d['query']
+origins = {r['route']['origin'] for r in d['results']}
+assert origins <= {'JFK','EWR','LGA'} and d['count'] > 0
+
+s, d = get('/api/v1/search?origin=JFK,EWR,LGA,BOS&destination=LHR&date=2026-10-10')
+assert s == 400 and 'At most 3' in d['detail'], (s, d)
+s, d = get('/api/v1/search?origin=JFK,ZZZ&destination=LHR&date=2026-10-10')
+assert s == 400 and "Unknown origin 'ZZZ'" == d['detail'], (s, d)
+s, d = get('/api/v1/search?origin=JFK,JFK&destination=LHR&date=2026-10-10')
+assert s == 400 and 'Duplicate' in d['detail'], (s, d)
+s, d = get('/api/v1/calendar?origin=JFK,EWR&destination=LHR,LGW&start_date=2026-10-10&days=5&cabin=business')
+assert s == 200 and d['origin'] == ['JFK','EWR'] and d['destination'] == ['LHR','LGW'], (s, d)
+print('3x1 fan-out, caps, dupes, unknowns, overlap + multi calendar OK')
+EOF
+[ $? -eq 0 ] && ok "multi-airport search + validation" || bad "multi-airport"
+
 echo
 echo "=============================="
 echo -e "ACCEPTANCE: \033[92m$pass passed\033[0m, \033[91m$fail failed\033[0m"

@@ -78,6 +78,17 @@ def _list_param(raw: str | None) -> list[str] | None:
     return [p.strip() for p in raw.split(",") if p.strip()]
 
 
+def _airport_params(origin: str, destination: str):
+    """Parse comma-separated origin/destination (up to 3 each side)."""
+    origins = orchestrator.parse_airports(origin, "origin")
+    if isinstance(origins, str):
+        return origins, None
+    destinations = orchestrator.parse_airports(destination, "destination")
+    if isinstance(destinations, str):
+        return destinations, None
+    return None, (origins, destinations)
+
+
 @app.get("/api/v1/search")
 async def search(
     origin: str,
@@ -89,12 +100,15 @@ async def search(
     programs: str | None = None,
     alliances: str | None = None,
 ):
-    err = orchestrator.validate(origin, destination, date, cabin)
+    err, od = _airport_params(origin, destination)
+    if err is None:
+        err = orchestrator.validate(od[0], od[1], date, cabin)
     if err:
         return JSONResponse({"detail": err}, status_code=400)
+    origins, destinations = od
     return await orchestrator.search(
-        origin,
-        destination,
+        origins,
+        destinations,
         date,
         cabin,
         passengers,
@@ -116,16 +130,19 @@ async def search_stream(
     programs: str | None = None,
     alliances: str | None = None,
 ):
-    err = orchestrator.validate(origin, destination, date, cabin)
+    err, od = _airport_params(origin, destination)
+    if err is None:
+        err = orchestrator.validate(od[0], od[1], date, cabin)
     if err:
         return JSONResponse({"detail": err}, status_code=400)
+    origins, destinations = od
 
     async def gen():
         import json as _json
 
         async for event in orchestrator.search_stream(
-            origin,
-            destination,
+            origins,
+            destinations,
             date,
             cabin,
             passengers,
@@ -149,11 +166,14 @@ async def calendar(
     cabin: str = "economy",
     programs: str | None = None,
 ):
-    err = orchestrator.validate(origin, destination, start_date, cabin)
+    err, od = _airport_params(origin, destination)
+    if err is None:
+        err = orchestrator.validate(od[0], od[1], start_date, cabin)
     if err:
         return JSONResponse({"detail": err}, status_code=400)
+    origins, destinations = od
     return await orchestrator.calendar(
-        origin, destination, start_date, days, cabin, _list_param(programs)
+        origins, destinations, start_date, days, cabin, _list_param(programs)
     )
 
 

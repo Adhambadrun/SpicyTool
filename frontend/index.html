@@ -57,13 +57,19 @@ header{position:sticky;top:0;z-index:50;background:rgba(13,13,17,.92);backdrop-f
 .sp-grid{display:grid;grid-template-columns:1fr 34px 1fr 148px 178px 86px auto;gap:9px;align-items:end}
 .field{display:flex;flex-direction:column;gap:5px;position:relative;min-width:0}
 .field label{font-size:11px;font-weight:600;letter-spacing:.05em;color:var(--muted);text-transform:uppercase;padding-left:2px}
-.inp{display:flex;align-items:center;gap:8px;background:var(--s1);border:1px solid var(--border2);border-radius:var(--r-md);padding:9px 11px;transition:border-color .15s, box-shadow .15s}
+.inp{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--s1);border:1px solid var(--border2);border-radius:var(--r-md);padding:9px 11px;transition:border-color .15s, box-shadow .15s;min-height:42px}
 .inp:focus-within{border-color:var(--red);box-shadow:var(--red-glow)}
-.inp input{background:none;border:none;outline:none;width:100%;font-size:14px;font-weight:500}
+.inp input{background:none;border:none;outline:none;flex:1;min-width:70px;font-size:14px;font-weight:500}
 .inp input::placeholder{color:var(--muted)}
 .chip{flex-shrink:0;display:flex;align-items:center;gap:5px;background:#222227;border:1px solid #2F2F36;border-radius:var(--r-sm);padding:3px 7px;font-family:var(--font-mono);font-size:13px;font-weight:600;letter-spacing:.02em}
 .chip .x{color:var(--muted);font-size:12px;line-height:1;cursor:pointer;padding:0 1px}
 .chip .x:hover{color:var(--red)}
+.label-count{font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--red);background:var(--red-soft);border-radius:9999px;padding:1px 6px;margin-left:6px;letter-spacing:.02em}
+.ta-item.metro{border-left:2px solid var(--red);background:rgba(225,29,46,.05)}
+.ta-item.metro:hover,.ta-item.metro.active{background:rgba(225,29,46,.12)}
+.ta-item.metro .ta-code{color:var(--red)}
+.ta-members{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:.04em}
+.ta-tag{margin-left:auto;font-size:9px;font-family:var(--font-mono);font-weight:700;color:var(--red);border:1px solid rgba(225,29,46,.35);border-radius:9999px;padding:2px 7px;flex-shrink:0;text-transform:uppercase;letter-spacing:.06em}
 .inp .icon{color:var(--muted);flex-shrink:0;display:flex}
 select.inp{appearance:none;background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2371717A' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;padding-right:28px;cursor:pointer}
 .swap-btn{width:38px;height:38px;border-radius:50%;background:var(--s2);border:1px solid #2E2E33;color:var(--text2);display:flex;align-items:center;justify-content:center;transition:all .2s;margin-bottom:1px;align-self:flex-end}
@@ -270,7 +276,7 @@ footer{border-top:1px solid var(--border);margin-top:30px;padding:22px 0 34px}
   <section class="search-panel">
     <div class="sp-grid">
       <div class="field" id="f-origin">
-        <label>From</label>
+        <label>From <span class="label-count" id="cnt-origin"></span></label>
         <div class="inp" id="inp-origin">
           <span class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#71717A" stroke-width="2"/><path d="M12 7v10M7 12h10" stroke="#71717A" stroke-width="2" stroke-linecap="round"/></svg></span>
           <input id="q-origin" type="text" placeholder="City or airport" autocomplete="off" spellcheck="false">
@@ -284,7 +290,7 @@ footer{border-top:1px solid var(--border);margin-top:30px;padding:22px 0 34px}
         </button>
       </div>
       <div class="field" id="f-dest">
-        <label>To</label>
+        <label>To <span class="label-count" id="cnt-dest"></span></label>
         <div class="inp" id="inp-dest">
           <span class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-5.1 7-11a7 7 0 1 0-14 0c0 5.9 7 11 7 11z" stroke="#71717A" stroke-width="2"/><circle cx="12" cy="10" r="2.6" stroke="#71717A" stroke-width="2"/></svg></span>
           <input id="q-dest" type="text" placeholder="City or airport" autocomplete="off" spellcheck="false">
@@ -345,6 +351,12 @@ footer{border-top:1px solid var(--border);margin-top:30px;padding:22px 0 34px}
     </div>
     <div class="fchip">Stops
       <select id="f-stops"><option value="">Any</option><option value="0">Nonstop</option><option value="1">≤ 1</option></select>
+    </div>
+    <div class="fchip" id="f-from-wrap" style="display:none">From
+      <select id="f-from"><option value="">All</option></select>
+    </div>
+    <div class="fchip" id="f-to-wrap" style="display:none">To
+      <select id="f-to"><option value="">All</option></select>
     </div>
     <div class="fchip">Bank
       <select id="f-bank">
@@ -420,17 +432,25 @@ const ALLIANCE_COLOR = {"Star Alliance":"#4ae176","SkyTeam":"#ffb95f","Oneworld"
 const CABIN_LABEL = {economy:"Economy", premium:"Premium Eco", business:"Business", first:"First"};
 
 const state = {
-  origin: null, destination: null,
-  results: [],          // every award result streamed so far
-  seen: new Set(),      // result ids
+  origins: [],            // up to 3 IATA codes
+  destinations: [],       // up to 3 IATA codes
+  results: [],            // every award result streamed so far
+  seen: new Set(),        // result ids
   streaming: false,
   sort: "points",
-  filters: {alliance:"", stops:"", bank:"", program:"", maxpts:null, maxdur:null},
+  filters: {alliance:"", stops:"", bank:"", program:"", maxpts:null, maxdur:null, from:"", to:""},
   programCounts: {},
   lastQuery: null,
-  cheapestPoints: null,
-  cheapestId: null
+  routes: [],
 };
+
+/* metro shortcuts: one entry expands to its member airports */
+const METRO = {
+  NYC: {label: "New York", members: ["JFK", "EWR", "LGA"]},
+  LON: {label: "London", members: ["LHR", "LGW"]},
+  TYO: {label: "Tokyo", members: ["NRT", "HND"]},
+};
+const MAX_AIRPORTS = 3;
 
 /* ---------------- helpers ---------------- */
 const fmtTime = (iso) => {
@@ -445,7 +465,19 @@ const fmtFull = (n) => n.toLocaleString("en-US");
 const dayDiff = (a, b) => Math.round((new Date(b.slice(0,10)) - new Date(a.slice(0,10))) / 86400000);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
-/* ---------------- typeahead ---------------- */
+/* ---------------- typeahead (with metro entries) ---------------- */
+function metroMatches(q) {
+  const s = q.trim().toLowerCase();
+  if (!s) return [];
+  const out = [];
+  for (const [code, m] of Object.entries(METRO)) {
+    if (code.toLowerCase().startsWith(s) || m.label.toLowerCase().startsWith(s)) {
+      out.push({metro: code, label: m.label, members: m.members});
+    }
+  }
+  return out;
+}
+
 function makeTypeahead(inputEl, boxEl, onPick) {
   let items = [], active = -1, debounce = null;
 
@@ -455,15 +487,26 @@ function makeTypeahead(inputEl, boxEl, onPick) {
       boxEl.classList.add("open");
       return;
     }
-    boxEl.innerHTML = items.map((a, i) => `
-      <div class="ta-item ${i === active ? "active" : ""}" data-i="${i}">
+    boxEl.innerHTML = items.map((a, i) => {
+      if (a.metro) {
+        return `<div class="ta-item metro ${i === active ? "active" : ""}" data-i="${i}">
+          <span class="ta-code">${esc(a.metro)}</span>
+          <span class="ta-meta">
+            <div class="ta-city">All ${esc(a.label)} airports</div>
+            <div class="ta-members">${a.members.join(" · ")}</div>
+          </span>
+          <span class="ta-tag">Adds ${a.members.length}</span>
+        </div>`;
+      }
+      return `<div class="ta-item ${i === active ? "active" : ""}" data-i="${i}">
         <span class="ta-code">${esc(a.code)}</span>
         <span class="ta-meta">
           <div class="ta-city">${esc(a.city)}, ${esc(a.country)}</div>
           <div class="ta-name">${esc(a.name)}</div>
         </span>
         <span class="ta-region">${esc(a.region)}</span>
-      </div>`).join("");
+      </div>`;
+    }).join("");
     boxEl.classList.add("open");
     boxEl.querySelectorAll(".ta-item").forEach(el => {
       el.addEventListener("mousedown", (e) => { e.preventDefault(); pick(+el.dataset.i); });
@@ -484,12 +527,14 @@ function makeTypeahead(inputEl, boxEl, onPick) {
     const q = inputEl.value.trim();
     if (!q) { close(); return; }
     debounce = setTimeout(async () => {
+      let airports = [];
       try {
         const res = await fetch(`/api/v1/airports?q=${encodeURIComponent(q)}&limit=8`);
-        items = await res.json();
-        active = items.length ? 0 : -1;
-        render();
+        if (res.ok) airports = await res.json();
       } catch { /* offline */ }
+      items = [...metroMatches(q), ...airports];
+      active = items.length ? 0 : -1;
+      render();
     }, 110);
   });
 
@@ -504,43 +549,74 @@ function makeTypeahead(inputEl, boxEl, onPick) {
   inputEl.addEventListener("focus", () => { if (inputEl.value.trim().length >= 2) inputEl.dispatchEvent(new Event("input")); });
 }
 
-function setAirport(kind, apt) {
-  state[kind] = apt;
-  const input = $(kind === "origin" ? "q-origin" : "q-dest");
+/* ---------------- multi-airport chip fields (up to 3) ---------------- */
+function fieldArr(kind) { return kind === "origin" ? state.origins : state.destinations; }
+
+function renderField(kind) {
+  const arr = fieldArr(kind);
   const wrap = $(kind === "origin" ? "inp-origin" : "inp-dest");
+  const input = $(kind === "origin" ? "q-origin" : "q-dest");
+  const cnt = $(kind === "origin" ? "cnt-origin" : "cnt-dest");
   wrap.querySelectorAll(".chip").forEach(c => c.remove());
-  const chip = document.createElement("span");
-  chip.className = "chip";
-  chip.innerHTML = `${esc(apt.code)}<span class="x" title="Change">×</span>`;
-  chip.addEventListener("mousedown", (e) => {
-    e.preventDefault();
-    clearAirport(kind);
-  });
-  wrap.appendChild(chip);
-  input.style.display = "none";
-  input.value = apt.city;
+  for (const code of arr) {
+    const chip = document.createElement("span");
+    chip.className = "chip";
+    chip.title = "Remove " + code;
+    chip.innerHTML = `${esc(code)}<span class="x" title="Remove">×</span>`;
+    chip.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      removeAirport(kind, code);
+    });
+    wrap.appendChild(chip);
+  }
+  cnt.textContent = arr.length ? `${arr.length}/${MAX_AIRPORTS}` : "";
+  if (arr.length >= MAX_AIRPORTS) {
+    input.style.display = "none";
+  } else {
+    input.style.display = "";
+    input.placeholder = arr.length === 0
+      ? "City or airport"
+      : `Add airport (${arr.length}/${MAX_AIRPORTS})`;
+  }
 }
 
-function clearAirport(kind) {
-  state[kind] = null;
+function addAirports(kind, codes) {
+  const arr = fieldArr(kind);
+  let room = MAX_AIRPORTS - arr.length;
+  for (const code of codes) {
+    if (room <= 0) break;
+    if (arr.includes(code)) continue;
+    arr.push(code);
+    room--;
+  }
+  renderField(kind);
+}
+
+function removeAirport(kind, code) {
+  const arr = fieldArr(kind);
+  const i = arr.indexOf(code);
+  if (i >= 0) arr.splice(i, 1);
+  renderField(kind);
   const input = $(kind === "origin" ? "q-origin" : "q-dest");
-  const wrap = $(kind === "origin" ? "inp-origin" : "inp-dest");
-  wrap.querySelectorAll(".chip").forEach(c => c.remove());
   input.style.display = "";
   input.value = "";
   input.focus();
 }
 
-makeTypeahead($("q-origin"), $("ta-origin"), (a) => setAirport("origin", a));
-makeTypeahead($("q-dest"), $("ta-dest"), (a) => setAirport("destination", a));
+makeTypeahead($("q-origin"), $("ta-origin"), (a) => {
+  addAirports("origin", a.metro ? a.members : [a.code]);
+  $("q-origin").value = "";
+});
+makeTypeahead($("q-dest"), $("ta-dest"), (a) => {
+  addAirports("destination", a.metro ? a.members : [a.code]);
+  $("q-dest").value = "";
+});
 
-/* swap origin <-> destination */
+/* swap origin <-> destination sets */
 $("btn-swap").addEventListener("click", () => {
-  const o = state.origin, d = state.destination;
-  clearAirport("origin");
-  clearAirport("destination");
-  if (d) setAirport("origin", d);
-  if (o) setAirport("destination", o);
+  [state.origins, state.destinations] = [state.destinations, state.origins];
+  renderField("origin");
+  renderField("destination");
 });
 
 /* default date: +30 days */
@@ -553,29 +629,25 @@ $("btn-swap").addEventListener("click", () => {
 function showError(msg) { const el = $("err"); el.textContent = msg; el.classList.add("show"); }
 function clearError() { $("err").classList.remove("show"); }
 
-async function validateAirport(code, label) {
-  const res = await fetch(`/api/v1/airports?q=${encodeURIComponent(code)}&limit=1`);
-  const matches = await res.json();
-  if (!matches.length || matches[0].code !== code) throw new Error(`Unknown ${label} '${code}'`);
-}
-
 async function startSearch() {
   clearError();
   const date = $("q-date").value;
   const cabin = $("q-cabin").value;
   const pax = $("q-pax").value;
 
-  if (!state.origin || !state.destination) {
-    return showError("Pick both an origin and a destination from the suggestions.");
-  }
+  if (!state.origins.length) return showError("Pick at least one origin airport from the suggestions.");
+  if (!state.destinations.length) return showError("Pick at least one destination airport from the suggestions.");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return showError("Pick a departure date.");
-  if (state.origin.code === state.destination.code) {
-    return showError("Origin and destination must differ.");
+  const overlap = state.origins.filter(c => state.destinations.includes(c));
+  if (overlap.length) {
+    return showError(`Origin and destination must differ (${overlap.join(", ")} is on both sides).`);
   }
 
   state.results = []; state.seen = new Set(); state.streaming = true;
-  state.programCounts = {}; state.cheapestPoints = null; state.cheapestId = null;
-  state.lastQuery = { origin: state.origin.code, destination: state.destination.code, date, cabin, pax };
+  state.programCounts = {}; state.routes = [];
+  state.lastQuery = {
+    origins: [...state.origins], destinations: [...state.destinations], date, cabin, pax
+  };
 
   $("controls").style.display = "flex";
   $("progWrap").style.display = "block";
@@ -588,14 +660,21 @@ async function startSearch() {
   $("btn-search").disabled = true;
 
   const params = new URLSearchParams({
-    origin: state.origin.code, destination: state.destination.code,
+    origin: state.origins.join(","), destination: state.destinations.join(","),
     date, cabin, passengers: pax
   });
 
   const es = new EventSource(`/api/v1/search/stream?${params}`);
   let first = true;
 
-  es.addEventListener("start", () => { $("progCount").textContent = "streaming…"; });
+  es.addEventListener("start", (e) => {
+    const d = JSON.parse(e.data);
+    state.routes = d.query.routes || [];
+    const nRoutes = state.routes.length;
+    $("progCount").textContent = nRoutes > 1
+      ? `streaming ${nRoutes} routes…`
+      : "streaming…";
+  });
 
   es.addEventListener("program", (e) => {
     const d = JSON.parse(e.data);
@@ -607,8 +686,10 @@ async function startSearch() {
     setProvider(d.program_code, d.count > 0 ? "resolved" : "zero", d.count);
     $("progFill").style.width = Math.round(d.progress * 100) + "%";
     const resolved = Object.keys(state.programCounts).length;
-    $("progCount").textContent = `${resolved}/14 programs · ${state.results.length} fares`;
+    const routes = state.routes.length > 1 ? ` · ${state.routes.length} routes` : "";
+    $("progCount").textContent = `${resolved}/14 programs · ${state.results.length} fares${routes}`;
     refreshProgramFilter();
+    refreshAirportFilters();
     renderResults();
   });
 
@@ -673,6 +754,8 @@ function passesFilters(r) {
   if (f.program && r.pricing.program_code !== f.program) return false;
   if (f.maxpts && r.pricing.points > f.maxpts) return false;
   if (f.maxdur && r.route.duration_minutes > f.maxdur * 60) return false;
+  if (f.from && r.route.origin !== f.from) return false;
+  if (f.to && r.route.destination !== f.to) return false;
   return true;
 }
 function sortKey(r) {
@@ -698,6 +781,29 @@ function refreshProgramFilter() {
   $("progCount").textContent = String(total);
 }
 
+/* From/To airport filters — only appear when the search spans multiple */
+function refreshAirportFilters() {
+  if (!state.lastQuery) return;
+  for (const side of ["from", "to"]) {
+    const sel = $(side === "from" ? "f-from" : "f-to");
+    const wrapEl = $(side === "from" ? "f-from-wrap" : "f-to-wrap");
+    const codes = side === "from" ? state.lastQuery.origins : state.lastQuery.destinations;
+    if (codes.length < 2) {
+      wrapEl.style.display = "none";
+      state.filters[side] = "";
+      continue;
+    }
+    const present = codes.filter(c => state.results.some(r =>
+      (side === "from" ? r.route.origin : r.route.destination) === c));
+    wrapEl.style.display = "flex";
+    const current = sel.value;
+    sel.innerHTML = `<option value="">All</option>` + present.map(c =>
+      `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+    sel.value = present.includes(current) ? current : "";
+    state.filters[side] = sel.value;
+  }
+}
+
 /* ---------------- rendering ---------------- */
 function renderResults() {
   const list = visibleResults();
@@ -705,9 +811,10 @@ function renderResults() {
   rc.style.display = "block";
   if (!state.results.length && !state.streaming) {
     rc.style.display = "none";
+    const nRoutes = (state.routes || []).length || 1;
     $("results").innerHTML = `<div class="empty">
       <div class="big">No award space found</div>
-      <div class="sub">No program has modeled availability for this route, date and cabin.<br>Try a nearby date, another cabin, or a different routing.</div>
+      <div class="sub">No program has modeled availability for ${nRoutes > 1 ? `any of the ${nRoutes} routes` : "this route"}, this date and cabin.<br>Try a nearby date, another cabin, or a different routing.</div>
     </div>`;
     return;
   }
@@ -720,7 +827,8 @@ function renderResults() {
     return;
   }
   const minPts = Math.min(...state.results.map(r => r.pricing.points));
-  rc.innerHTML = `<b>${list.length}</b> fares shown · cheapest <span class="mono">${fmtFull(minPts)}</span> pts · query <span class="mono">${esc(state.lastQuery.origin)}→${esc(state.lastQuery.destination)}</span> ${esc(state.lastQuery.date)} ${esc(CABIN_LABEL[state.lastQuery.cabin])}`;
+  const routeLbl = `${state.lastQuery.origins.join(" / ")} → ${state.lastQuery.destinations.join(" / ")}`;
+  rc.innerHTML = `<b>${list.length}</b> fares shown · cheapest <span class="mono">${fmtFull(minPts)}</span> pts · query <span class="mono">${esc(routeLbl)}</span> ${esc(state.lastQuery.date)} ${esc(CABIN_LABEL[state.lastQuery.cabin])}`;
 
   $("results").innerHTML = list.map(r => cardHTML(r, r.pricing.points === minPts)).join("");
   document.querySelectorAll(".card").forEach(card => {
@@ -842,12 +950,17 @@ $("f-bank").addEventListener("change", e => { state.filters.bank = e.target.valu
 $("f-program").addEventListener("change", e => { state.filters.program = e.target.value; renderResults(); });
 $("f-maxpts").addEventListener("input", e => { state.filters.maxpts = +e.target.value || null; renderResults(); });
 $("f-maxdur").addEventListener("input", e => { state.filters.maxdur = +e.target.value || null; renderResults(); });
+$("f-from").addEventListener("change", e => { state.filters.from = e.target.value; renderResults(); });
+$("f-to").addEventListener("change", e => { state.filters.to = e.target.value; renderResults(); });
 
 /* ---------------- calendar ---------------- */
 async function loadCalendar() {
   if (!state.lastQuery) return;
-  const { origin, destination, date, cabin } = state.lastQuery;
-  const params = new URLSearchParams({ origin, destination, start_date: date, days: 30, cabin });
+  const { origins, destinations, date, cabin } = state.lastQuery;
+  const params = new URLSearchParams({
+    origin: origins.join(","), destination: destinations.join(","),
+    start_date: date, days: 30, cabin
+  });
   try {
     const res = await fetch(`/api/v1/calendar?${params}`);
     if (!res.ok) return;

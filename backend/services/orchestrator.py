@@ -1,12 +1,15 @@
 """v1 fan-out: run the 14 program adapters concurrently.
 
-Each adapter has a distinct simulated resolution latency so results stream in
-staggered, the way real loyalty-program backends resolve.
+Supports multi-airport search: up to 3 origins x up to 3 destinations are
+fanned out across every origin/destination pair and merged into a single
+result stream. Each adapter has a distinct simulated resolution latency so
+results stream in staggered, the way real loyalty-program backends resolve.
 """
 from __future__ import annotations
 
 import asyncio
 import re
+from datetime import datetime, timedelta
 from typing import AsyncIterator
 
 from adapters.programs import PROGRAM_ADAPTERS, adapter_map
@@ -15,19 +18,45 @@ from core.cache import cache
 from core.itinerary import candidate_flights
 from core.schema import AwardResult, Route
 
+MAX_AIRPORTS_PER_SIDE = 3
+CABINS = ("economy", "premium", "business", "first")
 
-def validate(origin: str, destination: str, date: str, cabin: str) -> str | None:
-    """Shared v1 validation. Returns an error message or None."""
-    from datetime import datetime
 
-    origin, destination = origin.upper(), destination.upper()
-    if not geo.known(origin):
-        return f"Unknown origin '{origin}'"
-    if not geo.known(destination):
-        return f"Unknown destination '{destination}'"
-    if origin == destination:
+def parse_airports(raw: str, label: str) -> list[str] | str:
+    """Split a comma-separated airport param into validated IATA codes.
+
+    Returns a list of codes, or an error string.
+    """
+    codes: list[str] = []
+    for part in raw.split(","):
+        code = part.strip().upper()
+        if not code:
+            continue
+        if code in codes:
+            return f"Duplicate airport '{code}' in {label}"
+        codes.append(code)
+    if not codes:
+        return f"Unknown {label} ''"
+    if len(codes) > MAX_AIRPORTS_PER_SIDE:
+        return (
+            f"At most {MAX_AIRPORTS_PER_SIDE} {label} airports "
+            f"(got {len(codes)})"
+        )
+    for code in codes:
+        if not geo.known(code):
+            return f"Unknown {label} '{code}'"
+    return codes
+
+
+def validate(
+    origins: list[str], destinations: list[str], date: str, cabin: str
+) -> str | None:
+    """Shared validation over airport lists. Returns an error message or None."""
+    if not origins or not destinations:
+        return "Origin and destination are required"
+    if set(origins) & set(destinations):
         return "Origin and destination must differ"
-    if cabin not in ("economy", "premium", "business", "first"):
+    if cabin not in CABINS:
         return f"Invalid cabin '{cabin}'"
     if not re.match(r"^\d{4}-\d{2}-\d{2}$", date):
         return f"Invalid date '{date}' (expected YYYY-MM-DD)"
@@ -38,14 +67,39 @@ def validate(origin: str, destination: str, date: str, cabin: str) -> str | None
     return None
 
 
-async def _resolve(adapter, candidates: list[Route], cabin: str, date: str, passengers: int):
+def _pairs(origins: list[str], destinations: list[str]) -> list[tuple[str, str]]:
+    return [(o, d) for o in origins for d in destinations]
+
+
+def _cache_key(
+    origins: list[str],
+    destinations: list[str],
+    date: str,
+    cabin: str,
+    passengers: int,
+    max_stops: int,
+    programs: list[str] | None,
+    alliances: list[str] | None,
+) -> str:
+    return (
+        f"v1:{'+'.join(sorted(origins))}:{'+'.join(sorted(destinations))}"
+        f":{date}:{cabin}:{passengers}:{max_stops}"
+        f":{sorted(programs or [])}:{sorted(alliances or [])}"
+    )
+
+
+async def _resolve_pair(
+    adapter, pair: tuple[str, str], candidates: list[Route],
+    cabin: str, date: str, passengers: int,
+):
     await asyncio.sleep(adapter.latency)  # simulated staggered resolution
-    return adapter.program_code, adapter.search(candidates, cabin, date, passengers)
+    o, d = pair
+    return adapter.program_code, o, d, adapter.search(candidates, cabin, date, passengers)
 
 
 async def search(
-    origin: str,
-    destination: str,
+    origins: list[str],
+    destinations: list[str],
     date: str,
     cabin: str = "economy",
     passengers: int = 1,
@@ -53,9 +107,12 @@ async def search(
     programs: list[str] | None = None,
     alliances: list[str] | None = None,
 ) -> dict:
-    """Blocking v1 search: all programs, merged, capped per program at 12."""
-    origin, destination = origin.upper(), destination.upper()
-    key = f"v1:{origin}:{destination}:{date}:{cabin}:{passengers}:{max_stops}:{sorted(programs or [])}:{sorted(alliances or [])}"
+    """Blocking v1 search across every origin x destination pair."""
+    origins = [o.upper() for o in origins]
+    destinations = [d.upper() for d in destinations]
+    key = _cache_key(
+        origins, destinations, date, cabin, passengers, max_stops, programs, alliances
+    )
     cached = cache().get(key)
     if cached is not None:
         return cached
@@ -66,20 +123,29 @@ async def search(
         if programs
         else list(PROGRAM_ADAPTERS)
     )
-    candidates = candidate_flights(origin, destination, date, alliances, max_stops)
+    pairs = _pairs(origins, destinations)
+    candidates = {
+        pair: candidate_flights(pair[0], pair[1], date, alliances, max_stops)
+        for pair in pairs
+    }
 
-    pairs = await asyncio.gather(
-        *(_resolve(a, candidates, cabin, date, passengers) for a in selected)
+    outputs = await asyncio.gather(
+        *(
+            _resolve_pair(a, pair, candidates[pair], cabin, date, passengers)
+            for pair in pairs
+            for a in selected
+        )
     )
     results: list[AwardResult] = []
-    for _code, res in pairs:
+    for _code, _o, _d, res in outputs:
         results.extend(res)
     results.sort(key=lambda r: r.pricing.points)
 
     payload = {
         "query": {
-            "origin": origin,
-            "destination": destination,
+            "origin": origins,
+            "destination": destinations,
+            "routes": [list(p) for p in pairs],
             "date": date,
             "cabin": cabin,
             "passengers": passengers,
@@ -93,8 +159,8 @@ async def search(
 
 
 async def search_stream(
-    origin: str,
-    destination: str,
+    origins: list[str],
+    destinations: list[str],
     date: str,
     cabin: str = "economy",
     passengers: int = 1,
@@ -102,24 +168,34 @@ async def search_stream(
     programs: list[str] | None = None,
     alliances: list[str] | None = None,
 ) -> AsyncIterator[dict]:
-    """SSE: one event per program as it resolves, then a final summary."""
-    origin, destination = origin.upper(), destination.upper()
+    """SSE: one event per program (aggregated across all pairs), then a summary.
+
+    A program's event fires the moment it has resolved for EVERY pair, so the
+    staggered per-program resolution feel is preserved.
+    """
+    origins = [o.upper() for o in origins]
+    destinations = [d.upper() for d in destinations]
     amap = adapter_map()
     selected = (
         [amap[p] for p in programs if p in amap]
         if programs
         else list(PROGRAM_ADAPTERS)
     )
-    candidates = candidate_flights(origin, destination, date, alliances, max_stops)
-    total = len(selected)
+    pairs = _pairs(origins, destinations)
+    candidates = {
+        pair: candidate_flights(pair[0], pair[1], date, alliances, max_stops)
+        for pair in pairs
+    }
+    total_programs = len(selected)
 
     yield {
         "event": "start",
         "data": {
             "providers": [a.program_name for a in selected],
             "query": {
-                "origin": origin,
-                "destination": destination,
+                "origin": origins,
+                "destination": destinations,
+                "routes": [list(p) for p in pairs],
                 "date": date,
                 "cabin": cabin,
                 "passengers": passengers,
@@ -128,25 +204,38 @@ async def search_stream(
         },
     }
 
+    # per-program aggregation across pairs
+    agg: dict[str, dict] = {
+        a.program_code: {"results": [], "pairs_done": set()}
+        for a in selected
+    }
     seen: list[AwardResult] = []
     done = 0
     for coro in asyncio.as_completed(
-        [_resolve(a, candidates, cabin, date, passengers) for a in selected]
+        [
+            _resolve_pair(a, pair, candidates[pair], cabin, date, passengers)
+            for pair in pairs
+            for a in selected
+        ]
     ):
-        code, res = await coro
-        done += 1
-        seen.extend(res)
-        yield {
-            "event": "program",
-            "data": {
-                "provider": adapter_map()[code].program_name,
-                "program_code": code,
-                "ok": True,
-                "count": len(res),
-                "progress": round(done / total, 3),
-                "results": [r.model_dump() for r in res],
-            },
-        }
+        code, o, d, res = await coro
+        entry = agg[code]
+        entry["results"].extend(res)
+        entry["pairs_done"].add((o, d))
+        if len(entry["pairs_done"]) == len(pairs):
+            done += 1
+            seen.extend(entry["results"])
+            yield {
+                "event": "program",
+                "data": {
+                    "provider": adapter_map()[code].program_name,
+                    "program_code": code,
+                    "ok": True,
+                    "count": len(entry["results"]),
+                    "progress": round(done / total_programs, 3),
+                    "results": [r.model_dump() for r in entry["results"]],
+                },
+            }
 
     seen.sort(key=lambda r: r.pricing.points)
     yield {
@@ -159,36 +248,37 @@ async def search_stream(
 
 
 async def calendar(
-    origin: str,
-    destination: str,
+    origins: list[str],
+    destinations: list[str],
     start_date: str,
     days: int,
     cabin: str,
     programs: list[str] | None = None,
 ) -> dict:
-    """Cheapest award per day for a date range (no latency simulation)."""
-    from datetime import datetime, timedelta
-
-    origin, destination = origin.upper(), destination.upper()
+    """Cheapest award per day across every origin x destination pair."""
+    origins = [o.upper() for o in origins]
+    destinations = [d.upper() for d in destinations]
     amap = adapter_map()
     selected = (
         [amap[p] for p in programs if p in amap]
         if programs
         else list(PROGRAM_ADAPTERS)
     )
+    pairs = _pairs(origins, destinations)
     start = datetime.strptime(start_date, "%Y-%m-%d")
     out = []
     for i in range(days):
         day = (start + timedelta(days=i)).strftime("%Y-%m-%d")
-        candidates = candidate_flights(origin, destination, day, None, 1)
         best = None
-        for adapter in selected:
-            for res in adapter.search(candidates, cabin, day):
-                if best is None or (res.pricing.points, res.pricing.cash_fees) < (
-                    best.pricing.points,
-                    best.pricing.cash_fees,
-                ):
-                    best = res
+        for pair in pairs:
+            candidates = candidate_flights(pair[0], pair[1], day, None, 1)
+            for adapter in selected:
+                for res in adapter.search(candidates, cabin, day):
+                    if best is None or (res.pricing.points, res.pricing.cash_fees) < (
+                        best.pricing.points,
+                        best.pricing.cash_fees,
+                    ):
+                        best = res
         out.append(
             {
                 "date": day,
@@ -202,8 +292,8 @@ async def calendar(
             }
         )
     return {
-        "origin": origin,
-        "destination": destination,
+        "origin": origins,
+        "destination": destinations,
         "start_date": start_date,
         "days": days,
         "cabin": cabin,

@@ -9,7 +9,7 @@ from core.http_engine import TELEMETRY_BLOCKLIST, get_engine, is_telemetry_host
 from core.redis_cache import award_cache
 from providers.base import SearchQuery
 from services import aggregator
-from services.orchestrator import validate
+from services.orchestrator import parse_airports, validate
 
 router = APIRouter(prefix="/api/v2")
 
@@ -31,12 +31,18 @@ def _search_query(
     passengers: int,
     max_stops: int,
 ) -> SearchQuery | JSONResponse:
-    err = validate(origin, destination, date, cabin)
+    origins = parse_airports(origin, "origin")
+    if isinstance(origins, str):
+        return JSONResponse({"detail": origins}, status_code=400)
+    destinations = parse_airports(destination, "destination")
+    if isinstance(destinations, str):
+        return JSONResponse({"detail": destinations}, status_code=400)
+    err = validate(origins, destinations, date, cabin)
     if err:
         return JSONResponse({"detail": err}, status_code=400)
     return SearchQuery(
-        origin=origin.upper(),
-        destination=destination.upper(),
+        origin=origins[0],
+        destination=destinations[0],
         date=date,
         cabin=cabin,
         passengers=passengers,

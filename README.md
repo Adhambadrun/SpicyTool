@@ -41,6 +41,11 @@ cd backend && python3 tests_integration.py   # 16 assertions, offline
 
 - **78 airports** (real coordinates), **39 carriers** with real hubs,
   **14 loyalty programs** with real award-chart shapes and transfer partners.
+- **Multi-airport search** — up to **3 origins × 3 destinations** per query
+  (comma-separated, e.g. `origin=JFK,EWR,LGA`): every pair is fanned out in
+  parallel and merged into one result stream. The UI supports in-field IATA
+  chips (up to 3 per side) with a live recommendations dropdown, plus metro
+  shortcuts (`NYC` → JFK+EWR+LGA, `LON`, `TYO`).
 - Deterministic first-party engine: the same query always returns the same
   results; different dates differ.
 - **v1 API** — first-party engine: search, SSE streaming search (one event per
@@ -71,7 +76,8 @@ cd backend && python3 tests_integration.py   # 16 assertions, offline
 | `GET /api/v2/search/stream` | SSE `start → data* → complete` |
 
 Validation: unknown IATA → `400 "Unknown origin 'XXX'"`; same origin and
-destination → `400`; bad cabin → `400`; date must match `^\d{4}-\d{2}-\d{2}$`.
+destination → `400`; bad cabin → `400`; date must match `^\d{4}-\d{2}-\d{2}$`;
+more than 3 airports per side → `400 "At most 3 origin airports"`.
 
 ## Configuration (`.env`)
 
