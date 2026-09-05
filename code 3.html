@@ -1,0 +1,112 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>SpicyTool - Login</title>
+<!-- Load Tailwind CSS v3 with plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              blue: '#2563eb',
+              banner: '#1e40af',
+              darkBg: '#111215',
+              cardBg: '#18191d',
+              inputBg: '#101114',
+              inputBorder: '#27292e',
+              border: '#23252a'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+<!-- BEGIN: Custom Styles -->
+<style data-purpose="custom-overrides">
+    body {
+      background-color: #111215;
+      color: #ffffff;
+      -webkit-font-smoothing: antialiased;
+    }
+    input::placeholder {
+      color: #6b7280;
+    }
+  </style>
+<!-- END: Custom Styles -->
+</head>
+<body class="min-h-screen flex flex-col font-sans select-none overflow-x-hidden">
+<!-- BEGIN: AnnouncementBanner -->
+<!-- Top promotional / notice banner -->
+<header class="w-full bg-[#e11d2e] py-2 px-4 text-center" data-purpose="announcement-banner">
+<p class="text-xs sm:text-sm font-medium tracking-wide text-white">
+      Welcome to SpicyTool v3.0! SpicyTool Exclusive features are now live!
+    </p>
+</header>
+<!-- END: AnnouncementBanner -->
+<!-- BEGIN: NavigationBar -->
+<!-- Top application bar containing logo and theme switch -->
+<nav class="w-full border-b border-[#23252a] px-6 py-3.5 flex items-center justify-between" data-purpose="top-navigation">
+<!-- Brand Logo and Wordmark -->
+<a aria-label="SpicyTool Home" class="flex items-center gap-2.5 focus:outline-none" href="#">
+<img alt="SpicyTool Logo" class="w-7 h-7 object-contain rounded" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD2PbX-dlD940GGKjDlvqBaHTN3W1UeKEeC_tBPzUWwOqgVSReLDJ-3kOqsMsxvgXSM2x6QHTnLJptCJfvBdKW49FNJzeGgp4HKIRg3W8Y1cYbJrahIjoMXjhMIcZZMcDhCe4ZJxdtru80TGNurb4c79w5vP5enB0GIoQRJR_nhYMkKAsp_a2bcVdY9g2XxZ9gl2e5UGEC3UTRqHD9eXGdFd4GyE4KQPzoMpvRvKv41n7x9cIYb70uFydOqP9DDozOMuA">
+<span class="text-xl font-bold tracking-tight text-white">SpicyTool</span>
+</a>
+<!-- Theme Switch Pill -->
+<div class="flex items-center" data-purpose="theme-toggle">
+<div class="flex items-center bg-[#1d1f24] p-1 rounded-full border border-[#2e3138]">
+<button aria-label="Light mode" class="p-1.5 rounded-full text-[#8e939e] hover:text-white transition-colors" type="button">
+<!-- Sun Icon -->
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="4"></circle>
+<path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" stroke-linecap="round"></path>
+</svg>
+</button>
+<button aria-label="Dark mode" class="p-1.5 rounded-full bg-[#2a2d35] text-white shadow-sm transition-colors" type="button">
+<!-- Moon Icon -->
+<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+<path d="M21.752 15.002A9 9 0 0110.998 4.248a9.003 9.003 0 0010.754 10.754z"></path>
+</svg>
+</button>
+</div>
+</div>
+</nav>
+<!-- END: NavigationBar -->
+<!-- BEGIN: MainContent -->
+<!-- Centered Login Card Area -->
+<main class="flex-1 flex items-center justify-center p-4">
+<!-- Card Container -->
+<div class="w-full max-w-[430px] bg-[#18191d] border border-[#26282e] rounded-xl px-9 py-10 shadow-2xl" data-purpose="login-card">
+<!-- Inner Branding Header -->
+<div class="flex flex-col items-center justify-center text-center">
+<div class="flex items-center gap-2.5 mb-5">
+<img alt="SpicyTool Logo" class="w-8 h-8 object-contain rounded" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAhptE3XXjWGf5V_XPSd1BCFc9nlmpaTBus3QUbsM6SOP5_78D9ClLUCOxIjgovMJ_-TKqxX9_q1P3AyG8QdFNdjwEnmT6rED6N8_rJkBjAl0mewF_oVc5exbO6Zxg17R_BIFlSPYz7DJz2n_x1s6otcUjAeN3FjqpaA14xSzdQH9qkdP3wN1DvhJNR_eRjlf9MCPJa7WOoIHUTD-M-YNBjKUQujAF0ISw-o6PWZYPqdgzQk27yM8EIeQmgepK24lvgeA">
+<span class="text-2xl font-bold tracking-tight text-white">SpicyTool</span>
+</div>
+<!-- Instructional text -->
+<p class="text-[14px] text-gray-300 font-normal mb-6">
+          Enter your email to login.
+        </p>
+</div>
+<!-- Login Form -->
+<form class="space-y-4" data-purpose="login-form" onsubmit="event.preventDefault();">
+<!-- Email Input Field -->
+<div>
+<label class="sr-only" for="email">Email address</label>
+<input class="w-full px-3.5 py-2.5 bg-[#101114] border border-[#2b2e35] rounded-md text-sm text-gray-100 placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-[#e11d2e] focus:border-[#e11d2e] transition-colors" id="email" name="email" placeholder="name@spicytool.com" required="" type="email">
+</div>
+<!-- Submit Button -->
+<button class="w-full bg-[#e11d2e] hover:bg-[#c01825] active:bg-[#a6131e] text-white text-sm font-medium py-2.5 px-4 rounded-md transition duration-150 ease-in-out shadow-sm focus:outline-none focus:ring-2 focus:ring-[#e11d2e] focus:ring-offset-2 focus:ring-offset-[#18191d]" type="submit">
+          Sign In with Email
+        </button>
+</form>
+</div>
+</main>
+<!-- END: MainContent -->
+
+
+</body></html>

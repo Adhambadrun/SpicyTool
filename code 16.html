@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Modify Programs - SpicyTool</title>
+<!-- Tailwind CSS v3 CDN with forms plugin -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              DEFAULT: '#e11d2e',
+              hover: '#c81624',
+              soft: 'rgba(225, 29, 46, 0.08)',
+              border: '#fecdd3',
+            }
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="custom-scrollbars">
+    /* Custom clean scrollbar for the modal content */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 font-sans antialiased text-gray-900 min-h-screen flex items-center justify-center p-2 sm:p-4 md:p-6 selection:bg-red-500 selection:text-white">
+<!-- BEGIN: ModalBackdrop -->
+<div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 flex items-center justify-center p-3 md:p-6 overflow-y-auto" data-purpose="modal-backdrop">
+<!-- BEGIN: ModalContainer -->
+<div class="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[92vh] my-auto z-50 animate-in fade-in zoom-in-95 duration-200" data-purpose="modal-window">
+<!-- BEGIN: ModalHeader -->
+<header class="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white sticky top-0 z-20">
+<div class="flex items-center gap-3">
+<!-- SpicyTool Mini Mark -->
+<img alt="SpicyTool Logo" class="w-7 h-7 rounded-lg shadow-sm object-cover border border-red-500/10" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkccOSdxpULmJo_RyLLx3GDIM0wxFeC-ZiwO06DlfLm85yduaq7sND2Ovuw-y1vhOs6rbm1tU4DPdF-GWZDSF84sz0BCqiyXjR1zZahyptDOhwIlYOuahp3qrBpi6c_1WiUFDKwELzctiDy3nYLuqHZ7AWXwwkhzJz1ZQXNUIvTYj8tEBYE8GWtGfYgCVWpS-Eaxz2TTLnXUmnYEE1pUl5uGH3oL0TS_qo2HqKQ0ijgXWFoO_sZhtfaYUwTAiF40mAHQ"/>
+<h2 class="text-lg md:text-xl font-bold text-gray-900 tracking-tight">Modify programs</h2>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-brand border border-red-100">
+            29 Available
+          </span>
+</div>
+<!-- Close Button -->
+<button aria-label="Close dialog" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 transition flex items-center justify-center text-sm font-semibold" type="button">
+          ✕
+        </button>
+</header>
+<!-- END: ModalHeader -->
+<!-- BEGIN: ModalBody -->
+<div class="p-5 md:p-6 overflow-y-auto custom-scrollbar space-y-5 bg-white flex-1" data-purpose="modal-content">
+<!-- BEGIN: OptionCard1 (Ticket via SpicyTool) -->
+<div class="rounded-xl border border-gray-200 bg-gray-50/70 p-4 md:p-5 transition hover:bg-gray-50" data-purpose="ticketing-option-spicytool">
+<div class="flex items-start gap-3">
+<input class="mt-1 h-4 w-4 text-brand focus:ring-brand border-gray-300" id="option_spicytool" name="booking_method" type="radio"/>
+<div class="flex-1">
+<div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+<label class="text-sm md:text-base font-semibold text-gray-800 cursor-pointer" for="option_spicytool">
+                  Ticket via SpicyTool.com
+                </label>
+<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-mono font-medium bg-gray-200/70 text-gray-600">
+                  Fastest &amp; Safest
+                </span>
+</div>
+<p class="text-xs md:text-sm text-gray-600 leading-relaxed mb-3">
+                Experience unmatched speed and safety when booking award flights with us. Plus, enjoy these exclusive benefits:
+              </p>
+<!-- Benefits List -->
+<ul class="space-y-2 text-xs md:text-xs leading-normal text-gray-600 border-t border-gray-200/60 pt-3">
+<li class="flex items-start gap-1.5">
+<span class="text-brand font-bold leading-none mt-0.5">•</span>
+<span><strong class="font-semibold text-gray-900">Lightning-Fast Ticketing:</strong> We understand how quickly award availability can change. Our system automatically locates matching mileage accounts and confirms your customers' flights at industry-leading speed.</span>
+</li>
+<li class="flex items-start gap-1.5">
+<span class="text-brand font-bold leading-none mt-0.5">•</span>
+<span><strong class="font-semibold text-gray-900">World-Class Safety Team:</strong> Our expert team stays up-to-date with the latest ticketing safety practices, so you don't have to. Just using a VPN won't cut it these days—you need a broker who understands proxies, browser fingerprinting, email pixels, phone audit triggers, and much more.</span>
+</li>
+<li class="flex items-start gap-1.5">
+<span class="text-brand font-bold leading-none mt-0.5">•</span>
+<span><strong class="font-semibold text-gray-900">Seamless Online Booking:</strong> No emails, WhatsApp groups, or manual processes. Book your award flight entirely online, just like you would a revenue flight—minus the high cost.</span>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- END: OptionCard1 -->
+<!-- BEGIN: OptionCard2 (Use your brokers - ACTIVE) -->
+<div class="rounded-xl border-2 border-brand bg-white p-4 md:p-5 shadow-sm ring-1 ring-brand/10" data-purpose="ticketing-option-brokers">
+<div class="flex items-start gap-3 mb-4">
+<input checked="" class="mt-1 h-4.5 w-4.5 text-brand focus:ring-brand border-gray-300" id="option_brokers" name="booking_method" type="radio"/>
+<div>
+<label class="text-sm md:text-base font-bold text-gray-900 cursor-pointer block" for="option_brokers">
+                Use your brokers
+              </label>
+<p class="text-xs md:text-sm text-gray-600 mt-1 leading-relaxed">
+                Enter the cost per mile (CPM) from your current brokers for each program. The total cost of a ticket will be based on the amount of miles the ticket requires, multiplied by the program's CPM, plus taxes and fees.
+              </p>
+</div>
+</div>
+<!-- BEGIN: ProgramsGrid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1" data-purpose="programs-list">
+<!-- Program Item 1 -->
+<div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="rounded border-gray-300 text-brand focus:ring-brand h-4 w-4" type="checkbox"/>
+<span class="text-xs font-semibold text-gray-800 truncate" title="Aeromexico Club Premier">Aeromexico Club Premier</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<!-- Dots meter -->
+<div class="flex items-center gap-0.5" title="Transfer ratio / Availability health">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+</div>
+<span class="text-[10px] font-mono uppercase text-gray-400 font-medium">CPM</span>
+<input class="w-12 py-1 px-1.5 text-center text-xs font-mono font-medium rounded border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand" type="text" value="1.4"/>
+</div>
+</div>
+<!-- Program Item 2 -->
+<div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="rounded border-gray-300 text-brand focus:ring-brand h-4 w-4" type="checkbox"/>
+<span class="text-xs font-semibold text-gray-800 truncate" title="Air Canada Aeroplan">Air Canada Aeroplan</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+</div>
+<span class="text-[10px] font-mono uppercase text-gray-400 font-medium">CPM</span>
+<input class="w-12 py-1 px-1.5 text-center text-xs font-mono font-medium rounded border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-brand" type="text" value="1.4"/>
+</div>
+</div>
+<!-- Program Item 3 -->
+<div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="rounded border-gray-300 text-brand focus:ring-brand h-4 w-4" type="checkbox"/>
+<span class="text-xs font-semibold text-gray-800 truncate" title="Air France/KLM Flying Blue">Air France/KLM Flying Blue</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+</div>
+<span class="text-[10px] font-mono uppercase text-gray-400 font-medium">CPM</span>
+<input class="w-12 py-1 px-1.5 text-center text-xs font-mono font-medium rounded border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-brand" type="text" value="1.4"/>
+</div>
+</div>
+<!-- Program Item 4 -->
+<div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="rounded border-gray-300 text-brand focus:ring-brand h-4 w-4" type="checkbox"/>
+<span class="text-xs font-semibold text-gray-800 truncate" title="Alaska Airlines Mileage Plan">Alaska Airlines Mileage Plan</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+</div>
+<span class="text-[10px] font-mono uppercase text-gray-400 font-medium">CPM</span>
+<input class="w-12 py-1 px-1.5 text-center text-xs font-mono font-medium rounded border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-brand" type="text" value="1.4"/>
+</div>
+</div>
+<!-- Program Item 5 -->
+<div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="rounded border-gray-300 text-brand focus:ring-brand h-4 w-4" type="checkbox"/>
+<span class="text-xs font-semibold text-gray-800 truncate" title="American Airlines AAdvantage">American Airlines AAdvantage</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+</div>
+<span class="text-[10px] font-mono uppercase text-gray-400 font-medium">CPM</span>
+<input class="w-12 py-1 px-1.5 text-center text-xs font-mono font-medium rounded border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-brand" type="text" value="1.4"/>
+</div>
+</div>
+<!-- Program Item 6 -->
+<div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="rounded border-gray-300 text-brand focus:ring-brand h-4 w-4" type="checkbox"/>
+<span class="text-xs font-semibold text-gray-800 truncate" title="Avianca LifeMiles">Avianca LifeMiles</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+</div>
+<span class="text-[10px] font-mono uppercase text-gray-400 font-medium">CPM</span>
+<input class="w-12 py-1 px-1.5 text-center text-xs font-mono font-medium rounded border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-brand" type="text" value="1.4"/>
+</div>
+</div>
+<!-- Program Item 7 -->
+<div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="rounded border-gray-300 text-brand focus:ring-brand h-4 w-4" type="checkbox"/>
+<span class="text-xs font-semibold text-gray-800 truncate" title="British Airways Executive Club">British Airways Executive Club</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+</div>
+<span class="text-[10px] font-mono uppercase text-gray-400 font-medium">CPM</span>
+<input class="w-12 py-1 px-1.5 text-center text-xs font-mono font-medium rounded border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-brand" type="text" value="1.4"/>
+</div>
+</div>
+<!-- Program Item 8 -->
+<div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="rounded border-gray-300 text-brand focus:ring-brand h-4 w-4" type="checkbox"/>
+<span class="text-xs font-semibold text-gray-800 truncate" title="Copa ConnectMiles">Copa ConnectMiles</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+</div>
+<span class="text-[10px] font-mono uppercase text-gray-400 font-medium">CPM</span>
+<input class="w-12 py-1 px-1.5 text-center text-xs font-mono font-medium rounded border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-brand" type="text" value="1.4"/>
+</div>
+</div>
+<!-- Program Item 9 -->
+<div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="rounded border-gray-300 text-brand focus:ring-brand h-4 w-4" type="checkbox"/>
+<span class="text-xs font-semibold text-gray-800 truncate" title="Delta SkyMiles">Delta SkyMiles</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+</div>
+<span class="text-[10px] font-mono uppercase text-gray-400 font-medium">CPM</span>
+<input class="w-12 py-1 px-1.5 text-center text-xs font-mono font-medium rounded border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-brand" type="text" value="1.4"/>
+</div>
+</div>
+<!-- Program Item 10 -->
+<div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="rounded border-gray-300 text-brand focus:ring-brand h-4 w-4" type="checkbox"/>
+<span class="text-xs font-semibold text-gray-800 truncate" title="Emirates Skywards">Emirates Skywards</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+</div>
+<span class="text-[10px] font-mono uppercase text-gray-400 font-medium">CPM</span>
+<input class="w-12 py-1 px-1.5 text-center text-xs font-mono font-medium rounded border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-brand" type="text" value="1.4"/>
+</div>
+</div>
+<!-- Program Item 11 -->
+<div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="rounded border-gray-300 text-brand focus:ring-brand h-4 w-4" type="checkbox"/>
+<span class="text-xs font-semibold text-gray-800 truncate" title="Etihad Guest">Etihad Guest</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+</div>
+<span class="text-[10px] font-mono uppercase text-gray-400 font-medium">CPM</span>
+<input class="w-12 py-1 px-1.5 text-center text-xs font-mono font-medium rounded border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-brand" type="text" value="1.4"/>
+</div>
+</div>
+<!-- Program Item 12 -->
+<div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="rounded border-gray-300 text-brand focus:ring-brand h-4 w-4" type="checkbox"/>
+<span class="text-xs font-semibold text-gray-800 truncate" title="Iberia Plus">Iberia Plus</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+</div>
+<span class="text-[10px] font-mono uppercase text-gray-400 font-medium">CPM</span>
+<input class="w-12 py-1 px-1.5 text-center text-xs font-mono font-medium rounded border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-brand" type="text" value="1.4"/>
+</div>
+</div>
+<!-- Program Item 13 -->
+<div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="rounded border-gray-300 text-brand focus:ring-brand h-4 w-4" type="checkbox"/>
+<span class="text-xs font-semibold text-gray-800 truncate" title="JetBlue TrueBlue">JetBlue TrueBlue</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+</div>
+<span class="text-[10px] font-mono uppercase text-gray-400 font-medium">CPM</span>
+<input class="w-12 py-1 px-1.5 text-center text-xs font-mono font-medium rounded border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-brand" type="text" value="1.4"/>
+</div>
+</div>
+<!-- Program Item 14 -->
+<div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="rounded border-gray-300 text-brand focus:ring-brand h-4 w-4" type="checkbox"/>
+<span class="text-xs font-semibold text-gray-800 truncate" title="Qantas Frequent Flyer">Qantas Frequent Flyer</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+</div>
+<span class="text-[10px] font-mono uppercase text-gray-400 font-medium">CPM</span>
+<input class="w-12 py-1 px-1.5 text-center text-xs font-mono font-medium rounded border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-brand" type="text" value="1.4"/>
+</div>
+</div>
+<!-- Program Item 15 -->
+<div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="rounded border-gray-300 text-brand focus:ring-brand h-4 w-4" type="checkbox"/>
+<span class="text-xs font-semibold text-gray-800 truncate" title="SAS EuroBonus">SAS EuroBonus</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+</div>
+<span class="text-[10px] font-mono uppercase text-gray-400 font-medium">CPM</span>
+<input class="w-12 py-1 px-1.5 text-center text-xs font-mono font-medium rounded border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-brand" type="text" value="1.4"/>
+</div>
+</div>
+<!-- Program Item 16 -->
+<div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="rounded border-gray-300 text-brand focus:ring-brand h-4 w-4" type="checkbox"/>
+<span class="text-xs font-semibold text-gray-800 truncate" title="Singapore KrisFlyer">Singapore KrisFlyer</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+</div>
+<span class="text-[10px] font-mono uppercase text-gray-400 font-medium">CPM</span>
+<input class="w-12 py-1 px-1.5 text-center text-xs font-mono font-medium rounded border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-brand" type="text" value="1.4"/>
+</div>
+</div>
+<!-- Program Item 17 -->
+<div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="rounded border-gray-300 text-brand focus:ring-brand h-4 w-4" type="checkbox"/>
+<span class="text-xs font-semibold text-gray-800 truncate" title="Spirit">Spirit</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+</div>
+<span class="text-[10px] font-mono uppercase text-gray-400 font-medium">CPM</span>
+<input class="w-12 py-1 px-1.5 text-center text-xs font-mono font-medium rounded border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-brand" type="text" value="1.4"/>
+</div>
+</div>
+<!-- Program Item 18 -->
+<div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="rounded border-gray-300 text-brand focus:ring-brand h-4 w-4" type="checkbox"/>
+<span class="text-xs font-semibold text-gray-800 truncate" title="TAP Air Portugal Miles&amp;Go">TAP Air Portugal Miles&amp;Go</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+</div>
+<span class="text-[10px] font-mono uppercase text-gray-400 font-medium">CPM</span>
+<input class="w-12 py-1 px-1.5 text-center text-xs font-mono font-medium rounded border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-brand" type="text" value="1.4"/>
+</div>
+</div>
+<!-- Program Item 19 -->
+<div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="rounded border-gray-300 text-brand focus:ring-brand h-4 w-4" type="checkbox"/>
+<span class="text-xs font-semibold text-gray-800 truncate" title="Turkish Miles &amp; Smiles">Turkish Miles &amp; Smiles</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+</div>
+<span class="text-[10px] font-mono uppercase text-gray-400 font-medium">CPM</span>
+<input class="w-12 py-1 px-1.5 text-center text-xs font-mono font-medium rounded border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-brand" type="text" value="1.4"/>
+</div>
+</div>
+<!-- Program Item 20 -->
+<div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="rounded border-gray-300 text-brand focus:ring-brand h-4 w-4" type="checkbox"/>
+<span class="text-xs font-semibold text-gray-800 truncate" title="United MileagePlus">United MileagePlus</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+</div>
+<span class="text-[10px] font-mono uppercase text-gray-400 font-medium">CPM</span>
+<input class="w-12 py-1 px-1.5 text-center text-xs font-mono font-medium rounded border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-brand" type="text" value="1.4"/>
+</div>
+</div>
+<!-- Program Item 21 -->
+<div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="rounded border-gray-300 text-brand focus:ring-brand h-4 w-4" type="checkbox"/>
+<span class="text-xs font-semibold text-gray-800 truncate" title="Virgin Atlantic Flying Club">Virgin Atlantic Flying Club</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+</div>
+<span class="text-[10px] font-mono uppercase text-gray-400 font-medium">CPM</span>
+<input class="w-12 py-1 px-1.5 text-center text-xs font-mono font-medium rounded border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-brand" type="text" value="1.4"/>
+</div>
+</div>
+<!-- Program Item 22 -->
+<div class="flex items-center justify-between p-2.5 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-white hover:border-gray-300 transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="rounded border-gray-300 text-brand focus:ring-brand h-4 w-4" type="checkbox"/>
+<span class="text-xs font-semibold text-gray-800 truncate" title="Virgin Australia Velocity">Virgin Australia Velocity</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+</div>
+<span class="text-[10px] font-mono uppercase text-gray-400 font-medium">CPM</span>
+<input class="w-12 py-1 px-1.5 text-center text-xs font-mono font-medium rounded border border-gray-300 bg-white text-gray-900 focus:outline-none focus:border-brand" type="text" value="1.4"/>
+</div>
+</div>
+</div>
+<!-- END: ProgramsGrid -->
+</div>
+<!-- END: OptionCard2 -->
+</div>
+<!-- END: ModalBody -->
+<!-- BEGIN: ModalFooter -->
+<footer class="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-white sticky bottom-0 z-20" data-purpose="modal-footer">
+<button class="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors cursor-pointer select-none" type="button">
+          Deselect all
+        </button>
+<div class="flex items-center gap-3">
+<button class="px-6 py-2.5 rounded-full text-sm font-semibold text-white bg-brand hover:bg-brand-hover active:scale-[0.98] transition-all shadow-md shadow-red-500/20 flex items-center gap-2" type="button">
+            Save as default
+          </button>
+</div>
+</footer>
+<!-- END: ModalFooter -->
+</div>
+<!-- END: ModalContainer -->
+</div>
+<!-- END: ModalBackdrop -->
+</body></html>

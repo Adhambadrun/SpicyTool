@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+
+<html class="" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Choose your flights - SpicyTool</title>
+<!-- Tailwind CSS CDN with plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              500: '#e11d2e',
+              600: '#c51323',
+              glow: 'rgba(225, 29, 46, 0.25)'
+            },
+            dark: {
+              base: '#0d0e11',
+              card: '#16171a',
+              border: '#23252a',
+              chip: '#1c1e23',
+              muted: '#272a31'
+            }
+          },
+          animation: {
+            shimmer: 'shimmer 2s infinite linear'
+          },
+          keyframes: {
+            shimmer: {
+              '0%': { opacity: '0.4' },
+              '50%': { opacity: '0.85' },
+              '100%': { opacity: '0.4' }
+            }
+          }
+        }
+      }
+    };
+  </script>
+<style data-purpose="custom-scrollbars">
+    /* Custom hidden/minimal scrollbar for filter chips on smaller screens */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+<style data-purpose="skeleton-styling">
+    .skeleton-glow {
+      animation: pulseGlow 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulseGlow {
+      0%, 100% {
+        opacity: 0.35;
+      }
+      50% {
+        opacity: 0.7;
+      }
+    }
+  </style>
+</head>
+<body class="bg-[#f8fafc] text-slate-800 min-h-screen font-sans antialiased flex flex-col selection:bg-brand-500 selection:text-white">
+<!-- BEGIN: NavigationBar -->
+<header class="w-full border-b border-slate-200 bg-white/95 backdrop-blur sticky top-0 z-50 shadow-sm">
+<div class="max-w-[1440px] mx-auto px-6 h-16 flex items-center justify-between">
+<!-- Brand Logo & Title -->
+<a aria-label="SpicyTool Home" class="flex items-center space-x-3 group cursor-pointer focus:outline-none" href="#"><img alt="SpicyTool Logo" class="w-8 h-8 rounded-lg object-contain transition-transform duration-200 group-hover:scale-105 shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCOn4AmT_qu6y8Dng81nIWLJZ29LnHLphkliCvxL7QGBy6bjFFsgl1m5LH42FfcR0Uis0hUUATeVYvMsIAcHc22ZyEeu35iMSg_AD2pRDg9En-nnk6FavMJhY-rp9AZuqgfnBWcv4E_k8uIfpKEC9i1lR3sX5jSnH5io-ezxTT68_4lWsXigOWoenBV2i_VJV9wEzJ0mVZ6386b-H9DHtjmmirub7DPSLwUmRIh3Rxw4KvYZWTkrSTtmSISjtZ5opRf5w"/>
+<span class="text-slate-900 text-xl font-bold tracking-tight">SpicyTool</span></a>
+<!-- Header Action Controls -->
+<div class="flex items-center space-x-3" data-purpose="header-controls"><div class="flex items-center bg-slate-100 border border-slate-200 rounded-full p-0.5 shadow-inner">
+<button aria-label="Light mode" class="p-1.5 rounded-full bg-white text-amber-500 shadow-sm focus:outline-none transition-all" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<button aria-label="Dark mode" class="p-1.5 rounded-full text-slate-400 hover:text-slate-600 focus:outline-none transition-colors" type="button">
+<svg class="w-4 h-4" fill="currentColor" viewbox="0 0 20 20">
+<path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+</svg>
+</button>
+</div>
+<button aria-label="User Account Profile" class="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 hover:border-slate-400 hover:text-slate-900 transition-all focus:outline-none shadow-sm" type="button">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
+</svg>
+</button></div>
+</div>
+</header>
+<!-- END: NavigationBar -->
+<!-- BEGIN: MainContent -->
+<main class="flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 pt-12 pb-24">
+<!-- Page Title -->
+<div class="text-center mb-10">
+<h1 class="text-4xl sm:text-5xl font-bold text-slate-900 tracking-tight">
+        Choose your flights
+      </h1>
+</div>
+<!-- BEGIN: StepperSection -->
+<section aria-label="Flight Booking Steps" class="max-w-2xl mx-auto mb-14 px-4"><div class="flex items-center justify-between relative">
+<!-- Step 1: Modify Search -->
+<div class="flex items-center space-x-2 z-10 bg-[#f8fafc] pr-3">
+<span class="w-5 h-5 rounded-full bg-brand-500 flex items-center justify-center text-white text-[11px] shadow-sm">
+<svg class="w-3.5 h-3.5 stroke-[2.5]" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</span>
+<span class="text-sm font-medium text-slate-700">Modify Search</span>
+</div>
+<!-- Connecting Line 1 -->
+<div class="flex-1 h-[1px] bg-slate-300 mx-2"></div>
+<!-- Step 2: Flights (Active) -->
+<div class="flex items-center space-x-2 z-10 bg-[#f8fafc] px-3">
+<span class="w-5 h-5 rounded-full bg-brand-500 flex items-center justify-center text-white text-[11px] ring-4 ring-brand-500/20 shadow-sm">
+<svg class="w-3.5 h-3.5 stroke-[2.5]" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</span>
+<span class="text-sm font-semibold text-slate-900">Flights</span>
+</div>
+<!-- Connecting Line 2 -->
+<div class="flex-1 h-[1px] bg-slate-300 mx-2"></div>
+<!-- Step 3: Itinerary (Upcoming) -->
+<div class="flex items-center space-x-2 z-10 bg-[#f8fafc] pl-3">
+<span class="w-5 h-5 rounded-full border-2 border-slate-400 flex items-center justify-center bg-white"></span>
+<span class="text-sm font-medium text-slate-500">Itinerary</span>
+</div>
+</div></section>
+<!-- END: StepperSection -->
+<!-- BEGIN: FilterBar -->
+<section aria-label="Flight Search Filters" class="mb-8"><div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 text-xs sm:text-[13px]">
+<span class="text-slate-500 font-medium whitespace-nowrap mr-1">Filter:</span>
+<!-- Filter Pills -->
+<button class="flex items-center space-x-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-medium rounded-full border border-slate-200 shadow-sm transition-colors whitespace-nowrap">
+<span>Stops</span>
+<svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<button class="flex items-center space-x-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-medium rounded-full border border-slate-200 shadow-sm transition-colors whitespace-nowrap">
+<span>Airlines</span>
+<svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<button class="flex items-center space-x-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-medium rounded-full border border-slate-200 shadow-sm transition-colors whitespace-nowrap">
+<span>Tickets</span>
+<svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<button class="flex items-center space-x-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-medium rounded-full border border-slate-200 shadow-sm transition-colors whitespace-nowrap">
+<span>Programs</span>
+<svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<button class="flex items-center space-x-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-medium rounded-full border border-slate-200 shadow-sm transition-colors whitespace-nowrap">
+<span>Airports</span>
+<svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<button class="flex items-center space-x-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-medium rounded-full border border-slate-200 shadow-sm transition-colors whitespace-nowrap">
+<span>Premium</span>
+<svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<button class="flex items-center space-x-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-medium rounded-full border border-slate-200 shadow-sm transition-colors whitespace-nowrap">
+<span>Dates</span>
+<svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<button class="flex items-center space-x-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-medium rounded-full border border-slate-200 shadow-sm transition-colors whitespace-nowrap">
+<span>Departure Time</span>
+<svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<button class="flex items-center space-x-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-medium rounded-full border border-slate-200 shadow-sm transition-colors whitespace-nowrap">
+<span>Arrival Time</span>
+<svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<button class="flex items-center space-x-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-medium rounded-full border border-slate-200 shadow-sm transition-colors whitespace-nowrap">
+<span>Duration</span>
+<svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<button class="flex items-center space-x-1.5 px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 rounded-full border border-slate-200 transition-colors whitespace-nowrap font-medium">
+<span>Clear All</span>
+</button>
+</div></section>
+<!-- END: FilterBar -->
+<!-- BEGIN: FlightCardsContainer -->
+<div class="w-full bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xl" data-purpose="flight-results-wrapper">
+<!-- Tab Header Bar -->
+<div class="grid grid-cols-3 border-b border-slate-200 text-sm font-medium bg-slate-50/50"><!-- Active Tab: Best -->
+<button class="py-4 text-slate-900 relative flex justify-center items-center font-bold bg-brand-500/[0.04] transition-all">
+<span>Best</span>
+<div class="absolute bottom-0 left-0 right-0 h-[2.5px] bg-brand-500 shadow-[0_0_8px_#e11d2e]"></div>
+</button>
+<!-- Tab: Fastest -->
+<button class="py-4 text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors flex justify-center items-center font-medium">
+<span>Fastest</span>
+</button>
+<!-- Tab: Cheapest -->
+<button class="py-4 text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors flex justify-center items-center font-medium">
+<span>Cheapest</span>
+</button></div>
+<!-- Skeleton Results Rows -->
+<div class="p-4 sm:p-6 space-y-4" data-purpose="skeleton-flight-list"><!-- Skeleton Card 1 (Crimson / Red Badge) -->
+<div class="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 transition-all shadow-sm hover:border-slate-300">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-5">
+<!-- Left Info Block with Airline Icon Skeleton -->
+<div class="flex items-center space-x-5 flex-1">
+<!-- Crimson Icon Skeleton -->
+<div class="w-16 sm:w-20 h-9 rounded-lg bg-[#e11d2e]/15 border border-[#e11d2e]/30 skeleton-glow flex-shrink-0 flex items-center justify-center">
+<div class="w-7 h-3 rounded bg-brand-500/40"></div>
+</div>
+<!-- Flight Details Pill Skeletons -->
+<div class="w-28 sm:w-36 h-4 bg-slate-200 rounded-md skeleton-glow"></div>
+<div class="w-20 sm:w-28 h-4 bg-slate-200/80 rounded-md skeleton-glow hidden sm:block"></div>
+<div class="w-24 sm:w-32 h-4 bg-slate-200/70 rounded-md skeleton-glow hidden lg:block"></div>
+</div>
+<!-- Middle Pill Skeletons -->
+<div class="flex items-center space-x-4">
+<div class="w-20 sm:w-28 h-4 bg-slate-200 rounded-md skeleton-glow hidden md:block"></div>
+<div class="w-16 sm:w-24 h-4 bg-slate-200/80 rounded-md skeleton-glow hidden sm:block"></div>
+<div class="w-14 h-4 bg-slate-200 rounded-md skeleton-glow"></div>
+</div>
+<!-- Right Circular Status / Fare Indicators -->
+<div class="flex items-center space-x-2.5 justify-end">
+<div class="w-5 h-5 rounded-full bg-indigo-100 border border-indigo-200 skeleton-glow"></div>
+<div class="w-5 h-5 rounded-full bg-rose-100 border border-rose-200 skeleton-glow"></div>
+</div>
+</div>
+</div>
+<!-- Skeleton Card 2 (Warm Amber Badge) -->
+<div class="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 transition-all shadow-sm hover:border-slate-300">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-5">
+<!-- Left Info Block with Airline Icon Skeleton -->
+<div class="flex items-center space-x-5 flex-1">
+<!-- Warm Amber Icon Skeleton -->
+<div class="w-16 sm:w-20 h-9 rounded-lg bg-amber-500/15 border border-amber-500/30 skeleton-glow flex-shrink-0 flex items-center justify-center">
+<div class="w-7 h-3 rounded bg-amber-500/40"></div>
+</div>
+<!-- Flight Details Pill Skeletons -->
+<div class="w-28 sm:w-36 h-4 bg-slate-200 rounded-md skeleton-glow"></div>
+<div class="w-20 sm:w-28 h-4 bg-slate-200/80 rounded-md skeleton-glow hidden sm:block"></div>
+<div class="w-24 sm:w-32 h-4 bg-slate-200/70 rounded-md skeleton-glow hidden lg:block"></div>
+</div>
+<!-- Middle Pill Skeletons -->
+<div class="flex items-center space-x-4">
+<div class="w-20 sm:w-28 h-4 bg-slate-200 rounded-md skeleton-glow hidden md:block"></div>
+<div class="w-16 sm:w-24 h-4 bg-slate-200/80 rounded-md skeleton-glow hidden sm:block"></div>
+<div class="w-14 h-4 bg-slate-200 rounded-md skeleton-glow"></div>
+</div>
+<!-- Right Circular Status / Fare Indicators -->
+<div class="flex items-center space-x-2.5 justify-end">
+<div class="w-5 h-5 rounded-full bg-indigo-100 border border-indigo-200 skeleton-glow"></div>
+<div class="w-5 h-5 rounded-full bg-rose-100 border border-rose-200 skeleton-glow"></div>
+</div>
+</div>
+</div>
+<!-- Skeleton Card 3 (Teal / Slate Badge) -->
+<div class="bg-white border border-slate-200 rounded-xl p-5 sm:p-6 transition-all shadow-sm hover:border-slate-300">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-5">
+<!-- Left Info Block with Airline Icon Skeleton -->
+<div class="flex items-center space-x-5 flex-1">
+<!-- Deep Teal Icon Skeleton -->
+<div class="w-16 sm:w-20 h-9 rounded-lg bg-teal-500/15 border border-teal-500/30 skeleton-glow flex-shrink-0 flex items-center justify-center">
+<div class="w-7 h-3 rounded bg-teal-500/40"></div>
+</div>
+<!-- Flight Details Pill Skeletons -->
+<div class="w-28 sm:w-36 h-4 bg-slate-200 rounded-md skeleton-glow"></div>
+<div class="w-20 sm:w-28 h-4 bg-slate-200/80 rounded-md skeleton-glow hidden sm:block"></div>
+<div class="w-24 sm:w-32 h-4 bg-slate-200/70 rounded-md skeleton-glow hidden lg:block"></div>
+</div>
+<!-- Middle Pill Skeletons -->
+<div class="flex items-center space-x-4">
+<div class="w-20 sm:w-28 h-4 bg-slate-200 rounded-md skeleton-glow hidden md:block"></div>
+<div class="w-16 sm:w-24 h-4 bg-slate-200/80 rounded-md skeleton-glow hidden sm:block"></div>
+<div class="w-14 h-4 bg-slate-200 rounded-md skeleton-glow"></div>
+</div>
+<!-- Right Circular Status / Fare Indicators -->
+<div class="flex items-center space-x-2.5 justify-end">
+<div class="w-5 h-5 rounded-full bg-indigo-100 border border-indigo-200 skeleton-glow"></div>
+<div class="w-5 h-5 rounded-full bg-rose-100 border border-rose-200 skeleton-glow"></div>
+</div>
+</div>
+</div></div>
+</div>
+<!-- END: FlightCardsContainer -->
+</main>
+<!-- END: MainContent -->
+</body></html>

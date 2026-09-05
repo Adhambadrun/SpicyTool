@@ -1,0 +1,367 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Basis - Find your flight</title>
+<!-- Tailwind CSS v3 with Forms and Container Queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8'
+            }
+          }
+        }
+      }
+    }
+  </script>
+<!-- Custom Styles for refined calendar and layout UI -->
+<style data-purpose="custom-styling">
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .calendar-shadow {
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.12), 0 0 1px 1px rgba(0, 0, 0, 0.05);
+    }
+  </style>
+</head>
+<body class="bg-[#f8f9fa] text-[#111827] min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white pb-24">
+<!-- BEGIN: MainHeader -->
+<header class="w-full border-b border-gray-200/80 bg-white sticky top-0 z-30 px-6 py-3.5 flex items-center justify-between">
+<!-- Brand Logo -->
+<div class="flex items-center space-x-2"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBrB2FcjphIPhigfHGvZYyyTxZTZi91HppYSjak64Wxth-Dy2U5Q5YZjNzwuR4KKqCDcddpVSDK87cSs9PxMJd-GJFty21p2H1wdRndW1ljYWcNHpzPpF_kd3h2sF_Qj7uGDFG2qy_i_WExQC4FvU3A-7tHzx0l9LfI9-s-DV4lDu6zJOEW3EoPDFXR7YJOuD194h7MIRlXynLHesm2VQhQ_Z6uUj2Eqnolpi5rdLBSWawgsL4fCVsUb59vqFeVmmHciA" alt="SpicyTool Logo" class="w-8 h-8 rounded-lg object-contain">
+<span class="font-bold text-xl tracking-tight text-gray-950">SpicyTool</span></div>
+<!-- Top Right Controls -->
+<div class="flex items-center space-x-3">
+<!-- Modify Programs Button -->
+<button class="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-full transition-colors" type="button">
+        Modify programs (29)
+      </button>
+<!-- Theme Switcher -->
+<div class="flex items-center bg-gray-100 rounded-full p-0.5 border border-gray-200">
+<button aria-label="Light mode" class="w-7 h-7 rounded-full bg-white shadow-sm flex items-center justify-center text-gray-800" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="5"></circle>
+<line x1="12" x2="12" y1="1" y2="3"></line>
+<line x1="12" x2="12" y1="21" y2="23"></line>
+<line x1="4.22" x2="5.64" y1="4.22" y2="5.64"></line>
+<line x1="18.36" x2="19.78" y1="18.36" y2="19.78"></line>
+<line x1="1" x2="3" y1="12" y2="12"></line>
+<line x1="21" x2="23" y1="12" y2="12"></line>
+<line x1="4.22" x2="5.64" y1="19.78" y2="18.36"></line>
+<line x1="18.36" x2="19.78" y1="5.64" y2="4.22"></line>
+</svg>
+</button>
+<button aria-label="Dark mode" class="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+</svg>
+</button>
+</div>
+<!-- User Avatar / Profile -->
+<button aria-label="User Profile" class="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50" type="button">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+</header>
+<!-- END: MainHeader -->
+<!-- BEGIN: MainContent -->
+<main class="flex-1 max-w-5xl w-full mx-auto px-4 pt-10 pb-16 relative">
+<!-- Main Headline -->
+<h1 class="text-4xl font-extrabold text-center text-gray-900 tracking-tight mb-8">
+      Find your flight
+    </h1>
+<!-- Trip Type Switchers -->
+<div class="flex justify-center items-center space-x-12 mb-6 text-sm font-medium">
+<!-- Round Trip (Active) -->
+<button class="relative pb-2.5 font-semibold text-gray-900 flex items-center space-x-2">
+<span class="">Round Trip</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-300">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse"></span> Live Data
+        </span>
+<!-- Active underline highlight indicator -->
+<span class="absolute bottom-0 left-0 right-0 h-[2px] bg-[#e11d2e] rounded-full"></span>
+</button>
+<!-- One Way -->
+<button class="relative pb-2.5 text-gray-500 hover:text-gray-800 flex items-center space-x-2 transition-colors">
+<span class="">One Way</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600 border border-gray-200">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1"></span> Live Data
+        </span>
+</button>
+</div>
+<!-- Search Form Card -->
+<div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm mb-8">
+<!-- Filter Selectors: Class & Passengers -->
+<div class="flex items-center space-x-6 text-xs font-semibold text-gray-700 mb-4">
+<div class="flex items-center cursor-pointer space-x-1 hover:text-gray-950">
+<span class="">Business Class</span>
+<svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<div class="flex items-center cursor-pointer space-x-1 hover:text-gray-950">
+<span class="">1 Passenger</span>
+<svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+</div>
+<!-- Main Flight Location Inputs -->
+<div class="flex items-center space-x-2 relative mb-5">
+<!-- Origin ATH -->
+<div class="flex-1 flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500">
+<svg class="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="10"></circle>
+<line x1="22" x2="18" y1="12" y2="12"></line>
+<line x1="6" x2="2" y1="12" y2="12"></line>
+<line x1="12" x2="12" y1="6" y2="2"></line>
+<line x1="12" x2="12" y1="22" y2="18"></line>
+</svg>
+<div class="inline-flex items-center bg-white border border-gray-200 px-2 py-0.5 rounded text-xs font-semibold text-gray-800 shadow-2xs">
+            ATH
+            <button class="ml-1 text-gray-400 hover:text-gray-700">×</button>
+</div>
+<input class="w-full ml-2 border-0 bg-transparent p-0 text-sm focus:ring-0 placeholder-gray-400" placeholder="" type="text">
+</div>
+<!-- Exchange / Flip Button -->
+<button class="w-8 h-8 rounded-full border border-gray-200 bg-white hover:bg-gray-100 flex items-center justify-center text-gray-500 shadow-2xs z-10 transition">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Destination NYC -->
+<div class="flex-1 flex items-center bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500">
+<svg class="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+<path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<div class="inline-flex items-center bg-white border border-gray-200 px-2 py-0.5 rounded text-xs font-semibold text-gray-800 shadow-2xs">
+            NYC
+            <button class="ml-1 text-gray-400 hover:text-gray-700">×</button>
+</div>
+<input class="w-full ml-2 border-0 bg-transparent p-0 text-sm focus:ring-0 placeholder-gray-400" placeholder="" type="text">
+</div>
+</div>
+<!-- Feature Checkboxes -->
+<div class="space-y-2 text-xs font-medium text-gray-600 border-t border-gray-100 pt-3">
+<!-- Hidden City Fares Option -->
+<label class="flex items-center space-x-2 cursor-pointer select-none">
+<div class="w-4 h-4 rounded-full bg-[#e11d2e] text-white flex items-center justify-center">
+<svg class="w-2.5 h-2.5 stroke-current stroke-[3]" fill="none" viewBox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="text-gray-800">Check hidden city and upgrade fares.</span>
+</label>
+<!-- Super HC Mode Option -->
+<label class="flex items-center space-x-2 cursor-pointer select-none text-gray-500">
+<div class="w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center"></div>
+<span class="">Enable super hc mode (10 remaining for this month)</span>
+</label>
+</div>
+</div>
+<!-- BEGIN: ExploreCard -->
+<div class="bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-2xl p-8 flex flex-col justify-between relative overflow-hidden h-64 shadow-md">
+<div class="max-w-xs z-10">
+<h2 class="text-3xl font-extrabold tracking-tight leading-tight mb-6">
+          Want to explore flights fast?
+        </h2>
+<button class="px-5 py-2.5 bg-[#e11d2e] hover:bg-[#c0001f] text-white text-sm font-semibold rounded-xl transition shadow-md">
+          Try Broad Search
+        </button>
+</div>
+<!-- Subtle Decorative Sphere/Glow in Card -->
+<div class="absolute -bottom-16 -right-12 w-64 h-64 bg-[#e11d2e]/20 rounded-full blur-2xl pointer-events-none"></div>
+</div>
+<!-- END: ExploreCard -->
+<!-- BEGIN: DualMonthCalendarPopover -->
+<!-- Positioned over top right of search area mirroring screenshot reference -->
+<div class="absolute top-[160px] right-2 w-[520px] bg-white border border-gray-200/90 rounded-2xl calendar-shadow p-5 z-40" data-purpose="date-picker-dialog">
+<!-- Input Headers Row -->
+<div class="grid grid-cols-2 gap-3 mb-3">
+<!-- Departure Input Field -->
+<div>
+<span class="block text-[11px] font-bold tracking-wider text-gray-400 mb-1">DEPARTURE</span>
+<div class="flex items-center justify-between border border-gray-300 rounded-xl px-3 py-2 bg-white hover:border-gray-400 transition">
+<div class="flex items-center space-x-2 text-xs font-semibold text-gray-800">
+<svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<rect height="18" rx="2" ry="2" width="18" x="3" y="4"></rect>
+<line x1="16" x2="16" y1="2" y2="6"></line>
+<line x1="8" x2="8" y1="2" y2="6"></line>
+<line x1="3" x2="21" y1="10" y2="10"></line>
+</svg>
+<span class="">Sep 16, 2026</span>
+</div>
+<button class="text-gray-400 hover:text-gray-700 text-sm font-light">×</button>
+</div>
+<!-- Day tolerance chips -->
+<div class="flex items-center space-x-1.5 mt-2"><button class="px-2 py-0.5 rounded-full bg-red-50 hover:bg-red-100 text-[#e11d2e] text-[11px] font-semibold transition">± 1 day</button>
+<button class="px-2 py-0.5 rounded-full bg-red-50 hover:bg-red-100 text-[#e11d2e] text-[11px] font-semibold transition">± 2 day</button></div>
+</div>
+<!-- Return Input Field -->
+<div>
+<span class="block text-[11px] font-bold tracking-wider text-gray-400 mb-1">RETURN</span>
+<div class="flex items-center justify-between border border-gray-200 rounded-xl px-3 py-2 bg-white hover:border-gray-300 transition">
+<div class="flex items-center space-x-2 text-xs font-semibold text-gray-400">
+<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<rect height="18" rx="2" ry="2" width="18" x="3" y="4"></rect>
+<line x1="16" x2="16" y1="2" y2="6"></line>
+<line x1="8" x2="8" y1="2" y2="6"></line>
+<line x1="3" x2="21" y1="10" y2="10"></line>
+</svg>
+<span class="">Return</span>
+</div>
+<button class="text-gray-300 hover:text-gray-500 text-sm font-light">×</button>
+</div>
+<!-- Day tolerance chips -->
+<div class="flex items-center space-x-1.5 mt-2"><button class="px-2 py-0.5 rounded-full bg-red-50 hover:bg-red-100 text-[#e11d2e] text-[11px] font-semibold transition">± 1 day</button>
+<button class="px-2 py-0.5 rounded-full bg-red-50 hover:bg-red-100 text-[#e11d2e] text-[11px] font-semibold transition">± 2 day</button></div>
+</div>
+</div>
+<!-- Navigation & Month Headers -->
+<div class="flex items-center justify-between border-t border-gray-100 pt-3 pb-1">
+<button class="w-6 h-6 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<div class="flex-1 grid grid-cols-2 text-center text-xs font-bold text-gray-900">
+<div class="">September 2026</div>
+<div class="">October 2026</div>
+</div>
+<button class="w-6 h-6 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+<path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+<!-- Dual Calendar Grids Side by Side -->
+<div class="grid grid-cols-2 gap-4 text-center text-xs">
+<!-- Month 1: September 2026 -->
+<div>
+<!-- Day Names -->
+<div class="grid grid-cols-7 text-[10px] font-semibold text-gray-400 py-1">
+<span class="">Su</span><span class="">Mo</span><span class="">Tu</span><span class="">We</span><span class="">Th</span><span class="">Fr</span><span class="">Sa</span>
+</div>
+<!-- Days -->
+<div class="grid grid-cols-7 gap-y-1 font-medium text-gray-700">
+<!-- Row 1 -->
+<span class="py-1 text-gray-300">30</span>
+<span class="py-1 text-gray-300">31</span>
+<span class="py-1">1</span>
+<span class="py-1">2</span>
+<span class="py-1">3</span>
+<span class="py-1">4</span>
+<span class="py-1 flex items-center justify-center"><span class="w-6 h-6 rounded-full bg-gray-200 text-gray-800 font-bold flex items-center justify-center">5</span></span>
+<!-- Row 2 -->
+<span class="py-1">6</span>
+<span class="py-1">7</span>
+<span class="py-1">8</span>
+<span class="py-1">9</span>
+<span class="py-1">10</span>
+<span class="py-1">11</span>
+<span class="py-1">12</span>
+<!-- Row 3 -->
+<span class="py-1">13</span>
+<span class="py-1">14</span>
+<span class="py-1">15</span>
+<!-- Selected Departure Day 16 -->
+<span class="py-1 flex items-center justify-center"><span class="w-6 h-6 rounded-full bg-[#e11d2e] text-white font-semibold flex items-center justify-center shadow-sm">16</span></span>
+<span class="py-1">17</span>
+<span class="py-1">18</span>
+<span class="py-1">19</span>
+<!-- Row 4 -->
+<span class="py-1">20</span>
+<span class="py-1">21</span>
+<span class="py-1">22</span>
+<span class="py-1">23</span>
+<span class="py-1">24</span>
+<span class="py-1">25</span>
+<span class="py-1">26</span>
+<!-- Row 5 -->
+<span class="py-1">27</span>
+<span class="py-1">28</span>
+<span class="py-1">29</span>
+<span class="py-1">30</span>
+<span class="py-1 text-gray-300">1</span>
+<span class="py-1 text-gray-300">2</span>
+<span class="py-1 text-gray-300">3</span>
+</div>
+</div>
+<!-- Month 2: October 2026 -->
+<div>
+<!-- Day Names -->
+<div class="grid grid-cols-7 text-[10px] font-semibold text-gray-400 py-1">
+<span class="">Su</span><span class="">Mo</span><span class="">Tu</span><span class="">We</span><span class="">Th</span><span class="">Fr</span><span class="">Sa</span>
+</div>
+<!-- Days -->
+<div class="grid grid-cols-7 gap-y-1 font-medium text-gray-700">
+<!-- Row 1 -->
+<span class="py-1 text-gray-300">27</span>
+<span class="py-1 text-gray-300">28</span>
+<span class="py-1 text-gray-300">29</span>
+<span class="py-1 text-gray-300">30</span>
+<span class="py-1 font-semibold text-gray-900">1</span>
+<span class="py-1 font-semibold text-gray-900">2</span>
+<span class="py-1 font-semibold text-gray-900">3</span>
+<!-- Row 2 -->
+<span class="py-1">4</span>
+<span class="py-1">5</span>
+<span class="py-1">6</span>
+<span class="py-1">7</span>
+<span class="py-1">8</span>
+<span class="py-1">9</span>
+<span class="py-1">10</span>
+<!-- Row 3 -->
+<span class="py-1">11</span>
+<span class="py-1">12</span>
+<span class="py-1">13</span>
+<span class="py-1">14</span>
+<span class="py-1">15</span>
+<span class="py-1">16</span>
+<span class="py-1">17</span>
+<!-- Row 4 -->
+<span class="py-1">18</span>
+<span class="py-1">19</span>
+<span class="py-1">20</span>
+<span class="py-1">21</span>
+<span class="py-1">22</span>
+<span class="py-1">23</span>
+<span class="py-1">24</span>
+<!-- Row 5 -->
+<span class="py-1">25</span>
+<span class="py-1">26</span>
+<span class="py-1">27</span>
+<span class="py-1">28</span>
+<span class="py-1">29</span>
+<span class="py-1">30</span>
+<span class="py-1">31</span>
+</div>
+</div>
+</div>
+<!-- Action Buttons Footer -->
+<div class="flex items-center justify-end space-x-2.5 mt-5 pt-3 border-t border-gray-100">
+<button class="px-5 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-xl transition" type="button">
+          Cancel
+        </button>
+<button class="px-6 py-2 bg-[#e11d2e] hover:bg-[#c0001f] text-white text-xs font-semibold rounded-xl shadow-xs transition" type="button">
+          Set dates
+        </button>
+</div>
+</div>
+<!-- END: DualMonthCalendarPopover -->
+</main>
+<!-- END: MainContent -->
+
+
+</body></html>

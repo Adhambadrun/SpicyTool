@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SpicyTool - VI* Flight Terminal</title>
+<!-- Tailwind CSS v3 with plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              red: '#e11d2e',
+              redHover: '#c51624',
+              dark: '#0f172a',
+              slate: '#1e293b'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['JetBrains Mono', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+<style data-purpose="custom-scrollbar">
+    /* Custom refined scrollbar for the terminal window */
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: rgba(30, 41, 59, 0.4);
+      border-radius: 9999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 9999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: #64748b;
+    }
+  </style>
+<style data-purpose="terminal-styling">
+    .terminal-code {
+      white-space: pre;
+      line-height: 1.85;
+      font-feature-settings: "tnum";
+      letter-spacing: 0.04em;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen relative overflow-hidden select-none">
+<!-- BEGIN: UnderlayBackgroundPage -->
+<!-- Simulated background page: SpicyTool Flight Search Dashboard in Light Mode -->
+<div class="min-h-screen flex flex-col bg-slate-50 filter blur-[1px] opacity-75">
+<!-- Top Navigation Header -->
+<header class="w-full bg-white border-b border-slate-200 px-8 py-3.5 flex items-center justify-between shadow-xs">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-3">
+<img alt="SpicyTool Logo" class="w-9 h-9 rounded-xl shadow-xs object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA2i5KCfFYKs40NK4tE5LVZ9LqKtzzFZMzNRZcdEmEw7Lpq9siEcoVHq3cy8GHzsgqtW5bHtctNpBbeaSkU0EwLY6PwWERoHK4CiXp0BWLUkX_Nh4P-0emZdHq-faEXMTF4-kHi3z9lw4M8upg7TsKSQmTT2i4cwO8aV3MwUYsdj9LFZLLJUrz9uyCTWhOw9HgnfCqZlZJYr7A5ZS74SWuEHjOEdUZW69WKVw3ZsYGGQplyNZesWyO1ywZfO62YKn_d2g"/>
+<div class="flex flex-col">
+<span class="font-extrabold text-lg text-slate-900 tracking-tight leading-none">Spicy<span class="text-brand-red">Tool</span></span>
+<span class="text-[10px] text-slate-400 font-medium tracking-wide uppercase mt-0.5">Flight Engine</span>
+</div>
+</div>
+<nav class="hidden md:flex items-center gap-1 ml-4 text-sm font-medium text-slate-600">
+<a class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-900 font-semibold" href="#">Search</a>
+<a class="px-3 py-1.5 rounded-lg hover:bg-slate-50 text-slate-600" href="#">Routes</a>
+<a class="px-3 py-1.5 rounded-lg hover:bg-slate-50 text-slate-600" href="#">GDS Console</a>
+<a class="px-3 py-1.5 rounded-lg hover:bg-slate-50 text-slate-600" href="#">History</a>
+</nav>
+</div>
+<!-- Header Controls -->
+<div class="flex items-center gap-4">
+<!-- Light Mode Active Indicator -->
+<div class="flex items-center bg-slate-100 p-1 rounded-full border border-slate-200">
+<button class="px-2.5 py-1 text-xs font-semibold rounded-full bg-white text-slate-800 shadow-xs flex items-center gap-1.5">
+<svg class="w-3.5 h-3.5 text-amber-500" fill="currentColor" viewbox="0 0 20 20">
+<path clip-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd"></path>
+</svg>
+<span>Light</span>
+</button>
+<button class="px-2.5 py-1 text-xs font-medium text-slate-500 rounded-full hover:text-slate-700">Dark</button>
+</div>
+<div class="h-8 w-8 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center font-bold text-slate-700 text-xs">
+          SL
+        </div>
+</div>
+</header>
+<!-- Search Route Banner Preview -->
+<main class="flex-1 max-w-7xl w-full mx-auto p-8 space-y-6">
+<div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+<div>
+<div class="text-xs font-semibold uppercase tracking-wider text-slate-400">Selected Segment</div>
+<div class="text-2xl font-bold text-slate-900 mt-0.5">Athens (ATH) → New York (LGA)</div>
+<div class="text-sm text-slate-500 mt-1">Wed, Sep 16, 2026 • 2 Stops (VIE, YUL) • Business &amp; Economy</div>
+</div>
+<div class="text-right">
+<div class="text-xs text-slate-400 font-medium uppercase tracking-wider">Total Fare</div>
+<div class="text-3xl font-extrabold text-emerald-600">$3,420</div>
+</div>
+</div>
+<!-- Mock Result Cards in Background -->
+<div class="space-y-4">
+<div class="bg-white p-5 rounded-xl border border-slate-200 flex items-center justify-between shadow-xs">
+<div class="flex items-center gap-4">
+<span class="font-bold text-slate-900">Austrian Airlines + Air Canada</span>
+<span class="text-slate-400 text-sm">OS 806 • OS 55 • AC 734</span>
+</div>
+<span class="text-sm font-semibold text-slate-500">14h 06m</span>
+</div>
+<div class="bg-white p-5 rounded-xl border border-slate-200 flex items-center justify-between shadow-xs">
+<div class="flex items-center gap-4">
+<span class="font-bold text-slate-900">Lufthansa + United</span>
+<span class="text-slate-400 text-sm">LH 1281 • UA 8840</span>
+</div>
+<span class="text-sm font-semibold text-slate-500">12h 45m</span>
+</div>
+</div>
+</main>
+</div>
+<!-- END: UnderlayBackgroundPage -->
+<!-- BEGIN: ModalOverlay -->
+<!-- Dimmed Soft Frosted Backdrop Overlay -->
+<div class="fixed inset-0 bg-slate-900/45 backdrop-blur-sm z-40 transition-opacity flex items-center justify-center p-4" data-purpose="modal-backdrop">
+<!-- BEGIN: TerminalModalWindow -->
+<!-- Centered Crisp White Floating Modal Dialog Container -->
+<div class="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-slate-200/90 overflow-hidden flex flex-col transform transition-all duration-300" data-purpose="vi-terminal-modal">
+<!-- Top Bar / Close Button & Main Title -->
+<div class="relative pt-6 pb-2 px-8 flex flex-col items-center justify-center border-b border-slate-100">
+<!-- Close (X) Icon Button -->
+<button aria-label="Close modal" class="absolute top-5 right-6 w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer" type="button">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Centered Header Title: VI* with Brand Red Asterisk -->
+<h2 class="text-3xl font-extrabold tracking-tight text-slate-900 flex items-center gap-0.5">
+          VI<span class="text-brand-red font-black">*</span>
+</h2>
+<!-- Route Subtitle -->
+<div class="text-xl font-bold text-slate-800 tracking-tight mt-1">
+          ATH to LGA
+        </div>
+</div>
+<!-- Modal Body Content -->
+<div class="p-6 md:p-8 space-y-4">
+<!-- Developer Terminal / GDS Code Output Console Container -->
+<div class="relative bg-slate-900 rounded-xl border border-slate-800 shadow-inner overflow-hidden flex flex-col">
+<!-- Terminal Upper Bar with Copy Action -->
+<div class="flex items-center justify-between px-4 py-2.5 bg-slate-950/70 border-b border-slate-800/80">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-rose-500/80 inline-block"></span>
+<span class="w-2.5 h-2.5 rounded-full bg-amber-500/80 inline-block"></span>
+<span class="w-2.5 h-2.5 rounded-full bg-emerald-500/80 inline-block"></span>
+<span class="ml-2 text-xs font-mono text-slate-400 font-medium">GDS RAW SEGMENT VERIFICATION</span>
+</div>
+<!-- Top Right Copy Icon Button -->
+<button class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-300 hover:text-white text-xs font-medium border border-slate-700/80 transition-all cursor-pointer" data-purpose="copy-code-button" id="terminal-copy-btn" title="Copy terminal contents">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<rect height="13" rx="2" ry="2" width="13" x="9" y="9"></rect>
+<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+</svg>
+<span id="copy-btn-text">Copy</span>
+</button>
+</div>
+<!-- Exact Monospace GDS / Terminal Airline Routing Text Content -->
+<div class="custom-scroll p-5 overflow-x-auto max-h-[380px] bg-[#0c1220]">
+<pre class="terminal-code font-mono text-xs sm:text-sm text-slate-100 select-text"><span class="text-white font-semibold">1  OS   806  16SEP  ATH  VIE   630A   740A   D   ???  2.10   794  N</span>
+<span class="text-slate-400">DEP-NOT PRE-DETERMINED            ARR-3</span>
+<span class="text-brand-red font-medium">STAR</span>
+<span class="text-emerald-400">CABIN-BUSINESS</span>
+<span class="text-white font-semibold">2  OS    55  16SEP  VIE  YUL  1100A   150P   D   763  8.50  4027  N</span>
+<span class="text-slate-400">DEP-NOT PRE-DETERMINED            ARR-NOT PRE-DETERMINED</span>
+<span class="text-brand-red font-medium">STAR</span>
+<span class="text-emerald-400">CABIN-BUSINESS</span>
+<span class="text-white font-semibold">3  AC   734  16SEP  YUL  LGA   610P   736P   D   223  1.26   324  N</span>
+<span class="text-slate-400">DEP-NOT PRE-DETERMINED            ARR-NOT PRE-DETERMINED</span>
+<span class="text-brand-red font-medium">STAR</span>
+<span class="text-sky-300">CABIN-ECONOMY</span></pre>
+</div>
+<!-- Terminal Bottom Status Line -->
+<div class="px-4 py-2 bg-slate-950/90 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-mono text-slate-400">
+<span class="flex items-center gap-1.5">
+<span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              STATUS: CONFIRMED ROUTE
+            </span>
+<span class="text-slate-500">FORMAT: AMADEUS / SABRE GDS VI*</span>
+</div>
+</div>
+<!-- End Terminal Box -->
+</div>
+<!-- BEGIN: ModalFooter -->
+<!-- Action Row with SpicyTool Brand Red Accent Buttons -->
+<div class="px-6 md:px-8 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+<!-- Segment Summary Tag -->
+<div class="hidden sm:flex items-center gap-2 text-xs font-medium text-slate-500">
+<span class="w-2 h-2 rounded-full bg-brand-red"></span>
+<span>3 Segments Verified • ATH → VIE → YUL → LGA</span>
+</div>
+<!-- Action Buttons -->
+<div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+<button class="px-4 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer" id="secondary-copy-btn" type="button">
+<svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<rect height="13" rx="2" ry="2" width="13" x="9" y="9"></rect>
+<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+</svg>
+<span>Copy Details</span>
+</button>
+<button class="px-6 py-2 text-xs font-bold text-white bg-brand-red hover:bg-brand-redHover active:scale-[0.98] rounded-full shadow-sm hover:shadow transition-all cursor-pointer" type="button">
+            Done
+          </button>
+</div>
+</div>
+<!-- END: ModalFooter -->
+</div>
+<!-- END: TerminalModalWindow -->
+</div>
+<!-- END: ModalOverlay -->
+<!-- Simple script for Copy interaction -->
+<script data-purpose="clipboard-interaction">
+    const rawGdsData = `1  OS   806  16SEP  ATH  VIE   630A   740A   D   ???  2.10   794  N
+DEP-NOT PRE-DETERMINED            ARR-3
+STAR
+CABIN-BUSINESS
+2  OS    55  16SEP  VIE  YUL  1100A   150P   D   763  8.50  4027  N
+DEP-NOT PRE-DETERMINED            ARR-NOT PRE-DETERMINED
+STAR
+CABIN-BUSINESS
+3  AC   734  16SEP  YUL  LGA   610P   736P   D   223  1.26   324  N
+DEP-NOT PRE-DETERMINED            ARR-NOT PRE-DETERMINED
+STAR
+CABIN-ECONOMY`;
+
+    const copyBtn = document.getElementById('terminal-copy-btn');
+    const copyBtnText = document.getElementById('copy-btn-text');
+    const secondaryCopyBtn = document.getElementById('secondary-copy-btn');
+
+    function handleCopy() {
+      navigator.clipboard.writeText(rawGdsData).then(() => {
+        if (copyBtnText) copyBtnText.textContent = 'Copied!';
+        setTimeout(() => {
+          if (copyBtnText) copyBtnText.textContent = 'Copy';
+        }, 2000);
+      }).catch(err => {
+        console.error('Clipboard copy failed: ', err);
+      });
+    }
+
+    if (copyBtn) copyBtn.addEventListener('click', handleCopy);
+    if (secondaryCopyBtn) secondaryCopyBtn.addEventListener('click', handleCopy);
+  </script>
+</body></html>

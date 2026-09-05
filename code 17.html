@@ -1,0 +1,253 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>VI* Terminal Routing View - SpicyTool Obsidian Crimson</title>
+<!-- Tailwind CSS CDN with plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              red: '#e11d2e',
+              crimson: '#dc2626',
+              darkRed: '#991b1b',
+              glow: 'rgba(225, 29, 46, 0.45)',
+            },
+            obsidian: {
+              950: '#070709',
+              900: '#0d0d11',
+              850: '#121217',
+              800: '#18181e',
+              700: '#23232c',
+              600: '#32323f'
+            }
+          },
+          fontFamily: {
+            mono: ['SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace'],
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+<!-- Grouped CSS: Custom Scrollbar -->
+<style data-purpose="custom-scrollbar">
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #111116;
+      border-radius: 9999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #3f3f4e;
+      border-radius: 9999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: #5a5a6e;
+    }
+  </style>
+<!-- Grouped CSS: Glow and Accents -->
+<style data-purpose="brand-effects">
+    .crimson-glow {
+      box-shadow: 0 0 35px -5px rgba(225, 29, 46, 0.25), 0 25px 50px -12px rgba(0, 0, 0, 0.85);
+    }
+    .text-glow {
+      text-shadow: 0 0 12px rgba(225, 29, 46, 0.6);
+    }
+  </style>
+</head>
+<body class="bg-obsidian-950 text-gray-100 font-sans min-h-screen relative overflow-hidden select-none">
+<!-- BEGIN: BackgroundApplication -->
+<!-- Dimmed underlying Flight Search interface matching reference layout -->
+<div class="absolute inset-0 z-0 flex flex-col pointer-events-none filter blur-[1px] opacity-35" data-purpose="background-flight-app">
+<!-- App Navigation Header -->
+<header class="h-16 border-b border-obsidian-700 bg-obsidian-900/90 px-8 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<img alt="SpicyTool Logo" class="w-9 h-9 rounded-lg shadow-sm shadow-brand-red/30" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIiSDEsSaeb9-U2p7hquNoYfkZxnvr6a7eSfGcakImZWDwwpZcfpt-Xl9yiRD1FfPTZBCowoMuInjqb3i3zIhdhdiYl1YYjvfETrLKIwFn5XWcVgRcdox0q5boeo8elIBCg3GCroswLFET3e4Xe0xpKT3-Da5-1TO9t3pCR8Y8pH2O-pab1_CXsY1vakIdOgox-qdaC14aGAshHya0lgfIGuqlsV5aCEkj4Y64FrXJfN_Pa0nfnl2PwvbzsYHJZLK-RQ">
+<span class="text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
+          Spicy<span class="text-brand-red">Tool</span>
+<span class="text-xs px-2 py-0.5 rounded bg-brand-red/10 border border-brand-red/30 text-brand-red uppercase font-mono tracking-wider ml-2">Obsidian GDS</span>
+</span>
+</div>
+<div class="flex items-center gap-6 text-sm text-gray-400 font-medium">
+<span class="text-white">Flights</span>
+<span class="">Availability</span>
+<span class="">Fare Rules</span>
+<span class="">PNR Search</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-semibold">
+          $3,420 RT
+        </div>
+</div>
+</header>
+<!-- Flight Search Results Backdrop Preview -->
+<main class="p-8 max-w-6xl mx-auto w-full space-y-4">
+<div class="flex justify-between items-center pb-4 border-b border-obsidian-700/60">
+<div class="flex items-center gap-4">
+<h2 class="text-2xl font-bold text-white tracking-wide">ATH → LGA</h2>
+<span class="text-sm text-gray-400">Sep 16, 2026 — 2 Stops (VIE, YUL)</span>
+</div>
+<div class="text-sm font-mono text-gray-400">GDS Mode: Amadeus/Sabre VI*</div>
+</div>
+<!-- Result Card 1 -->
+<div class="bg-obsidian-850/80 border border-obsidian-700 rounded-xl p-5 flex items-center justify-between">
+<div class="flex items-center gap-6">
+<div class="text-lg font-bold text-white">06:30 ATH</div>
+<div class="w-36 h-[2px] bg-obsidian-600 relative flex items-center justify-center">
+<span class="text-[10px] absolute -top-4 text-gray-400">18h 06m</span>
+<div class="w-2 h-2 rounded-full bg-brand-red"></div>
+</div>
+<div class="text-lg font-bold text-white">19:36 LGA</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-sm font-mono text-gray-400">Austrian + Air Canada</span>
+<span class="text-brand-red font-bold text-lg">$3,420</span>
+</div>
+</div>
+<!-- Result Card 2 -->
+<div class="bg-obsidian-850/80 border border-obsidian-700 rounded-xl p-5 flex items-center justify-between">
+<div class="flex items-center gap-6">
+<div class="text-lg font-bold text-white">10:15 ATH</div>
+<div class="w-36 h-[2px] bg-obsidian-600 relative flex items-center justify-center">
+<span class="text-[10px] absolute -top-4 text-gray-400">16h 40m</span>
+<div class="w-2 h-2 rounded-full bg-brand-red"></div>
+</div>
+<div class="text-lg font-bold text-white">21:55 LGA</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-sm font-mono text-gray-400">Lufthansa + United</span>
+<span class="text-white font-bold text-lg">$3,890</span>
+</div>
+</div>
+</main>
+</div>
+<!-- END: BackgroundApplication -->
+<!-- BEGIN: ModalOverlayBackdrop -->
+<!-- Dark modal backdrop layer -->
+<div class="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" data-purpose="modal-overlay">
+<!-- BEGIN: TerminalModalWindow -->
+<!-- Exact clone of the VI* Terminal Modal window -->
+<div class="relative w-full max-w-[890px] bg-obsidian-850 border border-obsidian-700 rounded-2xl p-6 sm:p-7 shadow-2xl crimson-glow transition-all" data-purpose="terminal-modal-container">
+<!-- Top Close Button -->
+<button aria-label="Close Terminal View" class="absolute top-5 right-5 w-8 h-8 rounded-full border border-obsidian-600/80 bg-obsidian-800 hover:bg-brand-red hover:border-brand-red text-gray-400 hover:text-white flex items-center justify-center transition-all duration-200 group focus:outline-none" data-purpose="close-modal-button" id="btn-close-modal">
+<svg class="w-4 h-4 transition-transform group-hover:rotate-90" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+<path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- BEGIN: ModalHeader -->
+<div class="mb-5" data-purpose="modal-header-section">
+<!-- Main VI* Centered Title with Brand Asterisk -->
+<h1 class="text-center text-3xl font-extrabold text-white tracking-wider flex items-center justify-center gap-0.5">
+<span class="">VI</span><span class="text-brand-red text-glow">*</span>
+</h1>
+<!-- Segment Route Subheader -->
+<h2 class="text-xl sm:text-2xl font-bold text-white mt-1 tracking-tight">
+          ATH to LGA
+        </h2>
+</div>
+<!-- END: ModalHeader -->
+<!-- BEGIN: TerminalConsoleBox -->
+<!-- Monospace GDS terminal console window matching exact reference content -->
+<div class="relative rounded-xl bg-obsidian-950 border border-obsidian-700/80 overflow-hidden shadow-inner" data-purpose="gds-terminal-outer-frame">
+<!-- Terminal Quick Action: Copy to Clipboard -->
+<div class="absolute top-3.5 right-3.5 z-10">
+<button class="p-2 rounded-lg bg-obsidian-800/90 hover:bg-obsidian-700 border border-obsidian-600/60 hover:border-brand-red/60 text-gray-300 hover:text-white transition-all shadow-md focus:outline-none flex items-center gap-1.5 text-xs font-mono" data-purpose="copy-code-button" id="btn-copy-gds" title="Copy GDS Text">
+<!-- Copy Icon -->
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+<rect height="13" rx="2" ry="2" width="13" x="9" y="9"></rect>
+<path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+</svg>
+<span class="hidden sm:inline text-[11px]" id="copy-status-text">Copy</span>
+</button>
+</div>
+<!-- Terminal Monospace Text Buffer -->
+<div class="custom-scroll max-h-[380px] overflow-y-auto p-5 sm:p-6 pr-14 font-mono text-[13px] sm:text-[14px] leading-[1.75] text-gray-100 whitespace-pre tracking-wide selection:bg-brand-red selection:text-white" data-purpose="terminal-scroll-area" id="gds-raw-text">1  OS   806  16SEP  ATH  VIE  630A  740A  D  ???  2.10   794  N
+DEP-NOT PRE-DETERMINED      ARR-3
+STAR
+CABIN-BUSINESS
+2  OS    55  16SEP  VIE  YUL  1100A 150P  D  763  8.50  4027  N
+DEP-NOT PRE-DETERMINED      ARR-NOT PRE-DETERMINED
+STAR
+CABIN-BUSINESS
+3  AC   734  16SEP  YUL  LGA  610P  736P  D  223  1.26   324  N
+DEP-NOT PRE-DETERMINED      ARR-NOT PRE-DETERMINED
+STAR
+CABIN-ECONOMY</div>
+<!-- Subtle terminal bottom status footer bar -->
+<div class="px-5 py-2.5 bg-obsidian-900 border-t border-obsidian-700/60 flex items-center justify-between text-xs text-gray-400 font-mono">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+<span class="">CONNECTED TO GDS CORE</span>
+</div>
+<span class="text-[11px] text-gray-500">FORMAT: VI* DIRECT ENTRY</span>
+</div>
+</div>
+<!-- END: TerminalConsoleBox -->
+<!-- BEGIN: ModalActionFooter -->
+<div class="mt-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-400" data-purpose="modal-footer">
+<div class="flex items-center gap-2">
+<img alt="Brand Stamp" class="w-4 h-4 rounded" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAaQtuILYLwIR_qMfBIpdb4cgLhoNkXOcioUDep3zeW9bYFFaW7klWZMEL2sgG0PjBkj4Wora6SSISHFPCXlHG5upkEtCd9vZv6r_r8l9-vAyNHkPS57jPP5BjbEP0KvC1FFhojP4b-vQ3Jr2bzE2h0qBYnOy-tbVIb8WUjfcskI-pId6fuRzDO_6O241xy78fF1jecQCLVqDRtjK4nTxOlU4OAfoBg7d5SMlWpqMDPUeQR55y9ztmrJHktLPFtdJDypA">
+<span class="font-mono text-[11px]">SpicyTool Obsidian v2.6.4</span>
+</div>
+<div class="flex items-center gap-2.5">
+<button class="px-4 py-2 rounded-lg bg-obsidian-800 hover:bg-obsidian-700 border border-obsidian-600 text-gray-300 hover:text-white text-xs font-medium transition-colors" onclick="document.getElementById('btn-close-modal').click()" type="button">
+            Close Esc
+          </button>
+<button class="px-4 py-2 rounded-lg bg-brand-red hover:bg-brand-crimson text-white text-xs font-semibold shadow-md shadow-brand-red/30 transition-colors flex items-center gap-1.5" onclick="document.getElementById('btn-copy-gds').click()" type="button">
+<span class="">Copy Itinerary</span>
+</button>
+</div>
+</div>
+<!-- END: ModalActionFooter -->
+</div>
+<!-- END: TerminalModalWindow -->
+</div>
+<!-- END: ModalOverlayBackdrop -->
+<!-- BEGIN: SimpleInteractivityScript -->
+<script data-purpose="clipboard-and-modal-interactions">
+    // Interactive copy functionality for GDS text terminal
+    const copyBtn = document.getElementById('btn-copy-gds');
+    const gdsText = document.getElementById('gds-raw-text');
+    const copyStatus = document.getElementById('copy-status-text');
+    const closeBtn = document.getElementById('btn-close-modal');
+
+    if (copyBtn && gdsText) {
+      copyBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(gdsText.innerText);
+          if (copyStatus) copyStatus.textContent = 'Copied!';
+          copyBtn.classList.add('border-brand-red', 'text-brand-red');
+          setTimeout(() => {
+            if (copyStatus) copyStatus.textContent = 'Copy';
+            copyBtn.classList.remove('border-brand-red', 'text-brand-red');
+          }, 1800);
+        } catch (err) {
+          console.error('Clipboard copy failed: ', err);
+        }
+      });
+    }
+
+    // Modal dismiss demo feedback
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        const modalContainer = document.querySelector('[data-purpose="terminal-modal-container"]');
+        if (modalContainer) {
+          modalContainer.classList.add('scale-95', 'opacity-50');
+          setTimeout(() => {
+            modalContainer.classList.remove('scale-95', 'opacity-50');
+          }, 400);
+        }
+      });
+    }
+  </script>
+<!-- END: SimpleInteractivityScript -->
+
+
+</body></html>

@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Modify Programs - SpicyTool v3.0</title>
+<!-- Google Fonts: Inter & JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration for SpicyTool Obsidian & Crimson Theme -->
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#fff1f2',
+              100: '#ffe4e6',
+              400: '#f43f5e',
+              500: '#e11d2e',
+              600: '#c31624',
+              700: '#9f121d',
+              glow: 'rgba(225, 29, 46, 0.25)'
+            },
+            obsidian: {
+              base: '#080809',
+              card: '#121215',
+              surface: '#17171c',
+              border: '#23232a',
+              hover: '#1b1b22',
+              muted: '#71717e',
+              text: '#e6e6eb'
+            }
+          }
+        }
+      }
+    }
+  </script>
+<!-- Custom Scrollbar and Form Styling Styles -->
+<style data-purpose="custom-scrollbars">
+    /* Subtle minimalist dark scrollbar for the modal content */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #121215;
+      border-radius: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #2a2a32;
+      border-radius: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #3a3a46;
+    }
+  </style>
+<style data-purpose="component-tweaks">
+    /* Custom checkbox and radio styling matching SpicyTool Red */
+    .checkbox-red {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 1rem;
+      height: 1rem;
+      border: 1.5px solid #33333d;
+      border-radius: 0.25rem;
+      background-color: #17171c;
+      cursor: pointer;
+      display: inline-grid;
+      place-content: center;
+      transition: all 0.15s ease-in-out;
+    }
+    .checkbox-red:checked {
+      background-color: #e11d2e;
+      border-color: #e11d2e;
+    }
+    .checkbox-red:checked::before {
+      content: "";
+      width: 0.55rem;
+      height: 0.35rem;
+      border-left: 1.8px solid #ffffff;
+      border-bottom: 1.8px solid #ffffff;
+      transform: rotate(-45deg) translate(0.5px, -0.5px);
+    }
+    .checkbox-red:focus-visible {
+      outline: 2px solid #e11d2e;
+      outline-offset: 2px;
+    }
+    .cpm-input::-webkit-outer-spin-button,
+    .cpm-input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    .cpm-input {
+      -moz-appearance: textfield;
+    }
+  </style>
+</head>
+<body class="bg-obsidian-base text-obsidian-text font-sans antialiased overflow-hidden min-h-screen relative select-none">
+<!-- BEGIN: Application Background Mockup (To replicate real underlying dashboard screenshot) -->
+<div class="fixed inset-0 pointer-events-none opacity-40 filter blur-sm">
+<!-- Top Bar Mockup -->
+<header class="w-full flex items-center justify-between px-7 py-3 border-b border-obsidian-border bg-obsidian-base/80">
+<div class="flex items-center gap-3">
+<img alt="SpicyTool Logo" class="w-7 h-7 rounded-md object-contain shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuATqzLkdmEgSciAj-qmt7n8IekcltIgjr1LU-JYbHk8WWcnaHq01_r5dQ3BgjZzGwy4jzYuKb01D0Jv-6KvLrSMyOAMV09A08P6M3ntAvdNgM7c1jJeQiVVDt7P0R584E2rQFibsB4b44juiuvS40WAZLyBMs60EuEpXShX2b37jb13wGeMMBUGxG425_tNtZLUJyIzfVXbU_s4NaRmLE86vIyMLDqWDqepu9SlxFeAbdTsbAvWNv4QAvTJXVKpkz9CHA"/>
+<span class="font-bold text-sm tracking-wider text-white">SPICYTOOL <span class="text-xs text-brand-500 font-mono font-medium">v3.0</span></span>
+</div>
+<div class="flex items-center gap-4 text-xs font-mono text-obsidian-muted">
+<span class="px-2.5 py-1 rounded border border-obsidian-border bg-obsidian-surface">Modify programs (29)</span>
+<div class="w-6 h-6 rounded-full bg-obsidian-surface border border-obsidian-border flex items-center justify-center text-[10px]">SL</div>
+</div>
+</header>
+<main class="max-w-4xl mx-auto mt-20 text-center flex flex-col items-center">
+<h1 class="text-2xl font-bold tracking-tight text-neutral-200">Find your flight</h1>
+<div class="w-full max-w-2xl h-14 bg-obsidian-card border border-obsidian-border rounded-xl mt-6"></div>
+</main>
+</div>
+<!-- END: Application Background Mockup -->
+<!-- BEGIN: Dark Backdrop Overlay -->
+<div class="fixed inset-0 bg-black/85 backdrop-blur-[3px] transition-opacity z-40" data-purpose="modal-backdrop"></div>
+<!-- END: Dark Backdrop Overlay -->
+<!-- BEGIN: Modal Container -->
+<div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+<div class="relative w-full max-w-[830px] max-h-[92vh] flex flex-col bg-[#121215] border border-[#26262e] rounded-xl shadow-[0_24px_60px_-15px_rgba(0,0,0,0.9),0_0_30px_0px_rgba(225,29,46,0.06)] overflow-hidden" data-purpose="modify-programs-dialog">
+<!-- BEGIN: Modal Header -->
+<div class="flex items-center justify-between px-6 py-4 border-b border-[#1f1f26] bg-[#121215] z-10 shrink-0">
+<div class="flex items-center gap-2.5">
+<h2 class="text-base font-semibold text-white tracking-tight">Modify programs</h2>
+<span class="text-[11px] font-mono font-medium text-brand-500 bg-brand-500/10 border border-brand-500/20 px-2 py-0.5 rounded-full">29 Available</span>
+</div>
+<button aria-label="Close dialog" class="text-obsidian-muted hover:text-white p-1 rounded-md hover:bg-obsidian-surface transition-colors duration-150 focus:outline-none" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+<!-- END: Modal Header -->
+<!-- BEGIN: Scrollable Modal Body -->
+<div class="custom-scrollbar overflow-y-auto px-6 py-4 space-y-4 flex-1 text-[13px] leading-relaxed">
+<!-- BEGIN: Option 1 (SpicyTool Managed Ticketing) -->
+<label class="block p-4 rounded-xl border border-[#23232b] bg-[#15151a] hover:border-[#2f2f3a] transition-colors cursor-pointer group" data-purpose="option-direct-booking">
+<div class="flex items-start gap-3">
+<input class="mt-1 w-4 h-4 text-brand-500 border-[#33333e] bg-obsidian-surface focus:ring-brand-500 focus:ring-offset-0 focus:ring-1" name="booking_routing_mode" type="radio" value="spicytool_direct"/>
+<div class="space-y-2.5 flex-1">
+<div class="flex items-center justify-between">
+<span class="font-semibold text-sm text-neutral-200 group-hover:text-white transition-colors">Ticket via SpicyTool.com</span>
+<span class="text-[11px] font-mono text-neutral-400 bg-[#1c1c24] border border-[#292934] px-2 py-0.5 rounded">Fastest &amp; Safest</span>
+</div>
+<p class="text-neutral-400 text-xs">
+                Experience unmatched speed and safety when booking award flights with us. Plus, enjoy these exclusive benefits:
+              </p>
+<ul class="space-y-1.5 text-xs text-neutral-300 list-disc list-inside">
+<li><strong class="text-neutral-200 font-medium">Lightning-Fast Ticketing:</strong> We understand how quickly award availability can change. Our system automatically locates matching mileage accounts and confirms your customers' flights at industry-leading speed.</li>
+<li><strong class="text-neutral-200 font-medium">World-Class Safety Team:</strong> Our expert team stays up-to-date with the latest ticketing safety practices, so you don't have to. Just using a VPN won't cut it these days—you need a broker who understands proxies, browser fingerprinting, email pixels, phone audit triggers, and much more.</li>
+<li><strong class="text-neutral-200 font-medium">Seamless Online Booking:</strong> No emails, WhatsApp groups, or manual processes. Book your award flight entirely online, just like you would a revenue flight—minus the high cost.</li>
+</ul>
+</div>
+</div>
+</label>
+<!-- END: Option 1 -->
+<!-- BEGIN: Option 2 (Custom Broker CPM Matrix - Active) -->
+<div class="p-4 rounded-xl border border-brand-500/40 bg-[#15151b] shadow-[0_0_18px_rgba(225,29,46,0.06)] relative" data-purpose="option-custom-brokers">
+<!-- Radio Header & Subtext -->
+<div class="flex items-start gap-3 mb-4">
+<input checked="" class="mt-1 w-4 h-4 text-brand-500 border-[#33333e] bg-obsidian-surface focus:ring-brand-500 focus:ring-offset-0 focus:ring-1" name="booking_routing_mode" type="radio" value="custom_brokers"/>
+<div>
+<div class="font-semibold text-sm text-white">Use your brokers</div>
+<p class="text-xs text-neutral-400 mt-1">
+                Enter the cost per mile (CPM) from your current brokers for each program. The total cost of a ticket will be based on the amount of miles the ticket requires, multiplied by the program's CPM, plus taxes and fees.
+              </p>
+</div>
+</div>
+<!-- BEGIN: 2-Column Airline Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2 pt-3 border-t border-[#23232b]">
+<!-- Program 1: Aeromexico Club Premier -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">Aeromexico Club Premier</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center" title="Route Health: Optimal">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 2: Air Canada Aeroplan -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">Air Canada Aeroplan</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center" title="Route Health: High Demand">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 3: Air France/KLM Flying Blue -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">Air France/KLM Flying Blue</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 4: Alaska Airlines Mileage Plan -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">Alaska Airlines Mileage Plan</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 5: American Airlines AAdvantage -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">American Airlines AAdvantage</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 6: Avianca LifeMiles -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">Avianca LifeMiles</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 7: British Airways Executive Club -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">British Airways Executive Club</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 8: Copa ConnectMiles -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">Copa ConnectMiles</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 9: Delta SkyMiles -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">Delta SkyMiles</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 10: Emirates Skywards -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">Emirates Skywards</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 11: Etihad Guest -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">Etihad Guest</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 12: Iberia Plus -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">Iberia Plus</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 13: JetBlue TrueBlue -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">JetBlue TrueBlue</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 14: Qantas Frequent Flyer -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">Qantas Frequent Flyer</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 15: SAS EuroBonus -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">SAS EuroBonus</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 16: Singapore KrisFlyer -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">Singapore KrisFlyer</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 17: Spirit -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">Spirit</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 18: TAP Air Portugal Miles&Go -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">TAP Air Portugal Miles&amp;Go</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 19: Turkish Miles & Smiles -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">Turkish Miles &amp; Smiles</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 20: United MileagePlus -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">United MileagePlus</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 21: Virgin Atlantic Flying Club -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">Virgin Atlantic Flying Club</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 22: Virgin Australia Velocity -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">Virgin Australia Velocity</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 23: Lufthansa Miles & More -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">Lufthansa Miles &amp; More</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 24: Eva Airways Infinity MileageLands -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">Eva Airways Infinity MileageLands</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 25: Cathay Pacific Asia Miles -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">Cathay Pacific Asia Miles</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 26: GOL Smiles -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">GOL Smiles</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 27: Qatar Airways Privilege Club -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">Qatar Airways Privilege Club</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 28: Finnair Plus -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">Finnair Plus</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+<!-- Program 29: JAL Mileage Bank -->
+<div class="flex items-center justify-between px-3 py-2 bg-[#191920] border border-[#262630] rounded-lg hover:border-[#383846] transition-colors md:col-span-1">
+<div class="flex items-center gap-2.5 min-w-0 pr-2">
+<input checked="" class="checkbox-red program-check" type="checkbox"/>
+<span class="text-xs font-medium text-neutral-200 truncate">JAL Mileage Bank</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<div class="flex gap-0.5 items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
+</div>
+<span class="text-[11px] font-mono text-neutral-400">CPM</span>
+<input class="cpm-input w-12 text-center text-xs font-mono font-medium text-white bg-[#0e0e11] border border-[#2b2b35] rounded py-1 px-0.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none" step="0.1" type="number" value="1.4"/>
+</div>
+</div>
+</div>
+<!-- END: 2-Column Airline Grid -->
+</div>
+<!-- END: Option 2 -->
+</div>
+<!-- END: Scrollable Modal Body -->
+<!-- BEGIN: Modal Footer -->
+<div class="px-6 py-3.5 bg-[#101013] border-t border-[#202028] flex items-center justify-between shrink-0">
+<!-- Deselect / Toggle Button -->
+<button class="text-xs font-medium text-neutral-400 hover:text-white px-3 py-1.5 rounded-md hover:bg-[#1c1c24] border border-transparent hover:border-[#2a2a35] transition duration-150 focus:outline-none" id="toggleAllBtn" type="button">
+          Deselect all
+        </button>
+<!-- Save Button (Spicy Red Theme, No Blue) -->
+<div class="flex items-center gap-3">
+<button class="px-5 py-2 text-xs font-medium text-white bg-brand-500 hover:bg-brand-600 active:bg-brand-700 shadow-[0_2px_12px_rgba(225,29,46,0.35)] hover:shadow-[0_4px_16px_rgba(225,29,46,0.5)] rounded-md transition duration-150 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-[#121215]" type="button">
+            Save as default
+          </button>
+</div>
+</div>
+<!-- END: Modal Footer -->
+</div>
+</div>
+<!-- END: Modal Container -->
+<!-- Simple Interaction Script for Selection Toggle -->
+<script data-purpose="toggle-interactions">
+    document.addEventListener('DOMContentLoaded', () => {
+      const toggleBtn = document.getElementById('toggleAllBtn');
+      const checkboxes = document.querySelectorAll('.program-check');
+      let allChecked = true;
+
+      toggleBtn.addEventListener('click', () => {
+        allChecked = !allChecked;
+        checkboxes.forEach(cb => {
+          cb.checked = allChecked;
+        });
+        toggleBtn.textContent = allChecked ? 'Deselect all' : 'Select all';
+      });
+
+      checkboxes.forEach(cb => {
+        cb.addEventListener('change', () => {
+          const checkedCount = document.querySelectorAll('.program-check:checked').length;
+          toggleBtn.textContent = checkedCount === 0 ? 'Select all' : 'Deselect all';
+          allChecked = checkedCount > 0;
+        });
+      });
+    });
+  </script>
+</body></html>

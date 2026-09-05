@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+
+<html class="" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Itinerary Details — SpicyTool v3.0</title>
+<!-- Tailwind CSS CDN with forms and container queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Custom Configuration -->
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              DEFAULT: '#E11D2E',
+              dark: '#B91422',
+              subtle: '#2E1013',
+              glow: 'rgba(225, 29, 46, 0.22)'
+            },
+            surface: {
+              base: '#0A0A0B',
+              card: '#141416',
+              cardHover: '#1B1B1E',
+              border: '#2A2A2E',
+              divider: '#222226'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+<!-- Custom Styles for Typography, Layout and Timeline Dot Accents -->
+<style data-purpose="custom-typography">
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+    body {
+      background-color: #0A0A0B;
+      color: #E2E8F0;
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .num-tabular {
+      font-family: 'JetBrains Mono', monospace;
+      font-feature-settings: "tnum" 1;
+    }
+  </style>
+<style data-purpose="timeline-styles">
+    /* Dotted connection line for itinerary stops */
+    .timeline-track {
+      position: absolute;
+      top: 18px;
+      bottom: 18px;
+      left: 7px;
+      width: 2px;
+      background-image: repeating-linear-gradient(to bottom, #4B5563 0, #4B5563 4px, transparent 4px, transparent 8px);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#0A0A0B] text-slate-100 antialiased selection:bg-brand selection:text-white" style="background-color: #F8FAFC; color: #0F172A;">
+<!-- BEGIN: AnnouncementBar -->
+<div class="w-full bg-[#E11D2E] text-white py-2 px-4 text-xs md:text-sm font-semibold tracking-wide flex items-center justify-center gap-2 shadow-sm" data-purpose="announcement-bar">
+<span>🌶️ Welcome to SpicyTool v3.0! Exclusive award fares are now live!</span>
+<span class="inline-block w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+</div>
+<!-- END: AnnouncementBar -->
+<!-- BEGIN: GlobalHeader -->
+<header class="border-b border-surface-border bg-[#0A0A0B]/90 backdrop-blur-md sticky top-0 z-40" style="background-color: rgba(255, 255, 255, 0.95); border-color: #E2E8F0;">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+<!-- Brand Identity Left -->
+<div class="flex items-center gap-3">
+<a class="flex items-center gap-2.5 group" href="#">
+<img alt="SpicyTool Logo" class="w-9 h-9 rounded-xl object-contain shadow-lg shadow-brand/20 group-hover:scale-105 transition-transform" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAybugdJHZASUe38mRUn6TSp9DthtRhHc8QNDh-OmCb6a-yiNaudCW9z-IJ1cygNsyixGJvap2vnDUkHkl7BHFvChQRgjO-HiTBKg_MSZ1oa7QEkoCxY9Cii4oVuClAFJVCHOtfQR8YbdzWm4s9xAdxtDPJPzq5hMpIhwmTP9DTjYmL8GjejwW3A0L7pNVOJtlfYx3XfiafmSeGKXr279k5m9FOgJC4if0C--t9g36KuD688fZeCmblAYcOWOto82ytGA"/>
+<span class="font-extrabold text-xl tracking-tight text-white flex items-center" style="color: #0F172A;">
+            SpicyTool
+          </span>
+</a>
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand/15 text-[#FF4D5E] border border-brand/30" style="background-color: #FEE2E2; color: #DC2626; border-color: #FECACA;">
+<span class="w-1.5 h-1.5 rounded-full bg-brand animate-ping"></span>
+          v3.0 · Live Data
+        </span>
+</div>
+<!-- Navigation & Action Right -->
+<div class="flex items-center gap-3">
+<!-- Programs Pill Button -->
+<button class="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-[#1A1A1E] hover:bg-[#232328] text-slate-300 border border-surface-border hover:border-slate-600 transition-all" style="background-color: #FFFFFF; color: #334155; border-color: #E2E8F0;" type="button">
+<span>Modify programs</span>
+<span class="bg-brand/20 text-brand px-1.5 py-0.2 rounded font-mono font-bold">29</span>
+</button>
+<!-- Theme Mode Toggle Demo -->
+<button aria-label="Toggle Theme" class="p-2 rounded-lg bg-[#141416] border border-surface-border text-slate-400 hover:text-white transition-colors" style="background-color: #FFFFFF; color: #F59E0B; border-color: #E2E8F0;" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- User Profile Avatar -->
+<div class="flex items-center gap-2 pl-2 border-l border-surface-border">
+<div class="w-8 h-8 rounded-full ring-2 ring-brand/40 bg-gradient-to-tr from-brand to-red-500 text-white flex items-center justify-center font-bold text-xs shadow">
+            SL
+          </div>
+</div>
+</div>
+</div>
+</header>
+<!-- END: GlobalHeader -->
+<!-- BEGIN: MainContent -->
+<main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16 flex flex-col">
+<!-- Page Title -->
+<h1 class="text-center text-4xl sm:text-[42px] font-extrabold tracking-tight text-white mb-8" style="color: #0F172A;">
+      Itinerary
+    </h1>
+<!-- BEGIN: StepperBar -->
+<div class="w-full max-w-2xl mx-auto mb-10" data-purpose="stepper-navigation"><div class="flex items-center justify-between relative">
+<div class="flex items-center gap-2.5 z-10">
+<div class="w-6 h-6 rounded-full bg-[#E11D2E] flex items-center justify-center text-white shadow-md shadow-red-500/20">
+<svg class="w-3.5 h-3.5 stroke-white" fill="none" stroke="currentColor" stroke-width="3" viewbox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="text-xs sm:text-sm font-medium text-slate-600">Modify Search</span>
+</div>
+<div class="flex-1 h-[2px] bg-red-200 mx-3"></div>
+<div class="flex items-center gap-2.5 z-10">
+<div class="w-6 h-6 rounded-full bg-[#E11D2E] flex items-center justify-center text-white shadow-md shadow-red-500/20">
+<svg class="w-3.5 h-3.5 stroke-white" fill="none" stroke="currentColor" stroke-width="3" viewbox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="text-xs sm:text-sm font-medium text-slate-600">Flights</span>
+</div>
+<div class="flex-1 h-[2px] bg-red-200 mx-3"></div>
+<div class="flex items-center gap-2.5 z-10">
+<div class="w-6 h-6 rounded-full bg-[#E11D2E] flex items-center justify-center text-white ring-4 ring-red-100 font-bold text-xs shadow-md shadow-red-500/20">
+<svg class="w-3.5 h-3.5 stroke-white" fill="none" stroke="currentColor" stroke-width="3" viewbox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="text-xs sm:text-sm font-semibold text-slate-900">Itinerary</span>
+</div>
+</div></div>
+<!-- END: StepperBar -->
+<!-- BEGIN: PricingSummaryStrip -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 text-sm px-1" data-purpose="pricing-summary"><div class="font-semibold text-slate-900 text-base mb-2 sm:mb-0">Itinerary details</div>
+<div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:text-sm">
+<span class="text-slate-500">Retail: <strong class="text-slate-900 num-tabular text-sm font-semibold">$4,440.63</strong></span>
+<span class="text-slate-300 hidden sm:inline">|</span>
+<span class="text-slate-500">Cost: <strong class="text-slate-900 num-tabular text-sm font-semibold">$1,190.84</strong></span>
+<span class="text-slate-300 hidden sm:inline">|</span>
+<span class="text-emerald-600 font-semibold num-tabular">Discount: $3,249.79 (73.18%)</span>
+</div></div>
+<!-- END: PricingSummaryStrip -->
+<!-- BEGIN: FlightSegmentCard -->
+<section class="w-full bg-[#141416] border border-surface-border rounded-xl p-5 sm:p-7 mb-6 shadow-xl" data-purpose="flight-segment-timeline" style="background-color: #FFFFFF; border-color: #E2E8F0; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);"><h2 class="text-sm sm:text-base font-semibold text-slate-900 mb-6">Athens (ATH) to New York (JFK) on Wed, Sep 16</h2>
+<div class="relative pl-7 sm:pl-9 flex flex-col space-y-7">
+<div aria-hidden="true" style="position: absolute; top: 18px; bottom: 18px; left: 7px; width: 2px; background-image: repeating-linear-gradient(to bottom, #CBD5E1 0, #CBD5E1 4px, transparent 4px, transparent 8px);"></div>
+<!-- FLIGHT LEG 1 -->
+<article class="relative flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+<div class="absolute -left-7 sm:-left-9 top-1 w-4 h-4 rounded-full border-2 border-[#E11D2E] bg-white flex items-center justify-center z-10 shadow-sm">
+<div class="w-1.5 h-1.5 rounded-full bg-[#E11D2E]"></div>
+</div>
+<div class="flex items-start gap-3.5">
+<div class="w-6 h-6 rounded bg-[#D52B1E] flex items-center justify-center flex-shrink-0 shadow-sm mt-0.5" title="Swiss International Air Lines">
+<svg class="w-4 h-4 text-white fill-current" viewbox="0 0 24 24">
+<rect height="16" width="4" x="10" y="4"></rect>
+<rect height="4" width="16" x="4" y="10"></rect>
+</svg>
+</div>
+<div>
+<div class="text-sm font-semibold text-slate-900 flex flex-wrap items-center gap-1.5">
+<span>Athens (ATH) to Zürich (ZRH)</span>
+<span class="text-slate-400">•</span>
+<span class="text-slate-600 font-normal">Wed, Sep 16</span>
+</div>
+<p class="text-xs text-slate-500 mt-1">LX 1843 (Operated by Swiss)</p>
+</div>
+</div>
+<div class="flex items-start gap-2.5 sm:text-right pl-9 sm:pl-0">
+<div>
+<div class="flex items-center sm:justify-end gap-1.5 text-xs sm:text-sm font-semibold text-slate-900 num-tabular">
+<span>6:55 AM to 8:45 AM</span>
+<span class="text-slate-400 font-normal">•</span>
+<span class="text-slate-600 font-medium">(2h 50m)</span>
+</div>
+<p class="text-xs text-slate-500 mt-1">Airbus A320 Neo | Business Class (D)</p>
+</div>
+</div>
+</article>
+<!-- LAYOVER NOTIFICATION -->
+<div class="py-2 px-3.5 my-1 rounded-lg bg-amber-50/70 border border-dashed border-amber-200 text-xs text-slate-700 flex items-center gap-2">
+<span class="text-[#E11D2E] font-semibold">1h 15m Layover</span>
+<span class="text-slate-400">•</span>
+<span>Zürich, Switzerland. This is a connecting flight in ZRH.</span>
+</div>
+<!-- FLIGHT LEG 2 -->
+<article class="relative flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+<div class="absolute -left-7 sm:-left-9 top-1 w-4 h-4 rounded-full border-2 border-[#E11D2E] bg-white flex items-center justify-center z-10 shadow-sm">
+<div class="w-1.5 h-1.5 rounded-full bg-[#E11D2E]"></div>
+</div>
+<div class="flex items-start gap-3.5">
+<div class="w-6 h-6 rounded bg-[#D52B1E] flex items-center justify-center flex-shrink-0 shadow-sm mt-0.5" title="Swiss International Air Lines">
+<svg class="w-4 h-4 text-white fill-current" viewbox="0 0 24 24">
+<rect height="16" width="4" x="10" y="4"></rect>
+<rect height="4" width="16" x="4" y="10"></rect>
+</svg>
+</div>
+<div>
+<div class="text-sm font-semibold text-slate-900 flex flex-wrap items-center gap-1.5">
+<span>Zürich (ZRH) to New York (JFK)</span>
+<span class="text-slate-400">•</span>
+<span class="text-slate-600 font-normal">Wed, Sep 16</span>
+</div>
+<p class="text-xs text-slate-500 mt-1">LX 16 (Operated by Swiss)</p>
+</div>
+</div>
+<div class="flex items-start gap-2.5 sm:text-right pl-9 sm:pl-0">
+<div>
+<div class="flex items-center sm:justify-end gap-1.5 text-xs sm:text-sm font-semibold text-slate-900 num-tabular">
+<span>10:00 AM to 12:50 PM</span>
+<span class="text-slate-400 font-normal">•</span>
+<span class="text-slate-600 font-medium">(8h 50m)</span>
+</div>
+<p class="text-xs text-slate-500 mt-1">Airbus A330-300 | Business Class</p>
+</div>
+</div>
+</article>
+</div></section>
+<!-- END: FlightSegmentCard -->
+<!-- BEGIN: BookingRedemptionMatrixCard -->
+<section class="w-full max-w-xl bg-[#141416] border border-surface-border rounded-xl p-5 sm:p-6 mb-8 shadow-xl" data-purpose="booking-matrix" style="background-color: #FFFFFF; border-color: #E2E8F0; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);"><div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+<h3 class="text-sm font-semibold text-slate-900">ATH to JFK</h3>
+<span class="text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Award Redemptions</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left text-xs sm:text-sm">
+<thead>
+<tr class="text-slate-500 text-[11px] uppercase tracking-wider font-semibold border-b border-slate-100">
+<th class="pb-2.5 font-medium" scope="col">Program</th>
+<th class="pb-2.5 font-medium" scope="col">Cost</th>
+<th class="pb-2.5 font-medium" scope="col">Points</th>
+<th class="pb-2.5 font-medium" scope="col">Taxes</th>
+<th class="pb-2.5 text-right font-medium" scope="col">Link</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100">
+<tr class="group hover:bg-slate-50 transition-colors">
+<td class="py-3.5 whitespace-nowrap">
+<span class="inline-flex items-center justify-center w-8 h-6 rounded bg-[#E65100] text-white font-bold text-xs tracking-wider shadow-sm">AC</span>
+</td>
+<td class="py-3.5 whitespace-nowrap text-slate-900 font-semibold num-tabular">$1,190.84</td>
+<td class="py-3.5 whitespace-nowrap text-slate-700 font-medium num-tabular">75.0K</td>
+<td class="py-3.5 whitespace-nowrap text-slate-500 num-tabular">$140.84</td>
+<td class="py-3.5 whitespace-nowrap text-right">
+<a class="text-[#E11D2E] hover:text-red-700 font-semibold inline-flex items-center gap-1 transition-colors hover:underline" href="#book-ac">
+<span>Flight link</span>
+<span class="text-xs">↗</span>
+</a>
+</td>
+</tr>
+<tr class="group hover:bg-slate-50 transition-colors">
+<td class="py-3.5 whitespace-nowrap">
+<span class="inline-flex items-center justify-center w-8 h-6 rounded bg-[#5A8725] text-white font-bold text-xs tracking-wider shadow-sm">UA</span>
+</td>
+<td class="py-3.5 whitespace-nowrap text-slate-900 font-semibold num-tabular">$1,301.93</td>
+<td class="py-3.5 whitespace-nowrap text-slate-700 font-medium num-tabular">88.0K</td>
+<td class="py-3.5 whitespace-nowrap text-slate-500 num-tabular">$69.93</td>
+<td class="py-3.5 whitespace-nowrap text-right">
+<a class="text-[#E11D2E] hover:text-red-700 font-semibold inline-flex items-center gap-1 transition-colors hover:underline" href="#book-ua">
+<span>Flight link</span>
+<span class="text-xs">↗</span>
+</a>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="mt-6 pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+<a class="text-xs text-[#E11D2E] hover:underline font-semibold inline-flex items-center gap-1" href="#pricing-tier">
+<span>Get VI* membership</span>
+<span>→</span>
+</a>
+<button class="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-[#E11D2E] hover:bg-[#B91422] text-white font-semibold text-xs sm:text-sm tracking-wide shadow-md shadow-red-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2" type="button">
+<span>Get VI*</span>
+<svg class="w-4 h-4 fill-current" viewbox="0 0 20 20">
+<path clip-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" fill-rule="evenodd"></path>
+</svg>
+</button>
+</div></section>
+<!-- END: BookingRedemptionMatrixCard -->
+</main>
+<!-- END: MainContent -->
+<!-- BEGIN: PageFooter -->
+<footer class="border-t border-surface-border bg-[#0A0A0B] py-6 text-center text-xs text-slate-500" style="background-color: #FFFFFF; border-color: #E2E8F0; color: #64748B;">
+<div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+<div class="flex items-center gap-2">
+<span class="font-bold text-slate-300" style="color: #0F172A;">SpicyTool v3.0</span>
+<span>•</span>
+<span>Premium Award Flight Analytics</span>
+</div>
+<p>All prices and availability cached in real-time. Taxes &amp; carrier fees may fluctuate.</p>
+</div>
+</footer>
+<!-- END: PageFooter -->
+</body></html>
