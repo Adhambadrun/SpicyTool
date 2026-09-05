@@ -99,10 +99,11 @@ async def search(
     max_stops: int = Query(1, ge=0, le=1),
     programs: str | None = None,
     alliances: str | None = None,
+    return_date: str | None = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
 ):
     err, od = _airport_params(origin, destination)
     if err is None:
-        err = orchestrator.validate(od[0], od[1], date, cabin)
+        err = orchestrator.validate(od[0], od[1], date, cabin, return_date)
     if err:
         return JSONResponse({"detail": err}, status_code=400)
     origins, destinations = od
@@ -115,6 +116,7 @@ async def search(
         max_stops,
         _list_param(programs),
         _list_param(alliances),
+        return_date,
     )
 
 
@@ -129,10 +131,11 @@ async def search_stream(
     max_stops: int = Query(1, ge=0, le=1),
     programs: str | None = None,
     alliances: str | None = None,
+    return_date: str | None = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
 ):
     err, od = _airport_params(origin, destination)
     if err is None:
-        err = orchestrator.validate(od[0], od[1], date, cabin)
+        err = orchestrator.validate(od[0], od[1], date, cabin, return_date)
     if err:
         return JSONResponse({"detail": err}, status_code=400)
     origins, destinations = od
@@ -149,6 +152,7 @@ async def search_stream(
             max_stops,
             _list_param(programs),
             _list_param(alliances),
+            return_date,
         ):
             if await request.is_disconnected():
                 break

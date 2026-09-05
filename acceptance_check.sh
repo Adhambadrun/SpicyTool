@@ -139,6 +139,36 @@ print('3x1 fan-out, caps, dupes, unknowns, overlap + multi calendar OK')
 EOF
 [ $? -eq 0 ] && ok "multi-airport search + validation" || bad "multi-airport"
 
+echo "== 15. round-trip search (both legs combined, mixed programs) =="
+$PY - <<'EOF'
+import json, urllib.request, urllib.error
+def get(path):
+    try:
+        with urllib.request.urlopen('http://localhost:8000' + path) as r:
+            return r.status, json.load(r)
+    except urllib.error.HTTPError as e:
+        return e.code, json.load(e)
+
+s, d = get('/api/v1/search?origin=CAI&destination=LHR&date=2026-09-16&return_date=2026-10-12&cabin=business')
+assert s == 200, s
+assert d['query']['trip'] == 'roundtrip'
+assert ['CAI','LHR'] in d['query']['routes'] and ['LHR','CAI'] in d['query']['routes']
+assert d['count'] > 0
+r0 = d['results'][0]
+assert r0['trip'] == 'roundtrip' and r0['outbound'] and r0['return_leg']
+assert r0['pricing']['points'] == r0['outbound']['pricing']['points'] + r0['return_leg']['pricing']['points']
+assert any(not p['pricing']['same_program'] for p in d['results']), 'no mixed-program pairs'
+pts = [p['pricing']['points'] for p in d['results']]
+assert pts == sorted(pts), 'pairs not sorted by total points'
+
+s, d = get('/api/v1/search?origin=CAI&destination=LHR&date=2026-10-12&return_date=2026-09-16')
+assert s == 400 and 'on or after' in d['detail'], (s, d)
+s, d = get('/api/v1/search?origin=CAI&destination=LHR&date=2026-09-16&return_date=2026-02-30')
+assert s == 400 and 'real calendar' in d['detail'], (s, d)
+print('pairing totals, mixed programs, sort, validation OK')
+EOF
+[ $? -eq 0 ] && ok "round-trip search + pairing + validation" || bad "round-trip"
+
 echo
 echo "=============================="
 echo -e "ACCEPTANCE: \033[92m$pass passed\033[0m, \033[91m$fail failed\033[0m"

@@ -68,6 +68,15 @@ modeled in the results-page notice and the price popover.
   parallel and merged into one result stream. The UI supports in-field IATA
   chips (up to 3 per side) with a live recommendations dropdown, plus metro
   shortcuts (`NYC` → JFK+EWR+LGA, `LON`, `TYO`).
+- **Round-trip search** — add `return_date=YYYY-MM-DD` (or pick Departure +
+  Return in the UI's Round Trip mode): both one-way legs are searched in
+  parallel and combined into round-trip itineraries. **Legs may book into
+  different loyalty programs** — pairs are ranked by total points and marked
+  `same_program`, with per-leg rows in the price breakdown. Filters apply to
+  both legs (e.g. Nonstop = nonstop both ways).
+- **Airline logos** — 24 carriers render their official brand glyph (inline
+  SVG, simple-icons CC0, brand colors, luminance-aware contrast) in card and
+  timeline tiles; the remaining carriers use the mockup's monogram tiles.
 - Deterministic first-party engine: the same query always returns the same
   results; different dates differ.
 - **v1 API** — first-party engine: search, SSE streaming search (one event per
@@ -99,7 +108,9 @@ modeled in the results-page notice and the price popover.
 
 Validation: unknown IATA → `400 "Unknown origin 'XXX'"`; same origin and
 destination → `400`; bad cabin → `400`; date must match `^\d{4}-\d{2}-\d{2}$`;
-more than 3 airports per side → `400 "At most 3 origin airports"`.
+more than 3 airports per side → `400 "At most 3 origin airports"`;
+`return_date` before `date` → `400 "Return date must be on or after the
+departure date"`.
 
 ## Configuration (`.env`)
 
