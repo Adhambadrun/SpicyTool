@@ -36,7 +36,7 @@ docker compose up --build
 ### Tests
 
 ```bash
-cd backend && python3 tests_integration.py   # 16 assertions, offline
+cd backend && python3 tests_integration.py   # full offline assertion suite
 ```
 
 ### Vercel
@@ -269,11 +269,6 @@ tests mint tokens in-process against the same per-install signing secret
 `AUTH_SECRET`). On read-only/ephemeral filesystems (serverless) the secret
 is derived deterministically from the login config, so a session survives
 cold starts instead of logging the user out mid-use.
-| `GET /api/v2/providers` | provider inventory + gating reasons |
-| `GET /api/v2/telemetry` | blocklist + blocked-request counter |
-| `GET /api/v2/cache/stats` | cache backend, hits/misses, TTL |
-| `GET /api/v2/search` | aggregated, deduped search |
-| `GET /api/v2/search/stream` | SSE `start → data* → complete` |
 
 Validation: unknown IATA → `400 "Unknown origin 'XXX'"`; same origin and
 destination → `400`; bad cabin → `400`; date must match `^\d{4}-\d{2}-\d{2}$`;
@@ -392,8 +387,8 @@ RapidAPI, no proxy secret.
 └── backend/
     ├── main.py              # app + v1 routes + static mount + lifecycle
     ├── api_v2.py            # v2 aggregation router
-    ├── tests_integration.py # 16 assertions
-    ├── data/                # airports.json (78), transfer_matrix.json
+    ├── tests_integration.py # offline assertion suite
+    ├── data/                # airports.json (84), transfer_matrix.json
     ├── core/                # geo, network, itinerary, pricing, schema,
     │                        # cache, redis_cache, http_engine
     ├── adapters/            # 10 loyalty-program adapters (v1)

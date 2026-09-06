@@ -362,6 +362,18 @@ else
   echo "  SKIP (node not available)"
 fi
 
+echo "== 19c. overlapping searches never cross-contaminate (jsdom) =="
+if command -v node >/dev/null 2>&1; then
+  ( cd frontend/test && [ -d node_modules/jsdom ] || npm install --silent >/dev/null 2>&1
+    node search-stream-race.mjs )
+  rc=$?
+  if   [ $rc -eq 0 ];  then ok "stale search streams are cut off; newest search owns the results"
+  elif [ $rc -eq 77 ]; then echo "  SKIP (jsdom not installed — cd frontend/test && npm install)"
+  else bad "search stream race (see output above)"; fi
+else
+  echo "  SKIP (node not available)"
+fi
+
 echo "== 20. date picker booking window (today .. today+330) =="
 # Boots the real frontend/index.html in jsdom. Skips (does NOT pass) when the
 # harness is unavailable, so a missing dep can never read as a green check.

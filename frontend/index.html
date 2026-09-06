@@ -1198,6 +1198,7 @@ const state = {
   pax: { adults: 1, children: 0, infants: 0 }, flex: 0, retFlex: 0, trip: "oneway",
   hc: true, superHc: false,   /* advanced toggles — include hidden-city/upgrade fares; super hc = deeper hidden-city sweep */   /* flex/retFlex = ±N-day search window around departure/return (not stay length) */
   results: [], routes: [], streaming: false, sort: "best",
+  searchEpoch: 0,            /* bumped per search: superseded streams must never touch newer state */
   filters: {
     stops:"any", airline:"", ticket:"", program:"",
     airports:"", cabinF:"any", alliance:"any", premium:"any",
@@ -1683,8 +1684,11 @@ function absorbResults(list){
   for (const r of list){ if (!seen.has(r.id)){ seen.add(r.id); state.results.push(r); } }
   return true;
 }
-function searchOneDate(date){
-  /* one v2 SSE stream for a single departure date; resolves when the server sends `complete` (or fails) */
+function searchOneDate(date, epoch){
+  /* one v2 SSE stream for a single departure date; resolves when the server sends `complete` (or fails).
+     `epoch` is the search this stream belongs to: once a newer search starts, this stream is stale —
+     its events are dropped, the socket is closed and it resolves false so it can never contaminate
+     the newer search's results or end its skeleton early. */
   const rt = state.trip === "roundtrip" && state.returnDate;
   const qsRT = rt ? `&return_date=${state.returnDate}&return_flex=${Math.max(0, Math.min(3, state.retFlex|0))}` : "";
   const qs = `origin=${state.origins.join(",")}&destination=${state.destinations.join(",")}&date=${date}&cabin=${state.cabin}&passengers=${paxTotal()}&max_stops=1${qsRT}${advQS()}`;
@@ -1692,15 +1696,18 @@ function searchOneDate(date){
     let es;
     try { es = new EventSource(`/api/v2/search/stream?${qs}${authQS()}`); } catch { resolve(false); return; }
     let gotStart = false, finished = false;
+    const stale = () => epoch !== state.searchEpoch;
     const finish = ok => { if (finished) return; finished = true; clearTimeout(startTimer); clearTimeout(hardTimer); try { es.close(); } catch {} resolve(ok); };
     const startTimer = setTimeout(() => { if (!gotStart) finish(false); }, 8000);           /* server unreachable */
     const hardTimer  = setTimeout(() => finish(gotStart), 45000);                             /* never hang the UI */
     es.addEventListener("start", e => {
+      if (stale()) return finish(false);
       gotStart = true;
       try { const d = JSON.parse(e.data); noteProviders(d); state.routes = (d.query && d.query.routes) || state.routes; } catch {}
       renderResults();
     });
     es.addEventListener("data", e => {
+      if (stale()) return finish(false);
       gotStart = true;
       try {
         const d = JSON.parse(e.data);
@@ -1709,15 +1716,17 @@ function searchOneDate(date){
       } catch {}
     });
     es.addEventListener("complete", e => {
+      if (stale()) return finish(false);
       try { const d = JSON.parse(e.data); noteProviders(d); absorbResults(d.results); } catch {}
       finish(true);
     });
-    es.addEventListener("error", () => { if (!gotStart) finish(false); /* after start: EventSource retries until complete */ });
+    es.addEventListener("error", () => { if (stale() || !gotStart) finish(false); /* after start: EventSource retries until complete */ });
   });
 }
 async function runSearch(){
   closeTT(); closeDP(); closeDD();
   showResultsView();
+  const epoch = ++state.searchEpoch;   /* cuts any in-flight streams off (see searchOneDate) */
   state.streaming = true; state.results = []; state.routes = []; state.expanded = null; state.ppop = null;
   state.itineraryId = null; state.notice = null; state.searchFailed = false;
   state.filters = {
@@ -1729,7 +1738,8 @@ async function runSearch(){
   renderResults(); renderFilterBar();
   /* every date in the ± window is a live search of its own; results merge + dedupe by id */
   const dates = flexDates();
-  const oks = await Promise.all(dates.map(searchOneDate));
+  const oks = await Promise.all(dates.map(d => searchOneDate(d, epoch)));
+  if (epoch !== state.searchEpoch) return;   /* a newer search owns the UI now — never finalize someone else's run */
   state.searchFailed = !oks.some(Boolean);
   state.streaming = false;
   sortResults(); renderResults(); renderFilterBar();
@@ -2143,17 +2153,15 @@ function renderResults(){
     if (state.results.length){
       h3.textContent = "No award flights found";
       $("empty-msg").textContent = "No flights match the current filters — relax a filter or Clear All.";
-    } else if (state.searchFailed){
-      h3.textContent = "Search service unreachable";
-      $("empty-msg").textContent = "Could not reach the search service. Check that the backend is running and try again.";
-    } else if (!state.live){
+      $("empty-msg").hidden = false;
+    } else if (state.searchFailed || !state.live || failed.length){
+      /* Search is not working — show one honest message and nothing else. */
       h3.textContent = "No live award provider connected";
-      $("empty-msg").textContent = state.notice || "SpicyTool relays the Flybasis search engine only. Add a FLYBASIS_API_KEY on the server to search real availability. Sample data is never shown.";
-    } else if (failed.length){
-      h3.textContent = "Live providers returned errors";
-      $("empty-msg").textContent = failed.map(p => `${p.provider}: ${p.error}`).join(" · ");
+      $("empty-msg").textContent = "";
+      $("empty-msg").hidden = true;
     } else {
       h3.textContent = "No award availability";
+      $("empty-msg").hidden = false;
       $("empty-msg").textContent = q.trip === "roundtrip"
         ? `${state.liveProviders.join(", ") || "Live providers"} found no award space for ${shortDate(q.date)} → ${shortDate(q.returnDate)} on this route and cabin. Try other dates, airports or cabin.`
         : `${state.liveProviders.join(", ") || "Live providers"} found no award space on this route for ${shortDate(q.date)} in ${CABIN_LABEL[q.cabin] || q.cabin || "this cabin"}. Try nearby dates (the ±1 / ±2 day chips in the date picker) or other airports.`;
@@ -2579,9 +2587,18 @@ function wcHTML(d){
   const disc = `<p class="wc-disc">${esc((d.disclaimer || "") + via)}</p>`;
   const rows = (d.data && Array.isArray(d.data.results)) ? d.data.results : [];
   if (!rows.length) return disc + `<p class="wc-dim">No web results for that query.</p>`;
+  /* Only http(s) URLs become links — a search row must never render a
+     javascript:/data: href, whatever the upstream returns. */
+  const linkFor = (x) => {
+    const url = String(x.url || "");
+    const label = esc(x.title || url || "Untitled");
+    return /^https?:\/\//i.test(url)
+      ? `<a href="${esc(url)}" target="_blank" rel="noopener nofollow">${label}</a>`
+      : `<span class="wc-nolink">${label}</span>`;
+  };
   return disc + `<ul class="wc-list">` + rows.slice(0, 6).map(x => `
       <li>
-        <a href="${esc(x.url || "#")}" target="_blank" rel="noopener nofollow">${esc(x.title || x.url || "Untitled")}</a>
+        ${linkFor(x)}
         <span class="wc-dom">${esc(x.domain || "")}</span>
         <p class="wc-snip">${esc(x.snippet || "")}</p>
       </li>`).join("") + `</ul>`;

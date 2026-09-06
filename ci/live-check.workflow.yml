@@ -47,7 +47,7 @@ jobs:
           pip install -r backend/requirements.txt
 
       # Always-green gates: these need no credential and no outbound access.
-      - name: Offline integration suite (33 assertions)
+      - name: Offline integration suite
         working-directory: backend
         run: python tests_integration.py
 
@@ -55,11 +55,13 @@ jobs:
         working-directory: backend
         run: python tools/verify_agentsearch.py
 
-      - name: Frontend web-context panel (jsdom)
+      - name: Frontend jsdom regression tests
         working-directory: frontend/test
         run: |
           npm install --silent
           node web-context.mjs
+          node search-stream-race.mjs
+          node booking-window.mjs
 
       # The live gate. Skips (does not fail) when the secret is absent, so the
       # workflow stays useful on forks and before the secret is configured.

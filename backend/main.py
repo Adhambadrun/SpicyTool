@@ -1,4 +1,4 @@
-"""SpicyTool — award-flight search behind email-OTP login.
+"""SpicyTool — award-flight search behind owner PIN login.
 
 FastAPI app: v1 first-party engine routes (auth-protected), v2 aggregation
 router, static frontend served from the same origin.
