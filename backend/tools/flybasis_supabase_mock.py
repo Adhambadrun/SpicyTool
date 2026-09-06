@@ -10,7 +10,7 @@ user (all HTTP, no real network):
     GET  /rest/v1/agent_cpm?select=...             -> []
 
 Credentials expected (fake, test-only):
-    refresh: refresh_token == "verify-refresh"
+    refresh: bootstrap == "verify-refresh", then only the latest rotated token
     password: email == "verify@example.com" and password == "verify-pass"
 
 Every issued access token is recorded and served on GET /__tokens so the
@@ -30,6 +30,7 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 ISSUED: list[str] = []
+CURRENT_REFRESH = "verify-refresh"
 
 
 def _access_token(nonce: int) -> str:
@@ -46,37 +47,42 @@ def _access_token(nonce: int) -> str:
 
 
 async def token(request: Request):
+    global CURRENT_REFRESH
+    if request.headers.get("apikey") != "mock-anon-key":
+        return JSONResponse({"error": "invalid apikey"}, status_code=401)
     grant = request.query_params.get("grant_type", "")
     try:
         body = json.loads((await request.body()) or b"{}")
     except json.JSONDecodeError:
         body = {}
     if grant == "refresh_token":
-        if body.get("refresh_token") != "verify-refresh":
+        if body.get("refresh_token") != CURRENT_REFRESH:
             return JSONResponse({"error": "invalid_grant", "hint": "refresh token mismatch"},
                                 status_code=400)
-        refresh_out = "rotated-verify-refresh"
     elif grant == "password":
         if body.get("email") != "verify@example.com" or body.get("password") != "verify-pass":
             return JSONResponse({"error": "invalid_credentials"}, status_code=401)
-        refresh_out = "rotated-verify-refresh"
     else:
         return JSONResponse({"error": "unsupported_grant_type", "grant_type": grant},
                             status_code=400)
     nonce = len(ISSUED) + 1
+    CURRENT_REFRESH = f"rotated-verify-refresh-{nonce}"
     token_value = _access_token(nonce)
     ISSUED.append(token_value)
     return JSONResponse({
         "access_token": token_value,
         "token_type": "bearer",
         "expires_in": 3600,
-        "refresh_token": refresh_out,
+        "refresh_token": CURRENT_REFRESH,
         "user": {"id": "mock-user", "email": "verify@example.com"},
     })
 
 
 async def whoami(request: Request):
-    # The auth check is header-only here; the verifier drives the happy path.
+    if request.headers.get("access-token") not in ISSUED:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    if request.query_params.get("batch") != "1" or await request.json() != {}:
+        return JSONResponse({"error": "invalid batch"}, status_code=400)
     return JSONResponse([
         {"result": {"data": {
             "email": "verify@example.com",

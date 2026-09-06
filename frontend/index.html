@@ -126,6 +126,7 @@ button{font-family:inherit}
 .adv-dot svg{width:12px;height:12px;opacity:0;transition:opacity .15s}
 .adv-opt.on .adv-dot{background:var(--brand);border-color:var(--brand);color:#fff}   /* both toggles: brand red when checked */
 .adv-opt.on .adv-dot svg{opacity:1}
+.super-hc-quota{font-variant-numeric:tabular-nums}
 /* search CTA — Search sits on the RIGHT-HAND side of the card (image-1 style); full-width pill on mobile */
 .cta{width:100%;padding:12px 40px;background:var(--brand);color:#fff;border:none;border-radius:9999px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 10px 15px -3px rgba(225,29,46,.3);transition:background .15s,transform .1s;align-self:flex-end;margin-top:20px}
 .cta:hover{background:var(--brand-hover)}
@@ -663,7 +664,7 @@ a.brand:hover .wordmark{opacity:.9}
         </button>
         <button type="button" class="adv-opt hc-super" id="adv-super" role="checkbox" aria-checked="false" title="Deeper hidden-city sweep — also tries one extra beyond-point per route">
           <span class="adv-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
-          <span>Enable super hc mode</span>
+          <span>Enable super hc mode <span id="super-hc-quota" class="super-hc-quota" role="status" aria-live="polite" aria-atomic="true">(Sign in to see remaining searches)</span></span>
         </button>
       </div>
 
@@ -1189,6 +1190,7 @@ function syncAvatar(){
     if (u){ btn.innerHTML = `<span class="avatar-in"><span>${esc(initialsOf(u.email))}</span></span>`; btn.title = u.email + " — click for options"; }
     else { btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`; btn.title = "Sign in"; }
   }
+  refreshSuperHcQuota();
 }
 const esc = (s) => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
@@ -1608,6 +1610,60 @@ function openDD(host, items, onPick){
 /* ============================ search ============================ */
 /* advanced toggles (code 12): hidden-city/upgrade fares + super hc mode — persisted, sent with every search */
 const ADV_KEY = "st_adv";
+/* This is a live account counter, not a browser-maintained allowance. Never
+   persist it or decrement optimistically: failed/cached/flexible searches may
+   spend a different amount of the provider's monthly quota. */
+const superHcQuota = { remaining:null, status:"signed_out", token:null, requestId:0, controller:null, updatedAt:0 };
+function renderSuperHcQuota(){
+  const el = $("super-hc-quota"); if (!el) return;
+  if (superHcQuota.status === "ready"){
+    const n = superHcQuota.remaining;
+    el.textContent = `(${n} ${n === 1 ? "search" : "searches"} remaining for this month)`;
+  } else if (superHcQuota.status === "loading") el.textContent = "(Checking remaining searches…)";
+  else if (superHcQuota.status === "signed_out") el.textContent = "(Sign in to see remaining searches)";
+  else el.textContent = "(Remaining searches unavailable)";
+}
+async function refreshSuperHcQuota(force = false){
+  const token = (AUTH.user || {}).token || null;
+  if (!token){
+    ++superHcQuota.requestId;
+    if (superHcQuota.controller) superHcQuota.controller.abort();
+    Object.assign(superHcQuota, { remaining:null, status:"signed_out", token:null, controller:null, updatedAt:0 });
+    renderSuperHcQuota(); return;
+  }
+  /* Coalesce page/view/focus refreshes; a completed search bypasses this short
+     freshness window and supersedes any pre-search quota request. */
+  if (!force && token === superHcQuota.token &&
+      (superHcQuota.controller || Date.now() - superHcQuota.updatedAt < 30000)) return;
+  const requestId = ++superHcQuota.requestId;
+  if (superHcQuota.controller) superHcQuota.controller.abort();
+  const controller = new AbortController();
+  Object.assign(superHcQuota, { remaining:null, status:"loading", token, controller });
+  renderSuperHcQuota();
+  const timer = setTimeout(() => controller.abort(), 12000);
+  try {
+    /* Unlike api(), this background read never redirects browsing to login.
+       The only browser credential sent is the app session, not a Flybasis token. */
+    const res = await fetch("/api/v2/super-hc/quota", {
+      headers:{ Authorization:"Bearer " + token }, cache:"no-store", signal:controller.signal,
+    });
+    const d = res.status === 401 ? null : await res.json();
+    if (requestId !== superHcQuota.requestId || token !== (AUTH.user || {}).token) return;
+    const valid = res.ok && d && d.available === true && d.provider === "Flybasis" &&
+      d.period === "month" && Number.isSafeInteger(d.remaining) && d.remaining >= 0;
+    superHcQuota.remaining = valid ? d.remaining : null;
+    superHcQuota.status = res.status === 401 ? "signed_out" : valid ? "ready" : "unavailable";
+  } catch {
+    if (requestId === superHcQuota.requestId) superHcQuota.status = "unavailable";
+  } finally {
+    clearTimeout(timer);
+    if (requestId === superHcQuota.requestId){
+      superHcQuota.controller = null;
+      superHcQuota.updatedAt = Date.now();
+      renderSuperHcQuota();
+    }
+  }
+}
 function advQS(){ return `&hidden_city=${state.hc ? 1 : 0}&super_hc=${state.superHc ? 1 : 0}`; }
 function syncAdvToggles(){
   const hc = $("adv-hc"), su = $("adv-super"); if (!hc || !su) return;
@@ -1748,6 +1804,7 @@ async function runSearch(){
   state.streaming = false;
   sortResults(); renderResults(); renderFilterBar();
   if (state.results.length) persistSearch();
+  refreshSuperHcQuota(true);  /* ask the provider again after every completed search */
 }
 function sortResults(){
   if (state.sort === "fastest") state.results.sort((a,b) => rDurV(a) - rDurV(b));
@@ -2210,6 +2267,7 @@ function showSearchView(){
   moveSearchCard("search-slot");
   document.title = "SpicyTool — Find your flight";
   setHash("");
+  refreshSuperHcQuota();
 }
 function showResultsView(){
   closeTT(); closeDP(); closeDD(); hideTPop();
@@ -2772,6 +2830,10 @@ function init(){
     syncAdvToggles();
   });
   loadAdvToggles();
+  /* Catch quota changes made in another tab/session and monthly resets. */
+  const refreshVisibleQuota = () => { if (!document.hidden && !$("view-search").hidden) refreshSuperHcQuota(); };
+  window.addEventListener("focus", refreshVisibleQuota);
+  document.addEventListener("visibilitychange", refreshVisibleQuota);
   /* trip tabs — round-trip combines both one-way legs (mixed programs allowed) */
   $("tab-round").addEventListener("click", e => { e.stopPropagation(); setTrip("roundtrip"); openDP(); });
   $("tab-oneway").addEventListener("click", e => { e.stopPropagation(); setTrip("oneway"); closeDP(); });

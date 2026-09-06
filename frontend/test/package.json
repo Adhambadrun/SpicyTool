@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Frontend regression tests for SpicyTool (jsdom). Not deployed.",
   "scripts": {
-    "test": "node web-context.mjs && node search-stream-race.mjs && node no-provider-empty.mjs && node booking-window.mjs"
+    "test": "node web-context.mjs && node search-stream-race.mjs && node no-provider-empty.mjs && node booking-window.mjs && node super-hc-quota.mjs"
   },
   "devDependencies": {
     "jsdom": "^25.0.0"

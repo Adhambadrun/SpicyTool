@@ -1229,7 +1229,7 @@ def test_session_refresh_exchange_and_cache():
         assert calls["token"] == 1, f"expected 1 exchange, saw {calls['token']}"
         assert first == second == "access-1"
         # Rotated refresh token is persisted where the process can find it again.
-        assert Path(store).read_text(encoding="utf-8").strip() == "rotated-refresh"
+        assert json.loads(Path(store).read_text(encoding="utf-8"))["refresh_token"] == "rotated-refresh"
         return "1 exchange; token cached; rotated refresh persisted"
     finally:
         flybasis_session.reset_cache()
@@ -1278,7 +1278,8 @@ def test_session_password_grant_and_quota():
                 "refresh_token": "rotated-pass",
             })
         assert request.url.path.endswith("/trpc/user.whoami"), request.url
-        assert request.headers.get("authorization") == "Bearer access-pass", request.headers
+        assert request.headers.get("access-token") == "access-pass"
+        assert json.loads(request.read()) == {}
         return httpx.Response(200, json=[{"result": {"data": {
             "email": "me@example.com",
             "permissions": ["canMax"],

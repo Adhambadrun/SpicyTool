@@ -36,7 +36,9 @@ docker compose up --build
 ### Tests
 
 ```bash
-cd backend && python3 tests_integration.py   # full offline assertion suite
+python3 -m unittest discover -s backend/tests -p 'test_*.py' -v  # session/HAR/live-verifier regressions
+(cd backend && python3 tests_integration.py)                    # offline integration suite
+python3 backend/tools/verify_flybasis_socket.py                 # local HTTP/WebSocket contract
 ```
 
 ### Vercel
@@ -57,6 +59,11 @@ Variables):
   key).
 - `LOGIN_PIN`, `ALLOWED_LOGIN_EMAILS` — optional overrides.
 - `REDIS_URL` — optional; without it the cache runs in memory per instance.
+
+For real award results, configure an official Flybasis token or an authorized
+account session in Vercel Environment Variables and redeploy. See
+[Flybasis setup and private HAR import](FLYBASIS_GO_LIVE.md). Publicly shared
+session tokens must be revoked and replaced; they are never bundled into the app.
 
 ---
 
@@ -181,6 +188,13 @@ always confirm on the airline's own site before booking.
   fewer / Two stops or fewer), Tickets (the 7 types, Only + Reset) and
   Programs (the 10 programs, Only + Reset) — every count wired to the live
   result set.
+- **Super HC remaining searches** — the toggle shows the connected Flybasis
+  session's monthly `maxSearchesRemaining`, e.g. “Enable super hc mode
+  (3 searches remaining for this month)”. It refreshes on sign-in, after search
+  attempts, and when returning to a stale page. Zero is shown explicitly;
+  signed-out/unavailable quotas are labelled honestly, never guessed or stored
+  in browser preferences. The counter is not available for an unrelated
+  official socket-key account or a disconnected provider.
 - **Passengers stepper** — Adults / Children / Infants with −/+ steppers
   (infants capped at adults; seat-taking passengers = adults + children feed
   the engine's `passengers` parameter).
@@ -255,6 +269,7 @@ always confirm on the airline's own site before booking.
 | `GET /api/v1/search/stream` 🔒 | SSE, one event per program |
 | `GET /api/v1/calendar` 🔒 | cheapest award per day (1–60 days) |
 | `GET /api/v2/providers` | provider inventory + gating reasons |
+| `GET /api/v2/super-hc/quota` 🔒 | private, uncached monthly Super HC remaining count; `null`/`available:false` when unknown |
 | `GET /api/v2/telemetry` | blocklist + blocked-request counter |
 | `GET /api/v2/cache/stats` | cache backend, hits/misses, TTL |
 | `GET /api/v2/search` | aggregated, deduped search |
@@ -344,7 +359,8 @@ dev-only — the app never imports it.
 | `POINTSPATH_API_KEY` | *(blank)* | enables the PointsPath adapter |
 | `POINTSYEAH_API_KEY` | *(blank)* | enables the PointsYeah adapter |
 | `SEATS_AERO_API_KEY` | *(blank)* | enables the **Seats.aero** partner API (`SPICYTOOL_PROVIDERS=SeatsAero`): cached award availability for ~20 mileage programs — points, seats, cabins, airlines, flights. Key from [seats.aero/settings](https://seats.aero/settings) (API tab; Pro account, up to 1,000 calls/day, non-commercial unless you have a written agreement). `SEATS_AERO_BASE_URL` overrides the host for tests/mocks. |
-| `FLYBASIS_API_KEY` | *(blank)* | enables the Flybasis adapter (Socket.IO award feed, see `Flybasis-index.md`). Issued **by Flybasis** to the operator — see [`FLYBASIS_GO_LIVE.md`](FLYBASIS_GO_LIVE.md) for the exact steps, verification, and a copy-paste prompt for the next chat. |\n| `FLYBASIS_SUPABASE_URL` · `FLYBASIS_SUPABASE_ANON_KEY` · `FLYBASIS_REFRESH_TOKEN` (or `FLYBASIS_EMAIL`+`FLYBASIS_PASSWORD`) | *(blank)* | **Session mode (advanced):** used only when `FLYBASIS_API_KEY` is blank. Same feed via your own Flybasis account session — Supabase exchange → access token → socket auth. Consumes your account quota and may conflict with Flybasis ToS; see [`FLYBASIS_GO_LIVE.md`](FLYBASIS_GO_LIVE.md) § Option B. Never commit these. |
+| `FLYBASIS_API_KEY` | *(blank)* | enables the Flybasis adapter (Socket.IO award feed, see `Flybasis-index.md`). Issued **by Flybasis** to the operator — see [`FLYBASIS_GO_LIVE.md`](FLYBASIS_GO_LIVE.md) for the exact steps, verification, and private HAR import. |
+| `FLYBASIS_SUPABASE_URL` · `FLYBASIS_SUPABASE_ANON_KEY` · `FLYBASIS_REFRESH_TOKEN` (or `FLYBASIS_EMAIL`+`FLYBASIS_PASSWORD`) | *(blank)* | **Session mode (advanced):** used when no official award-feed key is configured (a misplaced RapidAPI key is ignored by award auth). Same feed via your own Flybasis account session — Supabase exchange → access token → socket auth. Consumes your account quota and may conflict with Flybasis ToS; see [`FLYBASIS_GO_LIVE.md`](FLYBASIS_GO_LIVE.md) § Option B. Never commit these. |
 | `AGENTSEARCH_API_KEY` | *(blank)* | RapidAPI key for the [AgentSearch](https://rapidapi.com) web-search API. **Web context only — not an award feed.** When set it becomes the preferred backend for the "Web context" panel (`/api/v2/context`), with the keyless FlyBasis Search MCP connector as automatic fallback. If `FLYBASIS_API_KEY` is set to a RapidAPI-shaped key (`…msh…jsn…`) it is used here automatically and is **not** dialled at the Flybasis award socket. |
 | `AGENTSEARCH_PROVIDER` | `brave` | SERP provider AgentSearch proxies (`brave` or `serper`) |
 | `AGENTSEARCH_MCP_URL` | *(blank)* | optional MCP fallback, e.g. `https://agentsearch-mcp.vercel.app/mcp` — same 3-tool surface as the keyless FlyBasis connector |

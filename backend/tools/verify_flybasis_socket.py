@@ -18,11 +18,13 @@ token -> real search, plus token caching, rotated-refresh persistence, quota
 lookup and the actionable failed-login path. The session path needs no
 ``FLYBASIS_API_KEY`` at all.
 
-Live mode (``--live``) runs the same handshake against the real
+Live mode (``--live``) sends ONE search (never mock-specific assertions) to the real
 ``enterprise-api.flybasis.com`` using either ``FLYBASIS_API_KEY`` (official
 token) or a configured Supabase session (``FLYBASIS_REFRESH_TOKEN`` +
 ``FLYBASIS_SUPABASE_ANON_KEY``), to confirm your credential actually works
-before you deploy.
+before you deploy. ``--live --auth-only`` checks Supabase login and account
+quota without spending an award search. Live mode loads root/backend .env
+without overriding exported environment variables. Never use public HAR tokens.
 
 Usage:
     python3 tools/verify_flybasis_socket.py
@@ -34,6 +36,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+from datetime import date, timedelta
 import json
 import os
 import socket
@@ -102,7 +105,7 @@ async def _search(**over):
     return await Flybasis().search(q)
 
 
-def run_checks(port: int | None, supabase_port: int | None = None) -> int:
+def run_checks(port: int, supabase_port: int | None = None) -> int:
     from providers.flybasis import Flybasis
 
     upstream = "the real upstream" if port is None else "the local mock upstream"
@@ -110,6 +113,7 @@ def run_checks(port: int | None, supabase_port: int | None = None) -> int:
         upstream = f"{upstream} + mock Supabase session auth"
     print(f"\n{DIM}Verifying the Flybasis award socket against {upstream}{RESET}\n")
 
+    _checks.clear()
     p = Flybasis()
 
     if port is not None:
@@ -282,9 +286,11 @@ def run_checks(port: int | None, supabase_port: int | None = None) -> int:
         def _rotation_persisted():
             store = Path(os.environ["FLYBASIS_REFRESH_FILE"])
             assert store.exists(), f"{store} missing"
-            value = store.read_text(encoding="utf-8").strip()
-            assert value == "rotated-verify-refresh", value
-            return "rotated refresh token persisted"
+            value = json.loads(store.read_text(encoding="utf-8"))
+            assert value["refresh_token"].startswith("rotated-verify-refresh-")
+            assert value.get("context"), "rotation must be bound to its source config"
+            assert store.stat().st_mode & 0o777 == 0o600, "token store must be private"
+            return "rotated refresh token persisted with mode 0600"
         check("Rotated refresh token is persisted (survives process restarts)", _rotation_persisted)
 
         # ---- 13. account quota is surfaced (whoami) -----------------------
@@ -355,27 +361,84 @@ def run_checks(port: int | None, supabase_port: int | None = None) -> int:
     return 1
 
 
+async def run_live_check(*, auth_only: bool = False, **query) -> int:
+    """Live verification is separate from fixtures and uses at most one search."""
+    from providers.flybasis import Flybasis
+    from providers import flybasis_session
+
+    provider = Flybasis()
+    if not provider.enabled:
+        print(f"{RED}Not configured.{RESET} {provider.disabled_reason()}")
+        return 2
+    if auth_only:
+        if provider.socket_credential:
+            print("--auth-only checks Supabase session mode. An official socket key "
+                  "needs --live (one search) to verify the award feed.")
+            return 2
+        try:
+            await flybasis_session.access_token()
+            remaining = await flybasis_session.searches_remaining()
+        except Exception as exc:
+            # Auth errors are intentionally generic: upstream messages may
+            # echo credentials. Never print a token or an account profile.
+            print(f"{RED}FAIL{RESET}: session authentication failed ({type(exc).__name__}). "
+                  "Check connectivity and replace revoked/rotated credentials privately.")
+            return 1
+        if remaining is None:
+            print(f"{RED}FAIL{RESET}: Supabase login succeeded, but account status is unavailable. "
+                  "No award search was sent.")
+            return 1
+        print(f"{GREEN}PASS{RESET}: session authenticated; searches remaining: {remaining}. "
+              "No award search was sent. This does not verify award availability.")
+        return 0
+
+    result = await _search(**query)
+    if not result.status.ok:
+        print(f"{RED}FAIL{RESET}: award search failed. Check network access, the provider "
+              "credential, timeout and account quota. No live results were verified.")
+        return 1
+    count = len(result.results)
+    print(f"{GREEN}PASS{RESET}: search completed; {count} normalized itineraries "
+          f"in {result.status.latency_ms}ms.")
+    if count == 0:
+        print("The provider returned no award availability for this query; "
+              "this is not confirmation of bookable seats.")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument(
-        "--live", action="store_true",
-        help="dial the real enterprise-api.flybasis.com with FLYBASIS_API_KEY",
-    )
+    ap.add_argument("--live", action="store_true", help="send one search to the real award feed")
+    ap.add_argument("--auth-only", action="store_true", help="with --live: verify session/quota, no award search")
+    ap.add_argument("--origin", default="JFK")
+    ap.add_argument("--destination", default="LHR")
+    ap.add_argument("--date", default=(date.today() + timedelta(days=30)).isoformat())
+    ap.add_argument("--cabin", choices=["economy", "premium", "business", "first"], default="business")
+    ap.add_argument("--timeout", type=float, default=45, help="live check budget in seconds (default: 45)")
     args = ap.parse_args()
+    if args.auth_only and not args.live:
+        ap.error("--auth-only requires --live")
 
     if args.live:
-        key = (os.environ.get("FLYBASIS_API_KEY") or "").strip()
-        if not key:
-            from providers import flybasis_session
-
-            if not flybasis_session.configured():
-                print(f"{RED}No credential.{RESET} Set FLYBASIS_API_KEY (a token issued "
-                      "by Flybasis) or a Supabase session "
-                      "(FLYBASIS_REFRESH_TOKEN + FLYBASIS_SUPABASE_ANON_KEY) "
-                      "to run --live.\n")
-                return 2
-        os.environ.pop("FLYBASIS_BASE_URL", None)
-        return run_checks(port=None)
+        from dotenv import load_dotenv
+        load_dotenv(BACKEND.parent / ".env")
+        load_dotenv(BACKEND / ".env")
+        try:
+            departure = date.fromisoformat(args.date)
+        except ValueError:
+            ap.error("--date must be YYYY-MM-DD")
+        if not date.today() <= departure <= date.today() + timedelta(days=330):
+            ap.error("--date must be inside the next 330 days")
+        if not 1 <= args.timeout <= 300:
+            ap.error("--timeout must be between 1 and 300 seconds")
+        # --live always means production, never a warm local mock.
+        for name in ("FLYBASIS_BASE_URL", "FLYBASIS_SUPABASE_URL", "FLYBASIS_API2_URL"):
+            os.environ.pop(name, None)
+        os.environ["PROVIDER_TIMEOUT"] = str(args.timeout)
+        return asyncio.run(run_live_check(
+            auth_only=args.auth_only, origin=args.origin.upper(),
+            destination=args.destination.upper(), date=departure.isoformat(), cabin=args.cabin,
+        ))
 
     port = _free_port()
     proc = subprocess.Popen(

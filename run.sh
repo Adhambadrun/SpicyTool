@@ -12,17 +12,10 @@ echo ">> installing requirements"
 .venv/bin/pip install --quiet --upgrade pip
 .venv/bin/pip install --quiet -r backend/requirements.txt
 
-# Load .env if present (does not override the environment).
-# Root .env is the primary location; backend/.env is accepted too so the
-# documented "put FLYBASIS_API_KEY in backend/.env" path always works.
-for envfile in .env backend/.env; do
-  if [ -f "$envfile" ]; then
-    set -a
-    # shellcheck disable=SC1091
-    source "$envfile"
-    set +a
-  fi
-done
+# core.auth loads root .env then backend/.env via python-dotenv when the app
+# imports. Do not source secrets as shell code here: that also used to override
+# exported deployment credentials despite claiming not to. Python's loader
+# preserves the process environment and never executes values from a HAR.
 
 echo ">> SpicyTool listening on http://0.0.0.0:8000"
 cd backend
