@@ -20,8 +20,13 @@ TOKEN=$(cd backend && ../.venv/bin/python -c "from core.auth import issue_token;
 ok()   { echo -e "\033[92mPASS\033[0m  $1"; pass=$((pass+1)); }
 bad()  { echo -e "\033[91mFAIL\033[0m  $1"; fail=$((fail+1)); }
 
-echo "== 1. tests_integration.py: 22/22 =="
-if (cd backend && ../.venv/bin/python tests_integration.py | grep -q "All 22 assertions passed"); then ok "22/22 assertions"; else bad "integration tests"; fi
+echo "== 1. tests_integration.py (all assertions) =="
+# Count-agnostic: the suite grows, so match its own summary line rather than a
+# hardcoded number that silently rots every time an assertion is added.
+if (cd backend && ../.venv/bin/python tests_integration.py | grep -qE "^.*All [0-9]+ assertions passed"); then
+  n=$(cd backend && ../.venv/bin/python tests_integration.py | grep -oE "All [0-9]+ assertions" | grep -oE "[0-9]+")
+  ok "$n/$n assertions"
+else bad "integration tests"; fi
 
 echo "== 2. /api/v1/health =="
 h=$(curl -s localhost:8000/api/v1/health)
@@ -328,7 +333,10 @@ for path in ("/api/v2/context?origin=JFK&destination=LHR&program=AC_AEROPLAN&cab
     assert s == 200, f"{path} -> {s}"
     assert d["kind"] == "web_context", d.get("kind")
     assert d["is_award_data"] is False, "is_award_data must be False"
-    assert d["source"] == "flybasis-mcp"
+    # The web backend is pluggable (AgentSearch when keyed, else the keyless
+    # MCP connector). What must hold is that it is a *known* web backend and
+    # never an award provider.
+    assert d["source"] in ("flybasis-mcp", "agentsearch"), d.get("source")
     assert "NOT award" in d["disclaimer"], d.get("disclaimer")
     print(f"  {d['tool']:15} ok={str(d['ok']):5} kind={d['kind']} is_award_data={d['is_award_data']}")
 
@@ -341,6 +349,18 @@ assert [r["id"] for r in a["results"]] == [r["id"] for r in b["results"]], "resu
 print(f"  search unaffected: {a['count']} results, identical ids")
 EOF
 [ $? -eq 0 ] && ok "web context labelled non-award, results untouched" || bad "web context"
+
+echo "== 19b. web context panel renders + refuses unlabelled data (jsdom) =="
+if command -v node >/dev/null 2>&1; then
+  ( cd frontend/test && [ -d node_modules/jsdom ] || npm install --silent >/dev/null 2>&1
+    node web-context.mjs )
+  rc=$?
+  if   [ $rc -eq 0 ];  then ok "web context panel renders AgentSearch results, refuses unlabelled data"
+  elif [ $rc -eq 77 ]; then echo "  SKIP (jsdom not installed — cd frontend/test && npm install)"
+  else bad "web context panel"; fi
+else
+  echo "  SKIP (node not available)"
+fi
 
 echo "== 20. date picker booking window (today .. today+330) =="
 # Boots the real frontend/index.html in jsdom. Skips (does NOT pass) when the

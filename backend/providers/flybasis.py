@@ -256,6 +256,31 @@ class Flybasis(BaseProvider):
         # The credential goes in the Socket.IO auth payload, not HTTP headers.
         return {}
 
+    @property
+    def enabled(self) -> bool:
+        # A RapidAPI application key is not a Flybasis socket token. Operators
+        # sometimes paste one here; it powers the Web context panel instead
+        # (see services/agentsearch.py) and must never be dialled at the award
+        # socket, which would just fail auth on every search.
+        from services.agentsearch import looks_like_rapidapi_key
+
+        if looks_like_rapidapi_key(self.credential):
+            return False
+        return super().enabled
+
+    def disabled_reason(self) -> str | None:
+        from services.agentsearch import looks_like_rapidapi_key
+
+        if looks_like_rapidapi_key(self.credential):
+            return (
+                "Disabled: FLYBASIS_API_KEY holds a RapidAPI application key, "
+                "not a Flybasis award-feed token. That key has been routed to "
+                "the web-search backend (AgentSearch) for the Web context "
+                "panel. Set FLYBASIS_API_KEY to a token issued by Flybasis to "
+                "search live award availability."
+            )
+        return super().disabled_reason()
+
     async def fetch_raw(self, q: SearchQuery, engine) -> object:
         try:
             import socketio  # deferred: only needed when the provider is enabled

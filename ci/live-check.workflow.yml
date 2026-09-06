@@ -1,0 +1,96 @@
+# AgentSearch LIVE verification — runs on a GitHub Actions runner, which has
+# full outbound internet access.
+#
+# ── INSTALL (one time, ~60 seconds) ───────────────────────────────────────────
+# This file cannot be committed to .github/workflows/ by the agent: GitHub
+# refuses pushes from an App without the `workflows` permission. So:
+#
+#   1. Add the key as an encrypted secret (NEVER commit it — this repo is public):
+#        Settings → Secrets and variables → Actions → New repository secret
+#        Name:  AGENTSEARCH_API_KEY
+#        Value: <your RapidAPI key>
+#
+#   2. Move this file into place and push:
+#        mkdir -p .github/workflows
+#        git mv ci/live-check.workflow.yml .github/workflows/live-check.yml
+#        git commit -m "Add AgentSearch live check" && git push
+#
+#   3. Run it:  Actions tab → "AgentSearch live check" → Run workflow
+#      (it also runs automatically on every push)
+#
+# The job fails loudly if the key is rejected, out of quota, or the schema
+# drifts — so it doubles as an ongoing contract test against the real API.
+name: AgentSearch live check
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["**"]
+  schedule:
+    # Weekly, so upstream schema/quota drift is caught before a user hits it.
+    - cron: "17 6 * * 1"
+
+jobs:
+  live-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      # Always-green gates: these need no credential and no outbound access.
+      - name: Offline integration suite (33 assertions)
+        working-directory: backend
+        run: python tests_integration.py
+
+      - name: Real-HTTP verification against the local mock upstream
+        working-directory: backend
+        run: python tools/verify_agentsearch.py
+
+      - name: Frontend web-context panel (jsdom)
+        working-directory: frontend/test
+        run: |
+          npm install --silent
+          node web-context.mjs
+
+      # The live gate. Skips (does not fail) when the secret is absent, so the
+      # workflow stays useful on forks and before the secret is configured.
+      - name: Raw upstream call
+        if: ${{ env.AGENTSEARCH_API_KEY != '' }}
+        env:
+          AGENTSEARCH_API_KEY: ${{ secrets.AGENTSEARCH_API_KEY }}
+        run: |
+          echo "::group::GET /v1/search"
+          code=$(curl -sS -o /tmp/live.json -w '%{http_code}' --max-time 30 \
+            --url 'https://agentsearch.p.rapidapi.com/v1/search?provider=brave&country=us&limit=3&query=anthropic%20claude' \
+            --header 'Content-Type: application/json' \
+            --header 'x-rapidapi-host: agentsearch.p.rapidapi.com' \
+            --header "x-rapidapi-key: ${AGENTSEARCH_API_KEY}")
+          echo "HTTP $code"
+          # Print the body WITHOUT the key ever being echoed.
+          python -c "import json;print(json.dumps(json.load(open('/tmp/live.json')),indent=2)[:2000])" \
+            || cat /tmp/live.json
+          echo "::endgroup::"
+          test "$code" = "200"
+
+      - name: LIVE assertions through the real app code
+        if: ${{ env.AGENTSEARCH_API_KEY != '' }}
+        working-directory: backend
+        env:
+          AGENTSEARCH_API_KEY: ${{ secrets.AGENTSEARCH_API_KEY }}
+        run: python tools/verify_agentsearch.py --live
+
+      - name: Note when the live gate was skipped
+        if: ${{ env.AGENTSEARCH_API_KEY == '' }}
+        run: |
+          echo "::warning::AGENTSEARCH_API_KEY secret is not set — the live" \
+               "checks were skipped. Add it under Settings → Secrets and" \
+               "variables → Actions to enable them."

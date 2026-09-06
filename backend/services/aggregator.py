@@ -73,11 +73,23 @@ def live_providers(providers: list[BaseProvider] | None = None) -> list[str]:
 def _no_live_reason(providers: list[BaseProvider]) -> str | None:
     if live_providers(providers):
         return None
-    return (
+    from services import agentsearch
+
+    base = (
         "No live award data is available. SpicyTool relays the Flybasis search "
         "engine only — set FLYBASIS_API_KEY to a key issued to you by Flybasis "
         "to search real availability."
     )
+    if agentsearch.configured():
+        # An operator supplied a RapidAPI/AgentSearch key. It powers the Web
+        # context panel, but it is a web-search relay — it has no award feed.
+        base += (
+            " An AgentSearch (RapidAPI) web-search key is connected and now "
+            "powers the Web context panel, but AgentSearch returns web pages, "
+            "not award availability, so it cannot replace the Flybasis award "
+            "feed."
+        )
+    return base
 
 
 def provider_report() -> list[dict]:

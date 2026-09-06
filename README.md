@@ -259,6 +259,8 @@ always confirm on the airline's own site before booking.
 | `GET /api/v2/cache/stats` | cache backend, hits/misses, TTL |
 | `GET /api/v2/search` | aggregated, deduped search |
 | `GET /api/v2/search/stream` | SSE `start → data* → complete` |
+| `GET /api/v2/context` | general web context (AgentSearch when keyed, else the keyless MCP connector) — always `is_award_data: false` |
+| `GET /api/v2/context/status` | which web-search backend is connected, and how the key was resolved |
 
 🔒 = requires the session token (`Authorization: Bearer …` header or
 `?token=` for `EventSource`). The token is minted only through the PIN flow;
@@ -279,6 +281,57 @@ more than 3 airports per side → `400 "At most 3 origin airports"`;
 `return_date` before `date` → `400 "Return date must be on or after the
 departure date"`.
 
+> ⚠️ **Rotate the exposed key.** A real RapidAPI key was committed to this
+> public repo in `bbd85a2`. See [`ROTATE_KEY.md`](ROTATE_KEY.md) for the
+> zero-downtime rotation steps.
+
+## Verifying live, on GitHub Actions
+
+This sandbox has no general outbound internet (SNI-filtered allowlist), so the
+`--live` check cannot run from here. A GitHub Actions runner *does* have full
+access, and `ci/live-check.workflow.yml` runs the whole suite there — including
+the real call to `agentsearch.p.rapidapi.com`.
+
+The agent cannot commit it into `.github/workflows/` (GitHub blocks Apps
+without the `workflows` permission), so install it once:
+
+```bash
+# 1. Add the key as an encrypted secret — NEVER commit it (this repo is public):
+#    Settings -> Secrets and variables -> Actions -> New repository secret
+#    Name: AGENTSEARCH_API_KEY
+
+# 2. Move the workflow into place
+mkdir -p .github/workflows
+git mv ci/live-check.workflow.yml .github/workflows/live-check.yml
+git commit -m "Add AgentSearch live check" && git push
+
+# 3. Actions tab -> "AgentSearch live check" -> Run workflow
+```
+
+The live steps skip (rather than fail) when the secret is absent, so forks stay
+green. With the secret set, the job fails loudly on a rejected key, an exhausted
+quota, or upstream schema drift — an ongoing contract test against the real API.
+
+## Verifying the AgentSearch integration
+
+The web-context backend has a self-contained verifier that exercises the real
+client over real HTTP — no outbound network needed:
+
+```bash
+cd backend
+../.venv/bin/python tools/verify_agentsearch.py          # offline: boots a local
+                                                          # mock of the documented
+                                                          # /v1 schema
+AGENTSEARCH_API_KEY=<key> \
+  ../.venv/bin/python tools/verify_agentsearch.py --live  # real RapidAPI endpoint
+```
+
+Both modes run the same five assertions: `/v1/search` returns the documented
+envelope, `/v1/answer` and `/v1/fetch` work, web context is labelled
+`is_award_data:false`, and award search stays isolated from the web backend.
+`tools/agentsearch_mock.py` serves the published schema byte-for-byte and is
+dev-only — the app never imports it.
+
 ## Configuration (`.env`)
 
 | Variable | Default | Meaning |
@@ -287,6 +340,11 @@ departure date"`.
 | `POINTSPATH_API_KEY` | *(blank)* | enables the PointsPath adapter |
 | `POINTSYEAH_API_KEY` | *(blank)* | enables the PointsYeah adapter |
 | `FLYBASIS_API_KEY` | *(blank)* | enables the Flybasis adapter (Socket.IO award feed, see `Flybasis-index.md`). Issued **by Flybasis** to the operator — see [`FLYBASIS_GO_LIVE.md`](FLYBASIS_GO_LIVE.md) for the exact steps, verification, and a copy-paste prompt for the next chat. |
+| `AGENTSEARCH_API_KEY` | *(blank)* | RapidAPI key for the [AgentSearch](https://rapidapi.com) web-search API. **Web context only — not an award feed.** When set it becomes the preferred backend for the "Web context" panel (`/api/v2/context`), with the keyless FlyBasis Search MCP connector as automatic fallback. If `FLYBASIS_API_KEY` is set to a RapidAPI-shaped key (`…msh…jsn…`) it is used here automatically and is **not** dialled at the Flybasis award socket. |
+| `AGENTSEARCH_PROVIDER` | `brave` | SERP provider AgentSearch proxies (`brave` or `serper`) |
+| `AGENTSEARCH_MCP_URL` | *(blank)* | optional MCP fallback, e.g. `https://agentsearch-mcp.vercel.app/mcp` — same 3-tool surface as the keyless FlyBasis connector |
+| `AGENTSEARCH_COUNTRY` | `us` | country bias for AgentSearch results |
+| `AGENTSEARCH_TIMEOUT` | `12` | seconds; web search is slower than an award lookup |
 | `REDIS_URL` | `redis://localhost:6379/0` | cache; falls back to memory if unreachable |
 | `CACHE_TTL` | `2700` | seconds, clamped to the 30–60 min band |
 | `PROVIDER_TIMEOUT` | `3.5` | per-request budget for third-party providers |

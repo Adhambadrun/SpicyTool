@@ -26,9 +26,14 @@ import time
 from typing import Any
 
 from core.http_engine import HttpEngine, ProviderError
+from services import agentsearch
 
 # ------------------------------------------------------------------ config --
 
+# Either connector speaks the same 3-tool MCP surface, so either URL works:
+#   AGENTSEARCH_MCP_URL -> https://agentsearch-mcp.vercel.app/mcp
+#   FLYBASIS_MCP_URL    -> https://flybasis-mcp.vercel.app/mcp (keyless)
+AGENTSEARCH_MCP_URL_ENV = "AGENTSEARCH_MCP_URL"
 MCP_URL_ENV = "FLYBASIS_MCP_URL"
 TIMEOUT_ENV = "FLYBASIS_MCP_TIMEOUT"
 DEFAULT_MCP_URL = "https://flybasis-mcp.vercel.app/mcp"
@@ -49,14 +54,28 @@ DISCLAIMER = (
     "results."
 )
 
+AGENTSEARCH_DISCLAIMER = (
+    "Web context from the AgentSearch web-search API (RapidAPI). This is "
+    "general web data — search results and page snippets — NOT award "
+    "availability, pricing or seat counts. It never contributes to search "
+    "results."
+)
+
 # Web search is slower than an award lookup, so this module keeps its own
 # pooled client instead of borrowing the 3.5s provider engine.
+# Cached per running event loop — a pool bound to a closed loop raises
+# "Event loop is closed" on its next request (see services/agentsearch.py).
 _engine: HttpEngine | None = None
+_engine_loop: object | None = None
 
 
 def mcp_url() -> str:
     """Endpoint of the FlyBasis Search MCP connector."""
-    return (os.environ.get(MCP_URL_ENV) or DEFAULT_MCP_URL).strip().rstrip("/")
+    return (
+        os.environ.get(AGENTSEARCH_MCP_URL_ENV)
+        or os.environ.get(MCP_URL_ENV)
+        or DEFAULT_MCP_URL
+    ).strip().rstrip("/")
 
 
 def timeout() -> float:
@@ -70,9 +89,16 @@ def timeout() -> float:
 
 
 def _get_engine() -> HttpEngine:
-    global _engine
-    if _engine is None:
+    global _engine, _engine_loop
+    import asyncio
+
+    try:
+        loop: object | None = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    if _engine is None or _engine_loop is not loop:
         _engine = HttpEngine(timeout=timeout())
+        _engine_loop = loop
     return _engine
 
 
@@ -145,19 +171,75 @@ def _unwrap_tool_result(rpc: dict) -> Any:
 
 # ---------------------------------------------------------------- public ----
 
-def _payload(tool: str, ok: bool, *, data: Any = None, error: str | None = None) -> dict:
+def _payload(
+    tool: str,
+    ok: bool,
+    *,
+    data: Any = None,
+    error: str | None = None,
+    source: str | None = None,
+    endpoint: str | None = None,
+) -> dict:
     """Wrap anything this module returns so it can never be read as award data."""
     return {
         "kind": "web_context",
         "is_award_data": False,
-        "source": "flybasis-mcp",
-        "endpoint": mcp_url(),
+        "source": source or "flybasis-mcp",
+        "endpoint": endpoint or mcp_url(),
         "tool": tool,
-        "disclaimer": DISCLAIMER,
+        "disclaimer": (
+            AGENTSEARCH_DISCLAIMER if source == "agentsearch" else DISCLAIMER
+        ),
         "ok": ok,
         "error": error,
         "data": data,
     }
+
+
+def backend_name() -> str:
+    """Which web backend serves the context panel right now."""
+    return "agentsearch" if agentsearch.configured() else "flybasis-mcp"
+
+
+async def _agentsearch_tool(tool: str, arguments: dict) -> dict | None:
+    """Serve a tool from AgentSearch (RapidAPI) when a key is configured.
+
+    Returns None when AgentSearch cannot serve this tool, so the caller falls
+    back to the keyless MCP connector. Never raises.
+    """
+    if not agentsearch.configured():
+        return None
+    endpoint = f"{agentsearch.base_url()}" + {
+        "web_search": agentsearch.SEARCH_PATH,
+        "instant_answer": agentsearch.ANSWER_PATH,
+        "fetch_url": agentsearch.FETCH_PATH,
+    }.get(tool, agentsearch.SEARCH_PATH)
+    try:
+        if tool == "web_search":
+            data = await agentsearch.search(
+                str(arguments.get("q") or ""), int(arguments.get("limit") or 5)
+            )
+        elif tool == "instant_answer":
+            data = await agentsearch.instant_answer(str(arguments.get("q") or ""))
+        elif tool == "fetch_url":
+            data = await agentsearch.fetch_url(
+                str(arguments.get("url") or ""),
+                str(arguments.get("format") or "text"),
+                int(arguments.get("maxChars") or 20000),
+            )
+        else:
+            return None
+        return _payload(
+            tool, True, data=data, source="agentsearch", endpoint=endpoint
+        )
+    except Exception as exc:  # noqa: BLE001 — fall through to the MCP connector
+        return _payload(
+            tool,
+            False,
+            error=f"{exc.__class__.__name__}: {exc}",
+            source="agentsearch",
+            endpoint=endpoint,
+        )
 
 
 async def call_tool(tool: str, arguments: dict) -> dict:
@@ -167,6 +249,10 @@ async def call_tool(tool: str, arguments: dict) -> dict:
     """
     if tool not in TOOLS:
         return _payload(tool, False, error=f"Unknown tool '{tool}' (expected one of {', '.join(TOOLS)})")
+    # Preferred backend: AgentSearch (RapidAPI) when an operator supplied a key.
+    primary = await _agentsearch_tool(tool, arguments)
+    if primary is not None and primary["ok"]:
+        return primary
     try:
         await _rpc(
             "initialize",
@@ -180,6 +266,13 @@ async def call_tool(tool: str, arguments: dict) -> dict:
         rpc = await _rpc("tools/call", {"name": tool, "arguments": arguments}, 2)
         return _payload(tool, True, data=_unwrap_tool_result(rpc))
     except Exception as exc:  # noqa: BLE001 — enrichment must never break a request
+        if primary is not None:
+            # Both backends failed: report both so the operator can fix the key.
+            primary["error"] = (
+                f"AgentSearch: {primary['error']} | "
+                f"MCP fallback: {exc.__class__.__name__}: {exc}"
+            )
+            return primary
         return _payload(tool, False, error=f"{exc.__class__.__name__}: {exc}")
 
 
@@ -239,8 +332,25 @@ async def route_context(
     return out
 
 
+async def status() -> dict:
+    """Which backend serves web context, and whether it is configured."""
+    return {
+        "kind": "web_context",
+        "is_award_data": False,
+        "backend": backend_name(),
+        "disclaimer": (
+            AGENTSEARCH_DISCLAIMER if backend_name() == "agentsearch" else DISCLAIMER
+        ),
+        "agentsearch": await agentsearch.status(),
+        "mcp": {"endpoint": mcp_url(), "timeout": timeout()},
+        "tools": list(TOOLS),
+    }
+
+
 async def aclose() -> None:
-    global _engine
+    global _engine, _engine_loop
     if _engine is not None:
         await _engine.aclose()
         _engine = None
+        _engine_loop = None
+    await agentsearch.aclose()

@@ -179,6 +179,12 @@ async def search_stream(
     return EventSourceResponse(gen(), headers=SSE_HEADERS)
 
 
+@router.get("/context/status")
+async def context_status():
+    """Which web-search backend serves the Web context panel. NOT award data."""
+    return await web_context.status()
+
+
 @router.get("/context")
 async def context(
     origin: str | None = None,
