@@ -136,7 +136,9 @@ def verify_pin(email: str, pin: str) -> tuple[str | None, str, int]:
         return None, "Too many attempts — try again in a moment.", int(entry["locked_until"] - now) + 1
     if not email or not pin:
         return None, "Enter your email and PIN.", 0
-    if not hmac.compare_digest(LOGIN_PIN, pin):
+    # compare_digest on str raises TypeError for non-ASCII input; comparing
+    # bytes accepts anything and simply fails the match (a PIN is digits).
+    if not hmac.compare_digest(LOGIN_PIN.encode(), pin.encode()):
         entry = _FAILS.setdefault(email, {"fails": 0, "locked_until": 0.0})
         entry["fails"] += 1
         if entry["fails"] >= PIN_MAX_ATTEMPTS:
@@ -174,7 +176,10 @@ def verify_token(token: str | None) -> str | None:
         return None
     _, body, sig = parts
     expect = hmac.new(_secret(), body.encode(), hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(expect, sig):
+    # compare_digest on str raises TypeError for non-ASCII input; the token is
+    # attacker-controlled (Authorization header), so compare bytes and let any
+    # malformed signature simply fail the match.
+    if not hmac.compare_digest(expect.encode(), sig.encode()):
         return None
     try:
         payload = json.loads(_unb64(body))

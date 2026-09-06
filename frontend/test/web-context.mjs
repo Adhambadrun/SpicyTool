@@ -161,6 +161,18 @@ setTimeout(() => {
     render({ ...AGENTSEARCH_PAYLOAD, data: { results: [] } })
       .includes('No web results'));
 
+  // a javascript: URL must never become a clickable link (esc() alone does not stop the scheme)
+  const jsRow = render({
+    ...AGENTSEARCH_PAYLOAD,
+    data: { results: [{ position: 1, title: 'Evil row', url: 'javascript:alert(1)', snippet: 'x' }] },
+  });
+  check('javascript: URL renders as plain text, not a link', !jsRow.includes('<a ') && jsRow.includes('Evil row'));
+  const relRow = render({
+    ...AGENTSEARCH_PAYLOAD,
+    data: { results: [{ position: 1, title: 'Proto-relative', url: '//evil.example/x', snippet: 'x' }] },
+  });
+  check('protocol-relative URL renders as plain text, not a link', !relRow.includes('<a '));
+
 
   // --- 4. a REAL production payload renders correctly ---------------------
   const liveHtml = render(LIVE_CAPTURE);
