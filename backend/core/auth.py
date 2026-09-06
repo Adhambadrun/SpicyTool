@@ -21,7 +21,6 @@ import hmac
 import json
 import os
 import re
-import secrets
 import time
 from pathlib import Path
 
@@ -45,19 +44,38 @@ EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+$")
 
 PIN_MAX_ATTEMPTS = 5         # wrong tries before the address is locked out
 PIN_LOCKOUT_SECONDS = 60     # lockout duration
-SESSION_TTL_HOURS = 12       # session token lifetime
+SESSION_TTL_HOURS = 720       # 30 days — a tab left open shouldn't expire mid-use
 
 _SECRET_FILE = Path(__file__).resolve().parent.parent / "data" / ".auth_secret"
 _RUNTIME_SECRET: bytes | None = None  # in-memory fallback (read-only filesystems)
+
+
+def _derive_secret() -> bytes:
+    """Deterministic fallback signing secret for serverless platforms.
+
+    On Vercel the filesystem is ephemeral, so a randomly generated
+    ``.auth_secret`` would change on every cold start and instantly
+    invalidate every token that was just issued — the client sees constant
+    401s and keeps getting bounced back to login mid-session.
+
+    Deriving the key from the stable login configuration (PIN + authorized
+    addresses + a fixed app namespace) makes the same secret reproducible
+    across every instance and cold start, so sessions stay valid for the
+    life of the tab. Set ``AUTH_SECRET`` to a long random value for a
+    stronger, deployment-agnostic key; this fallback guarantees session
+    *stability* only.
+    """
+    seed = "SpicyTool::v1::" + LOGIN_PIN + "::" + ",".join(sorted(ALLOWED_EMAILS))
+    return hashlib.sha256(seed.encode()).digest()
 
 
 def _secret() -> bytes:
     """Per-install signing secret.
 
     Order: AUTH_SECRET env var -> backend/data/.auth_secret (generated once)
-    -> in-memory secret for this process. The last case covers read-only
-    filesystems such as serverless platforms (Vercel); set AUTH_SECRET there
-    so sessions survive cold starts and are valid across instances.
+    -> deterministic key derived from the login config. The last case keeps
+    sessions valid on read-only/ephemeral filesystems (serverless platforms
+    such as Vercel) so users are not logged out between cold starts.
     """
     global _RUNTIME_SECRET
     env = os.getenv("AUTH_SECRET")
@@ -68,10 +86,11 @@ def _secret() -> bytes:
     try:
         if _SECRET_FILE.exists():
             _RUNTIME_SECRET = _SECRET_FILE.read_bytes().strip()
-            return _RUNTIME_SECRET
+            if _RUNTIME_SECRET:
+                return _RUNTIME_SECRET
     except OSError:
         pass
-    key = secrets.token_hex(32).encode()
+    key = _derive_secret()
     try:
         _SECRET_FILE.parent.mkdir(parents=True, exist_ok=True)
         _SECRET_FILE.write_bytes(key)
@@ -80,7 +99,8 @@ def _secret() -> bytes:
         except OSError:
             pass
     except OSError:
-        # Read-only filesystem: keep the key in memory for this process.
+        # Read-only filesystem: the deterministic key still holds across
+        # instances, so sessions remain valid without the file.
         pass
     _RUNTIME_SECRET = key
     return key
