@@ -30,6 +30,10 @@ from services import agentsearch
 
 # ------------------------------------------------------------------ config --
 
+# Either connector speaks the same 3-tool MCP surface, so either URL works:
+#   AGENTSEARCH_MCP_URL -> https://agentsearch-mcp.vercel.app/mcp
+#   FLYBASIS_MCP_URL    -> https://flybasis-mcp.vercel.app/mcp (keyless)
+AGENTSEARCH_MCP_URL_ENV = "AGENTSEARCH_MCP_URL"
 MCP_URL_ENV = "FLYBASIS_MCP_URL"
 TIMEOUT_ENV = "FLYBASIS_MCP_TIMEOUT"
 DEFAULT_MCP_URL = "https://flybasis-mcp.vercel.app/mcp"
@@ -64,7 +68,11 @@ _engine: HttpEngine | None = None
 
 def mcp_url() -> str:
     """Endpoint of the FlyBasis Search MCP connector."""
-    return (os.environ.get(MCP_URL_ENV) or DEFAULT_MCP_URL).strip().rstrip("/")
+    return (
+        os.environ.get(AGENTSEARCH_MCP_URL_ENV)
+        or os.environ.get(MCP_URL_ENV)
+        or DEFAULT_MCP_URL
+    ).strip().rstrip("/")
 
 
 def timeout() -> float:
@@ -191,7 +199,11 @@ async def _agentsearch_tool(tool: str, arguments: dict) -> dict | None:
     """
     if not agentsearch.configured():
         return None
-    endpoint = f"{agentsearch.base_url()}{agentsearch.SEARCH_PATH}"
+    endpoint = f"{agentsearch.base_url()}" + {
+        "web_search": agentsearch.SEARCH_PATH,
+        "instant_answer": agentsearch.ANSWER_PATH,
+        "fetch_url": agentsearch.FETCH_PATH,
+    }.get(tool, agentsearch.SEARCH_PATH)
     try:
         if tool == "web_search":
             data = await agentsearch.search(
@@ -199,8 +211,14 @@ async def _agentsearch_tool(tool: str, arguments: dict) -> dict | None:
             )
         elif tool == "instant_answer":
             data = await agentsearch.instant_answer(str(arguments.get("q") or ""))
+        elif tool == "fetch_url":
+            data = await agentsearch.fetch_url(
+                str(arguments.get("url") or ""),
+                str(arguments.get("format") or "text"),
+                int(arguments.get("maxChars") or 20000),
+            )
         else:
-            return None  # fetch_url stays with the SSRF-guarded connector
+            return None
         return _payload(
             tool, True, data=data, source="agentsearch", endpoint=endpoint
         )

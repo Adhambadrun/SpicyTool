@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SpicyTool integration tests — 28 assertions, no live network calls.
+"""SpicyTool integration tests — 31 assertions, no live network calls.
 
 Uses httpx.MockTransport for the HTTP-layer tests; everything else exercises
 the real normalization, enrichment and dedupe code paths directly.
@@ -598,39 +598,80 @@ def test_fly_skips_bad_flight() -> None:
 # AgentSearch (RapidAPI) web-search backend — NOT award data
 # ---------------------------------------------------------------------------
 
+# Verbatim example response from the AgentSearch API docs (GET /v1/search).
 _AGENTSEARCH_BRAVE = {
-    "meta": {"provider": "brave"},
+    "meta": {
+        "cached": False,
+        "stale": False,
+        "as_of": "2026-07-31T18:22:04.517Z",
+        "source": "web-search",
+        "provider": "brave",
+        "took_ms": 214,
+    },
+    "query": "anthropic claude",
+    "count": 2,
     "results": [
         {
             "position": 1,
-            "title": "Aeroplan award chart",
-            "url": "https://www.example.com/aeroplan",
-            "description": "How Aeroplan prices JFK-LHR business awards.",
+            "title": "Claude — Anthropic",
+            "url": "https://www.anthropic.com/claude",
+            "snippet": "Claude is a family of large language models built by Anthropic for safe, steerable AI.",
+            "source": "brave",
+            "domain": "anthropic.com",
+            "published": None,
         },
         {
-            "title": "Points guide",
-            "link": "https://blog.example.org/guide?x=1",
-            "snippet": "Transfer partners overview.",
+            "position": 2,
+            "title": "Anthropic",
+            "url": "https://en.wikipedia.org/wiki/Anthropic",
+            "snippet": "Anthropic is an AI safety and research company that develops the Claude models.",
+            "source": "brave",
+            "domain": "en.wikipedia.org",
+            "published": None,
         },
     ],
 }
 
+# Alternate spellings other SERP backends emit (link/description, no position).
+_AGENTSEARCH_LOOSE = {
+    "meta": {"provider": "serper"},
+    "results": [
+        {"title": "Aeroplan award chart", "link": "https://www.example.com/x",
+         "description": "How Aeroplan prices JFK-LHR business awards."},
+    ],
+}
 
-def test_as_normalizes_mixed_field_names():
-    """23. AgentSearch normalization accepts url/link + description/snippet."""
-    out = agentsearch.normalize_search(_AGENTSEARCH_BRAVE, "jfk lhr", took_ms=12)
+
+def test_as_documented_schema_roundtrip():
+    """23. The documented /v1/search body normalizes with meta provenance intact."""
+    out = agentsearch.normalize_search(_AGENTSEARCH_BRAVE, "anthropic claude", took_ms=999)
     assert len(out["results"]) == 2, out
     a, b = out["results"]
-    assert a["url"] == "https://www.example.com/aeroplan"
+    assert a["position"] == 1 and a["url"] == "https://www.anthropic.com/claude"
+    assert a["domain"] == "anthropic.com" and a["source"] == "brave"
+    assert a["published"] is None and "large language models" in a["snippet"]
+    assert b["domain"] == "en.wikipedia.org"
+    m = out["meta"]
+    # Upstream took_ms/cached/stale/as_of win over our measured round-trip.
+    assert m["took_ms"] == 214 and m["provider"] == "brave", m
+    assert m["cached"] is False and m["stale"] is False
+    assert m["as_of"] == "2026-07-31T18:22:04.517Z" and m["count"] == 2
+    assert out["query"] == "anthropic claude"
+
+
+def test_as_normalizes_mixed_field_names():
+    """24. link/description spellings and missing position still normalize."""
+    out = agentsearch.normalize_search(_AGENTSEARCH_LOOSE, "jfk lhr")
+    a = out["results"][0]
+    assert a["url"] == "https://www.example.com/x"
     assert a["snippet"].startswith("How Aeroplan")
     assert a["domain"] == "example.com", a["domain"]  # www. stripped
-    assert b["url"].startswith("https://blog.example.org")
-    assert b["position"] == 2, b  # positional fallback
-    assert out["meta"]["count"] == 2 and out["meta"]["took_ms"] == 12
+    assert a["position"] == 1  # positional fallback
+    assert out["meta"]["provider"] == "serper"
 
 
 def test_as_extracts_nested_and_empty_payloads():
-    """24. Nested {web:{results}} is found; junk payloads yield zero results."""
+    """25. Nested {web:{results}} is found; junk payloads yield zero results."""
     nested = {"web": {"results": [{"title": "T", "url": "https://a.io/x"}]}}
     assert len(agentsearch.normalize_search(nested, "q")["results"]) == 1
     for junk in ({}, {"results": []}, None, "nope", {"results": [{"a": 1}]}):
@@ -638,7 +679,7 @@ def test_as_extracts_nested_and_empty_payloads():
 
 
 def test_as_key_detection_and_flybasis_gate():
-    """25. A RapidAPI-shaped key routes to AgentSearch, never the award socket."""
+    """26. A RapidAPI-shaped key routes to AgentSearch, never the award socket."""
     rapid = "ebd27a2097msh8e99d38c54699bap135eb6jsncd2f0c804156"
     assert agentsearch.looks_like_rapidapi_key(rapid)
     assert not agentsearch.looks_like_rapidapi_key("a-real-flybasis-token")
@@ -661,7 +702,7 @@ def test_as_key_detection_and_flybasis_gate():
 
 
 def test_as_search_over_mock_transport():
-    """26. Live-shaped GET: RapidAPI headers sent, payload normalized."""
+    """27. Live-shaped GET: RapidAPI headers sent, payload normalized."""
     seen = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -685,7 +726,7 @@ def test_as_search_over_mock_transport():
 
 
 def test_as_surfaces_auth_and_rate_errors():
-    """27. 401/429 become actionable ProviderErrors, never silent empties."""
+    """28. 401/429 become actionable ProviderErrors, never silent empties."""
     from core.http_engine import ProviderError
 
     for code, needle in ((401, "rejected"), (403, "rejected"), (429, "rate limit")):
@@ -706,7 +747,7 @@ def test_as_surfaces_auth_and_rate_errors():
 
 
 def test_as_context_is_never_award_data():
-    """28. web_context via AgentSearch stays labelled is_award_data=false."""
+    """29. web_context via AgentSearch stays labelled is_award_data=false."""
     from services import web_context
 
     engine = HttpEngine(timeout=2.0)
@@ -726,8 +767,70 @@ def test_as_context_is_never_award_data():
         os.environ.pop("AGENTSEARCH_API_KEY", None)
 
 
+
+def test_as_answer_and_fetch_endpoints():
+    """30. instant_answer hits /v1/answer and fetch_url hits /v1/fetch."""
+    seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request.url.path)
+        if request.url.path == "/v1/answer":
+            return httpx.Response(200, json={
+                "meta": {"provider": None, "source": "duckduckgo"},
+                "heading": "Aeroplan",
+                "type": "abstract",
+                "text": "Air Canada's loyalty program.",
+                "source": "Wikipedia",
+                "sourceUrl": "https://en.wikipedia.org/wiki/Aeroplan",
+            })
+        return httpx.Response(200, json={
+            "meta": {"source": "fetch"},
+            "finalUrl": "https://example.com/guide",
+            "title": "Guide",
+            "format": "text",
+            "text": "Clean boilerplate-free body text.",
+            "links": [],
+        })
+
+    os.environ["AGENTSEARCH_API_KEY"] = "test-key"
+    engine = HttpEngine(timeout=2.0)
+    engine.client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    agentsearch._engine = engine
+    try:
+        ans = asyncio.run(agentsearch.instant_answer("Aeroplan"))
+        doc = asyncio.run(agentsearch.fetch_url("https://example.com/guide"))
+    finally:
+        agentsearch._engine = None
+        os.environ.pop("AGENTSEARCH_API_KEY", None)
+    assert seen == ["/v1/answer", "/v1/fetch"], seen
+    assert ans["heading"] == "Aeroplan" and ans["text"].startswith("Air Canada")
+    assert ans["sourceUrl"].endswith("/Aeroplan")
+    assert doc["finalUrl"] == "https://example.com/guide"
+    assert doc["text"].startswith("Clean boilerplate")
+
+
+def test_as_answer_falls_back_to_serp():
+    """31. An empty /v1/answer falls back to the top organic result."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/answer":
+            return httpx.Response(200, json={"meta": {}, "heading": "", "text": ""})
+        return httpx.Response(200, json=_AGENTSEARCH_BRAVE)
+
+    os.environ["AGENTSEARCH_API_KEY"] = "test-key"
+    engine = HttpEngine(timeout=2.0)
+    engine.client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    agentsearch._engine = engine
+    try:
+        ans = asyncio.run(agentsearch.instant_answer("anthropic claude"))
+    finally:
+        agentsearch._engine = None
+        os.environ.pop("AGENTSEARCH_API_KEY", None)
+    assert ans["text"].startswith("Claude is a family"), ans
+    assert ans["sourceUrl"] == "https://www.anthropic.com/claude"
+
+
 def main() -> int:
-    print(f"\n{DIM}SpicyTool integration tests — 28 assertions, offline{RESET}\n")
+    print(f"\n{DIM}SpicyTool integration tests — 31 assertions, offline{RESET}\n")
     tests = [
         test_retry,
         test_timeout_isolation,
@@ -751,12 +854,15 @@ def main() -> int:
         test_fly_roundtrip_two_lists,
         test_fly_enrichment,
         test_fly_skips_bad_flight,
+        test_as_documented_schema_roundtrip,
         test_as_normalizes_mixed_field_names,
         test_as_extracts_nested_and_empty_payloads,
         test_as_key_detection_and_flybasis_gate,
         test_as_search_over_mock_transport,
         test_as_surfaces_auth_and_rate_errors,
         test_as_context_is_never_award_data,
+        test_as_answer_and_fetch_endpoints,
+        test_as_answer_falls_back_to_serp,
     ]
     for i, fn in enumerate(tests, start=1):
         check(i, fn.__doc__.splitlines()[0].strip() if fn.__doc__ else fn.__name__, fn)
