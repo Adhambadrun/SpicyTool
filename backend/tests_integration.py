@@ -680,7 +680,8 @@ def test_as_extracts_nested_and_empty_payloads():
 
 def test_as_key_detection_and_flybasis_gate():
     """26. A RapidAPI-shaped key routes to AgentSearch, never the award socket."""
-    rapid = "ebd27a2097msh8e99d38c54699bap135eb6jsncd2f0c804156"
+    # Synthetic, RapidAPI-shaped value — never a real credential.
+    rapid = "0123456789msh0123456789abcdefp012345jsn0123456789ab"
     assert agentsearch.looks_like_rapidapi_key(rapid)
     assert not agentsearch.looks_like_rapidapi_key("a-real-flybasis-token")
     old = os.environ.get("FLYBASIS_API_KEY")

@@ -281,6 +281,33 @@ more than 3 airports per side → `400 "At most 3 origin airports"`;
 `return_date` before `date` → `400 "Return date must be on or after the
 departure date"`.
 
+## Verifying live, on GitHub Actions
+
+This sandbox has no general outbound internet (SNI-filtered allowlist), so the
+`--live` check cannot run from here. A GitHub Actions runner *does* have full
+access, and `ci/live-check.workflow.yml` runs the whole suite there — including
+the real call to `agentsearch.p.rapidapi.com`.
+
+The agent cannot commit it into `.github/workflows/` (GitHub blocks Apps
+without the `workflows` permission), so install it once:
+
+```bash
+# 1. Add the key as an encrypted secret — NEVER commit it (this repo is public):
+#    Settings -> Secrets and variables -> Actions -> New repository secret
+#    Name: AGENTSEARCH_API_KEY
+
+# 2. Move the workflow into place
+mkdir -p .github/workflows
+git mv ci/live-check.workflow.yml .github/workflows/live-check.yml
+git commit -m "Add AgentSearch live check" && git push
+
+# 3. Actions tab -> "AgentSearch live check" -> Run workflow
+```
+
+The live steps skip (rather than fail) when the secret is absent, so forks stay
+green. With the secret set, the job fails loudly on a rejected key, an exhausted
+quota, or upstream schema drift — an ongoing contract test against the real API.
+
 ## Verifying the AgentSearch integration
 
 The web-context backend has a self-contained verifier that exercises the real
