@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SpicyTool integration tests — 22 assertions, no live network calls.
+"""SpicyTool integration tests — 28 assertions, no live network calls.
 
 Uses httpx.MockTransport for the HTTP-layer tests; everything else exercises
 the real normalization, enrichment and dedupe code paths directly.
@@ -26,6 +26,7 @@ from core.schema import AwardResult, Layover, Pricing, Route, Segment, TransferP
 from providers.base import BaseProvider, SearchQuery  # noqa: E402
 from providers.flybasis import Flybasis, normalize_payload  # noqa: E402
 from providers.pointsyeah import PointsYeah  # noqa: E402
+from services import agentsearch  # noqa: E402
 from services.dedupe import dedupe, stats as dedupe_stats  # noqa: E402
 
 GREEN, RED, DIM, RESET = "\033[92m", "\033[91m", "\033[2m", "\033[0m"
@@ -592,8 +593,141 @@ def test_fly_skips_bad_flight() -> None:
 # --------------------------------------------------------------------------
 
 
+
+# ---------------------------------------------------------------------------
+# AgentSearch (RapidAPI) web-search backend — NOT award data
+# ---------------------------------------------------------------------------
+
+_AGENTSEARCH_BRAVE = {
+    "meta": {"provider": "brave"},
+    "results": [
+        {
+            "position": 1,
+            "title": "Aeroplan award chart",
+            "url": "https://www.example.com/aeroplan",
+            "description": "How Aeroplan prices JFK-LHR business awards.",
+        },
+        {
+            "title": "Points guide",
+            "link": "https://blog.example.org/guide?x=1",
+            "snippet": "Transfer partners overview.",
+        },
+    ],
+}
+
+
+def test_as_normalizes_mixed_field_names():
+    """23. AgentSearch normalization accepts url/link + description/snippet."""
+    out = agentsearch.normalize_search(_AGENTSEARCH_BRAVE, "jfk lhr", took_ms=12)
+    assert len(out["results"]) == 2, out
+    a, b = out["results"]
+    assert a["url"] == "https://www.example.com/aeroplan"
+    assert a["snippet"].startswith("How Aeroplan")
+    assert a["domain"] == "example.com", a["domain"]  # www. stripped
+    assert b["url"].startswith("https://blog.example.org")
+    assert b["position"] == 2, b  # positional fallback
+    assert out["meta"]["count"] == 2 and out["meta"]["took_ms"] == 12
+
+
+def test_as_extracts_nested_and_empty_payloads():
+    """24. Nested {web:{results}} is found; junk payloads yield zero results."""
+    nested = {"web": {"results": [{"title": "T", "url": "https://a.io/x"}]}}
+    assert len(agentsearch.normalize_search(nested, "q")["results"]) == 1
+    for junk in ({}, {"results": []}, None, "nope", {"results": [{"a": 1}]}):
+        assert agentsearch.normalize_search(junk, "q")["results"] == [], junk
+
+
+def test_as_key_detection_and_flybasis_gate():
+    """25. A RapidAPI-shaped key routes to AgentSearch, never the award socket."""
+    rapid = "ebd27a2097msh8e99d38c54699bap135eb6jsncd2f0c804156"
+    assert agentsearch.looks_like_rapidapi_key(rapid)
+    assert not agentsearch.looks_like_rapidapi_key("a-real-flybasis-token")
+    old = os.environ.get("FLYBASIS_API_KEY")
+    os.environ.pop("AGENTSEARCH_API_KEY", None)
+    try:
+        os.environ["FLYBASIS_API_KEY"] = rapid
+        assert agentsearch.configured()
+        fb = Flybasis()
+        assert fb.enabled is False, "RapidAPI key must not enable the award feed"
+        assert "RapidAPI" in (fb.disabled_reason() or "")
+        os.environ["FLYBASIS_API_KEY"] = "flybasis-issued-token"
+        assert not agentsearch.configured()
+        assert Flybasis().enabled is True
+    finally:
+        if old is None:
+            os.environ.pop("FLYBASIS_API_KEY", None)
+        else:
+            os.environ["FLYBASIS_API_KEY"] = old
+
+
+def test_as_search_over_mock_transport():
+    """26. Live-shaped GET: RapidAPI headers sent, payload normalized."""
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["url"] = str(request.url)
+        seen["headers"] = dict(request.headers)
+        return httpx.Response(200, json=_AGENTSEARCH_BRAVE)
+
+    os.environ["AGENTSEARCH_API_KEY"] = "test-key"
+    engine = HttpEngine(timeout=2.0)
+    engine.client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    agentsearch._engine = engine
+    try:
+        out = asyncio.run(agentsearch.search("JFK to LHR award", limit=5))
+    finally:
+        agentsearch._engine = None
+        os.environ.pop("AGENTSEARCH_API_KEY", None)
+    assert seen["headers"]["x-rapidapi-key"] == "test-key", seen["headers"]
+    assert seen["headers"]["x-rapidapi-host"] == "agentsearch.p.rapidapi.com"
+    assert "provider=brave" in seen["url"] and "country=us" in seen["url"], seen["url"]
+    assert len(out["results"]) == 2
+
+
+def test_as_surfaces_auth_and_rate_errors():
+    """27. 401/429 become actionable ProviderErrors, never silent empties."""
+    from core.http_engine import ProviderError
+
+    for code, needle in ((401, "rejected"), (403, "rejected"), (429, "rate limit")):
+        engine = HttpEngine(timeout=2.0)
+        engine.client = httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda r, c=code: httpx.Response(c, text="no"))
+        )
+        os.environ["AGENTSEARCH_API_KEY"] = "bad"
+        agentsearch._engine = engine
+        try:
+            asyncio.run(agentsearch.search("q"))
+            raise AssertionError(f"HTTP {code} should raise")
+        except ProviderError as exc:
+            assert needle in str(exc).lower(), (code, str(exc))
+        finally:
+            agentsearch._engine = None
+            os.environ.pop("AGENTSEARCH_API_KEY", None)
+
+
+def test_as_context_is_never_award_data():
+    """28. web_context via AgentSearch stays labelled is_award_data=false."""
+    from services import web_context
+
+    engine = HttpEngine(timeout=2.0)
+    engine.client = httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=_AGENTSEARCH_BRAVE))
+    )
+    os.environ["AGENTSEARCH_API_KEY"] = "test-key"
+    agentsearch._engine = engine
+    try:
+        assert web_context.backend_name() == "agentsearch"
+        out = asyncio.run(web_context.route_context("JFK", "LHR", cabin="business"))
+        assert out["ok"] and out["source"] == "agentsearch", out
+        assert out["is_award_data"] is False and out["kind"] == "web_context"
+        assert len(out["data"]["results"]) == 2
+    finally:
+        agentsearch._engine = None
+        os.environ.pop("AGENTSEARCH_API_KEY", None)
+
+
 def main() -> int:
-    print(f"\n{DIM}SpicyTool integration tests — 22 assertions, offline{RESET}\n")
+    print(f"\n{DIM}SpicyTool integration tests — 28 assertions, offline{RESET}\n")
     tests = [
         test_retry,
         test_timeout_isolation,
@@ -617,6 +751,12 @@ def main() -> int:
         test_fly_roundtrip_two_lists,
         test_fly_enrichment,
         test_fly_skips_bad_flight,
+        test_as_normalizes_mixed_field_names,
+        test_as_extracts_nested_and_empty_payloads,
+        test_as_key_detection_and_flybasis_gate,
+        test_as_search_over_mock_transport,
+        test_as_surfaces_auth_and_rate_errors,
+        test_as_context_is_never_award_data,
     ]
     for i, fn in enumerate(tests, start=1):
         check(i, fn.__doc__.splitlines()[0].strip() if fn.__doc__ else fn.__name__, fn)

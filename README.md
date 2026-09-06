@@ -259,6 +259,8 @@ always confirm on the airline's own site before booking.
 | `GET /api/v2/cache/stats` | cache backend, hits/misses, TTL |
 | `GET /api/v2/search` | aggregated, deduped search |
 | `GET /api/v2/search/stream` | SSE `start → data* → complete` |
+| `GET /api/v2/context` | general web context (AgentSearch when keyed, else the keyless MCP connector) — always `is_award_data: false` |
+| `GET /api/v2/context/status` | which web-search backend is connected, and how the key was resolved |
 
 🔒 = requires the session token (`Authorization: Bearer …` header or
 `?token=` for `EventSource`). The token is minted only through the PIN flow;
@@ -287,6 +289,10 @@ departure date"`.
 | `POINTSPATH_API_KEY` | *(blank)* | enables the PointsPath adapter |
 | `POINTSYEAH_API_KEY` | *(blank)* | enables the PointsYeah adapter |
 | `FLYBASIS_API_KEY` | *(blank)* | enables the Flybasis adapter (Socket.IO award feed, see `Flybasis-index.md`). Issued **by Flybasis** to the operator — see [`FLYBASIS_GO_LIVE.md`](FLYBASIS_GO_LIVE.md) for the exact steps, verification, and a copy-paste prompt for the next chat. |
+| `AGENTSEARCH_API_KEY` | *(blank)* | RapidAPI key for the [AgentSearch](https://rapidapi.com) web-search API. **Web context only — not an award feed.** When set it becomes the preferred backend for the "Web context" panel (`/api/v2/context`), with the keyless FlyBasis Search MCP connector as automatic fallback. If `FLYBASIS_API_KEY` is set to a RapidAPI-shaped key (`…msh…jsn…`) it is used here automatically and is **not** dialled at the Flybasis award socket. |
+| `AGENTSEARCH_PROVIDER` | `brave` | SERP provider AgentSearch proxies (`brave`, `google`, `duckduckgo`, …) |
+| `AGENTSEARCH_COUNTRY` | `us` | country bias for AgentSearch results |
+| `AGENTSEARCH_TIMEOUT` | `12` | seconds; web search is slower than an award lookup |
 | `REDIS_URL` | `redis://localhost:6379/0` | cache; falls back to memory if unreachable |
 | `CACHE_TTL` | `2700` | seconds, clamped to the 30–60 min band |
 | `PROVIDER_TIMEOUT` | `3.5` | per-request budget for third-party providers |

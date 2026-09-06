@@ -2558,7 +2558,7 @@ function renderItinerary(r){
       <h3>Web context</h3>
       <span class="wc-badge">Not award data</span>
     </div>
-    <p class="wc-note">Optional background from the FlyBasis Search MCP connector — general web data about this route and program. It is <strong>not</strong> award availability, pricing or seat counts, and it never changes the flights listed above.</p>
+    <p class="wc-note">Optional background from the connected web-search backend (AgentSearch when a RapidAPI key is set, otherwise the keyless FlyBasis Search MCP connector) — general web data about this route and program. It is <strong>not</strong> award availability, pricing or seat counts, and it never changes the flights listed above.</p>
     <button type="button" class="it-ghost" id="wc-load">Load web context</button>
     <div id="wc-body" hidden></div>
   </section>
@@ -2575,7 +2575,8 @@ function wcHTML(d){
   /* Defensive: refuse to render anything not explicitly labelled non-award. */
   if (!d || d.is_award_data !== false || d.kind !== "web_context") return `<p class="wc-dim">Web context unavailable.</p>`;
   if (!d.ok) return `<p class="wc-dim">${esc(d.error || "Web context unavailable.")}</p>`;
-  const disc = `<p class="wc-disc">${esc(d.disclaimer || "")}</p>`;
+  const via = d.source ? ` (via ${d.source})` : "";
+  const disc = `<p class="wc-disc">${esc((d.disclaimer || "") + via)}</p>`;
   const rows = (d.data && Array.isArray(d.data.results)) ? d.data.results : [];
   if (!rows.length) return disc + `<p class="wc-dim">No web results for that query.</p>`;
   return disc + `<ul class="wc-list">` + rows.slice(0, 6).map(x => `

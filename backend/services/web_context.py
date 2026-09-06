@@ -26,6 +26,7 @@ import time
 from typing import Any
 
 from core.http_engine import HttpEngine, ProviderError
+from services import agentsearch
 
 # ------------------------------------------------------------------ config --
 
@@ -45,6 +46,13 @@ TOOLS = ("web_search", "instant_answer", "fetch_url")
 DISCLAIMER = (
     "Web context from the FlyBasis Search MCP connector. This is general web "
     "data — search results, instant answers and page text — NOT award "
+    "availability, pricing or seat counts. It never contributes to search "
+    "results."
+)
+
+AGENTSEARCH_DISCLAIMER = (
+    "Web context from the AgentSearch web-search API (RapidAPI). This is "
+    "general web data — search results and page snippets — NOT award "
     "availability, pricing or seat counts. It never contributes to search "
     "results."
 )
@@ -145,19 +153,65 @@ def _unwrap_tool_result(rpc: dict) -> Any:
 
 # ---------------------------------------------------------------- public ----
 
-def _payload(tool: str, ok: bool, *, data: Any = None, error: str | None = None) -> dict:
+def _payload(
+    tool: str,
+    ok: bool,
+    *,
+    data: Any = None,
+    error: str | None = None,
+    source: str | None = None,
+    endpoint: str | None = None,
+) -> dict:
     """Wrap anything this module returns so it can never be read as award data."""
     return {
         "kind": "web_context",
         "is_award_data": False,
-        "source": "flybasis-mcp",
-        "endpoint": mcp_url(),
+        "source": source or "flybasis-mcp",
+        "endpoint": endpoint or mcp_url(),
         "tool": tool,
-        "disclaimer": DISCLAIMER,
+        "disclaimer": (
+            AGENTSEARCH_DISCLAIMER if source == "agentsearch" else DISCLAIMER
+        ),
         "ok": ok,
         "error": error,
         "data": data,
     }
+
+
+def backend_name() -> str:
+    """Which web backend serves the context panel right now."""
+    return "agentsearch" if agentsearch.configured() else "flybasis-mcp"
+
+
+async def _agentsearch_tool(tool: str, arguments: dict) -> dict | None:
+    """Serve a tool from AgentSearch (RapidAPI) when a key is configured.
+
+    Returns None when AgentSearch cannot serve this tool, so the caller falls
+    back to the keyless MCP connector. Never raises.
+    """
+    if not agentsearch.configured():
+        return None
+    endpoint = f"{agentsearch.base_url()}{agentsearch.SEARCH_PATH}"
+    try:
+        if tool == "web_search":
+            data = await agentsearch.search(
+                str(arguments.get("q") or ""), int(arguments.get("limit") or 5)
+            )
+        elif tool == "instant_answer":
+            data = await agentsearch.instant_answer(str(arguments.get("q") or ""))
+        else:
+            return None  # fetch_url stays with the SSRF-guarded connector
+        return _payload(
+            tool, True, data=data, source="agentsearch", endpoint=endpoint
+        )
+    except Exception as exc:  # noqa: BLE001 — fall through to the MCP connector
+        return _payload(
+            tool,
+            False,
+            error=f"{exc.__class__.__name__}: {exc}",
+            source="agentsearch",
+            endpoint=endpoint,
+        )
 
 
 async def call_tool(tool: str, arguments: dict) -> dict:
@@ -167,6 +221,10 @@ async def call_tool(tool: str, arguments: dict) -> dict:
     """
     if tool not in TOOLS:
         return _payload(tool, False, error=f"Unknown tool '{tool}' (expected one of {', '.join(TOOLS)})")
+    # Preferred backend: AgentSearch (RapidAPI) when an operator supplied a key.
+    primary = await _agentsearch_tool(tool, arguments)
+    if primary is not None and primary["ok"]:
+        return primary
     try:
         await _rpc(
             "initialize",
@@ -180,6 +238,13 @@ async def call_tool(tool: str, arguments: dict) -> dict:
         rpc = await _rpc("tools/call", {"name": tool, "arguments": arguments}, 2)
         return _payload(tool, True, data=_unwrap_tool_result(rpc))
     except Exception as exc:  # noqa: BLE001 — enrichment must never break a request
+        if primary is not None:
+            # Both backends failed: report both so the operator can fix the key.
+            primary["error"] = (
+                f"AgentSearch: {primary['error']} | "
+                f"MCP fallback: {exc.__class__.__name__}: {exc}"
+            )
+            return primary
         return _payload(tool, False, error=f"{exc.__class__.__name__}: {exc}")
 
 
@@ -239,8 +304,24 @@ async def route_context(
     return out
 
 
+async def status() -> dict:
+    """Which backend serves web context, and whether it is configured."""
+    return {
+        "kind": "web_context",
+        "is_award_data": False,
+        "backend": backend_name(),
+        "disclaimer": (
+            AGENTSEARCH_DISCLAIMER if backend_name() == "agentsearch" else DISCLAIMER
+        ),
+        "agentsearch": await agentsearch.status(),
+        "mcp": {"endpoint": mcp_url(), "timeout": timeout()},
+        "tools": list(TOOLS),
+    }
+
+
 async def aclose() -> None:
     global _engine
     if _engine is not None:
         await _engine.aclose()
         _engine = None
+    await agentsearch.aclose()
