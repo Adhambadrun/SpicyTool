@@ -20,8 +20,9 @@ SSE_HEADERS = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
 
 _NOTE = (
     "SpicyTool relays the Flybasis search engine only — every itinerary shown "
-    "is Flybasis output. Flybasis stays disabled until the operator supplies "
-    "their own FLYBASIS_API_KEY (issued directly by Flybasis). Other adapters "
+    "is Flybasis output. Flybasis requires an official FLYBASIS_API_KEY, "
+    "or an authorized account session (FLYBASIS_SUPABASE_ANON_KEY plus "
+    "FLYBASIS_REFRESH_TOKEN or FLYBASIS_EMAIL/FLYBASIS_PASSWORD). Other adapters "
     "and the first-party modeled SpicyToolEngine are not searched; widen this "
     "only for demos/offline sweeps with SPICYTOOL_PROVIDERS."
 )

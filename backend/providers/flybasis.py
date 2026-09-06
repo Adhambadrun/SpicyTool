@@ -304,37 +304,34 @@ class Flybasis(BaseProvider):
         return {}
 
     @property
-    def enabled(self) -> bool:
-        # A RapidAPI application key is not a Flybasis socket token. Operators
-        # sometimes paste one here; it powers the Web context panel instead
-        # (see services/agentsearch.py) and must never be dialled at the award
-        # socket, which would just fail auth on every search.
+    def socket_credential(self) -> str | None:
+        # A misplaced RapidAPI key may still power web context, but it must
+        # never reach the award socket OR block a configured Supabase session.
         from services.agentsearch import looks_like_rapidapi_key
 
-        if looks_like_rapidapi_key(self.credential):
-            return False
-        # Two valid credentials: an official FLYBASIS_API_KEY, or the
-        # operator's own Supabase session (flybasis_session).
-        if self.credential:
-            return True
+        key = self.credential
+        return None if looks_like_rapidapi_key(key) else key
+
+    @property
+    def enabled(self) -> bool:
         from providers import flybasis_session
 
-        return flybasis_session.configured()
+        return bool(self.socket_credential or flybasis_session.configured())
 
     def disabled_reason(self) -> str | None:
+        if self.enabled:
+            return None
+        from providers import flybasis_session
         from services.agentsearch import looks_like_rapidapi_key
 
         if looks_like_rapidapi_key(self.credential):
             return (
                 "Disabled: FLYBASIS_API_KEY holds a RapidAPI application key, "
-                "not a Flybasis award-feed token. That key has been routed to "
-                "the web-search backend (AgentSearch) for the Web context "
-                "panel. Set FLYBASIS_API_KEY to a token issued by Flybasis to "
-                "search live award availability."
+                "not a Flybasis award-feed token. That key powers only the "
+                "Web context panel. Set FLYBASIS_API_KEY to a token issued by "
+                "Flybasis, or configure session mode with "
+                f"{flybasis_session.REFRESH_ENV} + {flybasis_session.ANON_KEY_ENV}."
             )
-        if self.enabled:
-            return None
-        from providers import flybasis_session
 
         return (
             "Disabled: no credential for Flybasis. Set the "
@@ -355,7 +352,7 @@ class Flybasis(BaseProvider):
         if not self.enabled:
             raise ProviderError(self.disabled_reason())
 
-        token = self.credential or ""
+        token = self.socket_credential or ""
         if not token:
             # Session mode: exchange the operator's Supabase session for the
             # Socket.IO auth token the docs describe as auth={"token": ...}.
@@ -432,8 +429,9 @@ class Flybasis(BaseProvider):
             raise ProviderError(
                 f"Flybasis did not connect within {self.timeout:.0f}s"
             ) from None
-        except Exception as exc:  # noqa: BLE001 — surface cleanly (auth/network)
-            raise ProviderError(f"Flybasis connection failed: {exc}") from exc
+        except Exception as exc:  # noqa: BLE001 — upstream may echo the auth token
+            message = str(exc).replace(token, "[redacted]")
+            raise ProviderError(f"Flybasis connection failed: {message}") from None
         finally:
             try:
                 await client.disconnect()
@@ -441,7 +439,8 @@ class Flybasis(BaseProvider):
                 pass
 
         if errors:
-            raise ProviderError(f"Flybasis error event: {errors[0]}")
+            message = errors[0].replace(token, "[redacted]")
+            raise ProviderError(f"Flybasis error event: {message}")
         if not frames:
             raise ProviderError(
                 "Flybasis returned no data for this search (no availability)."

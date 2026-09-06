@@ -4,39 +4,34 @@ Two separate exposures were found in this public repo. **Rotate both — today.*
 
 ---
 
-## A. Session credentials from `agentsearch.vercel.app.har`  ⚠️ MOST URGENT
+## A. Session credentials from the publicly uploaded HAR
 
-`agentsearch.vercel.app.har` was uploaded to this **public** repo. It contains
-a live web session for a real Flybasis user account
-(`solomon@lux-flights.com`, id `59e79ed3-…`):
+`agentsearch.vercel.app.har` was uploaded publicly. It contains Supabase
+access and refresh tokens for a Flybasis account. Anyone holding a still-valid
+session may act within that account's permissions and consume its quota.
 
-- a **Supabase refresh_token** and **access_token** for
-  `sb.flybasis.com` (project ref `zdghaeihevurffircfun`),
-- the account's permission flags (`canHC`, `canMax`) and
-  `maxSearchesRemaining: 5` from `api2.flybasis.com/trpc/user.whoami`.
+The current branch excludes HAR files, but earlier copies remain accessible
+in Git history. **Deleting a file or waiting for its access token to expire
+does not revoke a refresh token.** Treat the published credentials as exposed,
+regardless of who owns the account.
 
-Anyone who has seen the repo can mint live sessions as that account and spend
-its remaining searches. The file is removed from the branch and `*.har` is
-now gitignored, but it remains in `main`'s history (`f8e93ad`) — deletion does
-**not** un-leak it.
+1. Have the account owner/provider **revoke the exposed sessions**, using the
+   provider's session-management controls or support. Verify revocation; do not
+   assume every password change invalidates every session.
+2. Change the account password if it was exposed or the account shows
+   suspicious activity. Coordinate with the owner if this is a shared account.
+3. Review account/search usage for unexpected activity.
+4. Sign in again and configure a fresh, private credential through the setup
+   in [FLYBASIS_GO_LIVE.md](FLYBASIS_GO_LIVE.md). The private HAR importer selects
+   the latest successful **response** token without printing it. Do not upload
+   the replacement HAR or put credentials in source code/chat.
+5. Optionally request GitHub's sensitive-data removal process for historical
+   copies. History cleanup is not a substitute for revocation.
 
-**Rotate now (no code change needed):**
-
-1. Change the password of the `solomon@lux-flights.com` Flybasis account
-   (Flybasis account settings). Supabase refresh tokens die when the password
-   changes — this kills the leaked session.
-2. If that account belongs to Lux Flights and is shared, coordinate with them:
-   the token grants access to whatever that account can see.
-3. Watch Flybasis/agency usage for the coming weeks; if the session was
-   already used, ask Flybasis `support@flybasis.com` to review the account's
-   search history.
-4. Optionally ask GitHub Support to purge the file from history
-   (Support → "Sensitive data"), since the repo is public.
-
-**Never use the HAR tokens in SpicyTool** — they belong to a third-party
-account, and using them would (a) be unauthorized credential use and (b) burn
-that account's quota. There is a safe session path documented in
-`FLYBASIS_GO_LIVE.md` § Option B that uses *your own* credentials.
+A refresh token is rotated when used. Do not share one seed between a browser,
+CLI verifier and multiple serverless deployments; see the deployment limits
+in the setup guide. GitHub repository secrets are also separate from Vercel
+Environment Variables: configure the app's deployment explicitly.
 
 ---
 
@@ -106,7 +101,8 @@ is the whole point — it makes the exposure in git history harmless.
 AGENTSEARCH_API_KEY=<new key> ./run_live_check.sh
 ```
 
-Or push and let the CI workflow run it (see `.github/workflows/live-check.yml`).
+If the owner has installed `ci/live-check.workflow.yml` under
+`.github/workflows/`, the configured CI live gate can run it too.
 
 ---
 

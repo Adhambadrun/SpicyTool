@@ -4,8 +4,10 @@ __pycache__/
 .venv/
 venv/
 
-# Env & secrets
+# Env & secrets (including private HAR-import output)
 .env
+.env.*
+!.env.example
 
 # Tooling
 .pytest_cache/

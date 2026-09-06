@@ -1,250 +1,170 @@
-# FLYBASIS GO-LIVE — everything needed is in the repo, except one thing
+# Connect live Flybasis award search
 
-**Final verdict (verified 2026-09-06):**
+SpicyTool has two Flybasis authentication paths: an official award-feed token,
+or an authorized account's Supabase session. Credentials belong in private
+server-side configuration, **not in source code, a public HAR, or the frontend**.
+Deploying the code without credentials does not connect an upstream provider.
 
-| Item | State |
-|---|---|
-| Award-feed adapter (`backend/providers/flybasis.py`) | ✅ in repo, wired, merged, passing 27/27 acceptance checks |
-| Flybasis WebSocket API docs (`Flybasis-index.md`) | ✅ in repo |
-| Exact `ProviderError` surfacing (never hidden) | ✅ verified — returns `Flybasis connection failed: …` verbatim |
-| `backend/.env` loading | ✅ **fixed this session** (`python-dotenv` was missing from requirements) |
-| `flybasis-mcp` (web context connector) | ✅ **rebuilt keyless + self-contained in repo** (`flybasis-mcp/`) |
-| `FLYBASIS_API_KEY` | ❌ **NOT in the repo** — never was. Only placeholders (`YOUR_AUTH_TOKEN`) exist. |
+## What the supplied HAR tells us
 
-The one input no repo, no agent, and no prompt can conjure is the **Flybasis
-API key**. It is issued by Flybasis to their partner/operator and the docs say
-only "once an authentication token is obtained…" — there is no public
-self-serve page (flybasis.com is behind Cloudflare and shows no key portal; the
-docs at https://flybasis.github.io/searchapi.docs/ confirm the token comes from
-their middleware). Per the project's hard constraint #2, credentials are
-**never hardcoded** — so the honest product state without a key is the current
-empty state, and synthesized flights are explicitly rejected.
+`agentsearch.vercel.app` is a Flybasis web client. Its login capture contains:
 
-## How to make award search show live results (2 steps, ~2 minutes)
+- `POST https://sb.flybasis.com/auth/v1/verify` / `auth/v1/token`: a Supabase
+  `apikey` request header and session tokens in the successful response.
+- `POST https://api2.flybasis.com/trpc/user.whoami?batch=1`: the account request
+  uses **`access-token: <access token>`**, with an empty JSON body `{}`.
 
-### Step 1 — get the key from Flybasis
+This is **not** `agentsearch.p.rapidapi.com`, the unrelated general web-search
+backend. A RapidAPI key cannot authenticate the Flybasis award socket. A
+misplaced RapidAPI key is used only for web context and no longer blocks a
+separately configured Flybasis session.
 
-Contact Flybasis to obtain an API token for the WebSocket feed
-`https://enterprise-api.flybasis.com/sockets/v1/stream-flights`:
+The supplied capture has no award-flight frames. Its login responses establish
+an auth request shape, not that a captured token is still valid or permitted to
+use the enterprise award feed. WebSocket access and availability require a live
+check. Offline mocks cannot establish those facts.
 
-- Partner/API inquiry: https://flybasis.com (site), or the docs repo
-  https://github.com/flybasis/searchapi.docs (auth section).
+**Publicly uploaded session tokens are exposed.** Revoke the exposed sessions
+through the account/provider, then sign in again and create a new private
+capture. See [ROTATE_KEY.md](ROTATE_KEY.md). Removing the HAR from the current
+branch does not remove copies in Git history. Do not post replacement tokens
+or another unredacted capture on GitHub or in chat.
 
-**Verified contact channels (checked 2026-09-06 — use these, not the site form):**
+## Option A — official award-feed token (preferred for production)
 
-- `support@flybasis.com` — published on Flybasis' Terms of Service page.
-- `asad@flybasis.com` — GitHub profile email of the maintainer who owns the API
-  docs repo (`github.com/asadukashif`, company `flybasis.com`; he authored the
-  docs commits). Best route for WebSocket API access specifically.
-- `https://github.com/flybasis` — official org (only the docs repo is public).
+Obtain a token from Flybasis for
+`https://enterprise-api.flybasis.com/sockets/v1/stream-flights`
+([upstream docs](https://flybasis.github.io/searchapi.docs/)). Configure it in
+Vercel Environment Variables, or a gitignored root/backend `.env` locally:
 
-**What a thorough online search found (and did NOT find):** no public or demo
-token anywhere; no sandbox; no signup/self-serve portal; no RapidAPI listing;
-and GitHub code search shows **zero** third-party integrations of
-`enterprise-api.flybasis.com` — the only public hit is Flybasis' own docs.
-The docs' `YOUR_AUTH_TOKEN` is a placeholder, not a key: it is genuinely
-issued by Flybasis to partners.
-
-**Access request already filed on their behalf (2026-09-06):**
-https://github.com/flybasis/searchapi.docs/issues/1 — a public API-access
-request on the official docs repo asking how to obtain a token, whether a
-sandbox exists, and pricing. Check that thread for a reply before doing
-anything else. (The old `flybasis.com/agency-request` page that advertised
-"utilize our API" for agency accounts now returns 404; the archived copy
-shows it was a travel-agency consolidation application — agency identity and
-volume, not a generic developer signup.)
-
-- The token is what you pass as `auth={"token": "<KEY>"}` when connecting.
-
-The key must be **issued to you directly by Flybasis**. I cannot generate it,
-and inventing one is the one thing I refuse to do (it would fake live
-availability).
-
-### Step 2 — set it, then verify
-
-Local run (repo root — works with either file):
-
-```bash
-cd /home/user/SpicyTool   # your clone
-printf 'FLYBASIS_API_KEY=PASTE_YOUR_KEY_HERE\n' > .env    # or backend/.env
-./run.sh                                                   # loads .env
+```dotenv
+FLYBASIS_API_KEY=<your private Flybasis-issued token>
+SPICYTOOL_PROVIDERS=Flybasis
+SPICYTOOL_MODELED_ENGINE=0
 ```
 
-Deployed (Vercel):
+An official token takes precedence over session credentials. No Supabase app
+key is needed for this path. A RapidAPI application key is not an official
+Flybasis token.
+
+## Option B — your authorized Flybasis account session
+
+Only use an account you own or are authorized to operate. Session mode consumes
+its search quota; confirm that automated use is permitted by your agreement
+with Flybasis. A session login does not guarantee enterprise API access.
+
+### Private HAR import (no manual token copying)
+
+After signing in, export a **private**, local HAR with response bodies. Then,
+from the repo root:
 
 ```bash
-# Vercel dashboard → Project → Settings → Environment Variables
-FLYBASIS_API_KEY = <paste>
-# also SPICYTOOL_PROVIDERS=Flybasis (default) and SPICYTOOL_MODELED_ENGINE=0 (default)
+# Inspect the credential structure without printing values or writing anything:
+python3 backend/tools/import_flybasis_har.py /path/to/private.har --check
+
+# Create a private repo-root .env (0600). Refuses to overwrite an existing file:
+python3 backend/tools/import_flybasis_har.py /path/to/private.har
 ```
 
-CI (GitHub Actions → Settings → Secrets and variables → Actions):
-`FLYBASIS_API_KEY` — the installed `.github/workflows/live-check.yml` then runs
-the same live verifier against production on every push and weekly
-(`python tools/verify_flybasis_socket.py --live`). Until the secret exists the
-step is skipped honestly, never faked.
+If `.env` already exists, use `--output backend/.env` (also automatically loaded
+by the app), or `--output .env.flybasis` and merge/import its values privately.
+**Other `.env.*` names are not auto-loaded.** Existing environment variables
+still take precedence when Python loads dotenv files.
 
-Verify (no auth needed for v2):
+The importer selects the latest complete successful auth **response**, even
+when HAR entries are out of order. It never imports the request's refresh token
+(which was already used), an expiring access token, telemetry, or account
+profile details. It rejects foreign auth hosts, mixed-account captures and
+unsafe dotenv values. It makes **no network requests** and does not validate
+current credentials. HARs, private env files and token stores are excluded from
+the Vercel function bundle; none of this material needs to be committed.
 
-```bash
-curl 'http://localhost:8000/api/v2/search?origin=JFK&destination=LHR&date=2026-10-05&cabin=business'
-# EXPECT: providers[0].ok == true, count > 0, live == true, notice == null
-```
+Equivalent manual settings, entered privately:
 
-The moment Flybasis returns real frames you will see itineraries. If the socket
-errors, the response now carries the **exact** ProviderError
-(`providers[0].error`), e.g. `Flybasis connection failed: <reason>` or
-`Flybasis error event: <message>` — sent as given by the server.
-
-### Option B (advanced): authenticate with your own Flybasis account session
-
-Flybasis' own site (agentsearch.vercel.app) does not use a static key — it
-logs into Supabase and passes the resulting access token to the award socket.
-SpicyTool now supports that exact path. This is **not** a Flybasis-issued API
-token and it is **not** recommended for production:
-
-- It consumes your **personal account** search quota (the account
-  `maxSearchesRemaining` is read from `user.whoami` and surfaced in errors).
-- Automated use may violate Flybasis' terms of service — this is your own
-  account doing your own thing, but be aware.
-- The official `FLYBASIS_API_KEY` path above stays preferred; session mode is
-  used **only when** `FLYBASIS_API_KEY` is blank.
-
-Setup (browser DevTools → Network → `sb.flybasis.com/auth/v1/token`):
-
-```bash
-# backend/.env or deployment env — NEVER commit these values
+```dotenv
 FLYBASIS_SUPABASE_URL=https://sb.flybasis.com
-FLYBASIS_SUPABASE_ANON_KEY=<the 'apikey' request header value>
-FLYBASIS_REFRESH_TOKEN=<refresh_token from the request payload>
-# or, instead of a refresh token:
-# FLYBASIS_EMAIL=you@example.com
-# FLYBASIS_PASSWORD=<password>
+FLYBASIS_SUPABASE_ANON_KEY=<apikey request header>
+FLYBASIS_REFRESH_TOKEN=<latest successful auth RESPONSE refresh_token>
+# Alternative to a refresh-token bootstrap:
+# FLYBASIS_EMAIL=<authorized account email>
+# FLYBASIS_PASSWORD=<account password>
 ```
 
-SpicyTool then exchanges the session for an access token, passes it as
-`auth={"token": …}` to `enterprise-api.flybasis.com/sockets/v1/stream-flights`,
-caches it until ~30s before expiry, and persists Supabase's **rotated**
-refresh token to `backend/data/.flybasis_refresh_token` (gitignored) so
-long-running processes stay valid. Verify before you deploy:
+The Supabase app key is required alongside either account credential. Without
+it, the adapter stays disabled rather than making requests with a blank key.
+Do not put a short-lived access token into `FLYBASIS_API_KEY` as a workaround.
+
+### Rotation and deployment limits
+
+The access token is cached until 30 seconds before expiry. Concurrent searches
+in one instance/event loop share a refresh. The newest refresh token is kept
+in memory and persisted atomically, with mode 0600, to
+`backend/data/.flybasis_refresh_token` (override with `FLYBASIS_REFRESH_FILE`).
+The store is bound to the original configuration: keeping the same env seed
+allows a single-instance restart to use the latest rotation; replacing the env
+credential invalidates the old account's cache. A failed file write no longer
+causes the warm process to reuse an already-spent env token.
+
+**Vercel/replicas:** `/tmp/spicytool/.flybasis_refresh_token` is writable but
+instance-local and ephemeral. This is **not shared durable storage**. Do not
+share a single refresh-token seed across browser, CLI and multiple deployments.
+A local verification exchanges/rotates it too; the original `.env` seed is not
+then a fresh deployment credential. Prefer an official API key for production.
+Where permitted, email/password can bootstrap independent sessions on cold
+starts; otherwise session deployments need a single persistent instance or a
+separately managed, shared refresh service. The current file store does not
+provide distributed refresh coordination.
+
+For Vercel, set credentials through **Project → Settings → Environment
+Variables**, select the relevant environments, and redeploy. GitHub repository
+secrets alone do not configure the Vercel app. `PROVIDER_TIMEOUT` controls the
+whole provider request; if the upstream needs longer than the default budget,
+set a value such as `45` while keeping it below the 60-second function limit.
+
+## Verify without confusing mocks with live results
+
+Install dependencies with `./run.sh` or a virtualenv plus
+`pip install -r requirements.txt`. Live verification loads root/backend `.env`
+without overriding exported environment variables:
 
 ```bash
-cd backend
-FLYBASIS_SUPABASE_URL=… FLYBASIS_SUPABASE_ANON_KEY=… FLYBASIS_REFRESH_TOKEN=… \
-  python3 tools/verify_flybasis_socket.py --live
-# EXPECT: 16 checks (13 offline + session auth + live handshake)
+# Session login + account quota only. NO award search; does rotate the session:
+.venv/bin/python backend/tools/verify_flybasis_socket.py --live --auth-only
+
+# One real award search; defaults to JFK–LHR business, today + 30 days:
+.venv/bin/python backend/tools/verify_flybasis_socket.py --live
+# Optional: --origin SFO --destination NRT --date YYYY-MM-DD --cabin business
 ```
 
-> ⚠️ Do **not** reuse credentials from `agentsearch.vercel.app.har` — that
-> capture contains live third-party session tokens for a real account and is
-> removed from the repo; rotate that account's password now.
+`--auth-only` does not verify socket access. The live search sends **one** query
+and reports the actual result count, not the mock's two specific itineraries.
+Zero results are explicitly reported as no availability, not invented flights.
+A failed login, unknown account status, socket error or timeout is not a pass.
 
-### Alternative live source you can get TODAY — Seats.aero
+Common failures:
 
-Flybasis is not the only way to get real award availability. The repo now
-ships a full adapter for the **Seats.aero partner API**
-(`backend/providers/seats_aero.py`): cached award availability across ~20
-mileage programs with points, seats, cabins, airlines and flight-level detail
-(OpenAPI: https://developers.seats.aero).
+- **Disabled provider:** both the app key and a session credential are required,
+  or use an official socket key. Local `.env` changes require an app restart;
+  Vercel changes require a redeploy.
+- **Session rejected:** replace revoked/rotated credentials privately. Do not
+  repeatedly replay the stale request token from a HAR.
+- **Zero quota:** a valid login does not grant more searches.
+- **TLS/network error:** connectivity must work before credentials can be
+  validated. A connection failure is not evidence that a token is invalid.
+- **Empty live search:** try another valid route/date on the provider's site;
+  never substitute modeled flights or web-search snippets as availability.
+
+## Offline regression gates
 
 ```bash
-# 1. Seats.aero Pro account -> settings -> API tab -> generate API key
-#    (up to 1,000 calls/day; non-commercial unless you have their written
-#     agreement; eligibility is at their sole discretion)
-# 2. Point SpicyTool at it (never commit the key):
-printf 'SEATS_AERO_API_KEY=<your key>\n' >> .env
-SPICYTOOL_PROVIDERS=SeatsAero ./run.sh
-# 3. Verify:  curl http://localhost:8000/api/v2/search?origin=JFK&destination=LHR&date=2026-10-05&cabin=business
-#    EXPECT: providers[] includes SeatsAero with ok == true and count > 0
+.venv/bin/python -m unittest discover -s backend/tests -p 'test_*.py' -v
+(cd backend && ../.venv/bin/python tests_integration.py)
+.venv/bin/python backend/tools/verify_flybasis_socket.py
+(cd frontend/test && npm ci && npm test)
 ```
 
-Why this matters: it is a **legitimate, documented, self-serve** developer
-feed — no invitation, no middleware-hidden token. The one input it also
-requires is a key from *your own* Seats.aero account (identity + paid Pro
-tier, so it cannot be conjured by an agent). AwardSecrets
-(https://awardsecrets.com) is another dev-oriented option ($0.02/search,
-onboarding by email) but returns seat facts **without points pricing**, so it
-does not fill SpicyTool's award-pricing cards.
-
-### Prove the socket works BEFORE you have a key
-
-`FLYBASIS_BASE_URL` (optional, mirrors `AGENTSEARCH_BASE_URL`) points the award
-socket at any host, so the whole live path can be exercised without a
-credential and without outbound network:
-
-```bash
-cd backend && python3 tools/verify_flybasis_socket.py
-# 16 checks over REAL websockets/HTTP against tools/flybasis_mock.py +
-# tools/flybasis_supabase_mock.py: connect + auth payload, the documented
-# `search` body, stops/layover/mixed-cabin/bookability normalization, both
-# directions of a round trip, `error` events surfaced verbatim, a silent
-# upstream failing loudly inside its budget, a rejected token reading as auth
-# failure (never as "no results"), the provider cache — and SESSION MODE end
-# to end: Supabase refresh/password -> access token -> socket auth -> flights,
-# token caching, rotated-refresh persistence, quota lookup, rejected-session
-# handling.
-```
-
-If that passes, the ONLY thing between you and live results is the credential —
-which is the answer to "search returns nothing". To confirm a real credential
-on a real endpoint, the same checks run against production:
-
-```bash
-# official key, or the Supabase session in Option B:
-FLYBASIS_API_KEY=<your key> python3 tools/verify_flybasis_socket.py --live
-FLYBASIS_REFRESH_TOKEN=… FLYBASIS_SUPABASE_ANON_KEY=… \
-  python3 tools/verify_flybasis_socket.py --live
-```
-
-### Also redeploy the web-context connector (free, no keys)
-
-`https://flybasis-mcp.vercel.app/mcp` is dead (`DEPLOYMENT_NOT_FOUND`). The
-connector is now **fully keyless**, so redeploy it with zero secrets:
-
-```bash
-cd flybasis-mcp
-npm install
-npx vercel --prod        # or import the folder at https://vercel.com/new
-# then in the backend env:
-FLYBASIS_MCP_URL=https://<your-project>.vercel.app/mcp
-```
-
-Everything the connector needs is in `flybasis-mcp/` (tools, parsers, SSRF
-guard, deploy config, offline tests).
-
----
-
-## Copy-paste prompt for the next chat
-
-> You are continuing work on the SpicyTool repo (branch with the latest
-> commit that includes the keyless flybasis-mcp rebuild and the python-dotenv
-> fix). Verified facts:
-> 1. Award availability comes ONLY from `backend/providers/flybasis.py`
->    (Socket.IO feed `https://enterprise-api.flybasis.com/sockets/v1/stream-flights`,
->    `auth={"token": <FLYBASIS_API_KEY>}`, reads `data.awd` flight lists). It is
->    wired and merged. `flybasis-mcp/` is a SEPARATE keyless web-context
->    connector and CANNOT produce award flights — never derive itineraries from it.
-> 2. `FLYBASIS_API_KEY` is NOT in the repo (by design — credential-gating
->    constraint). The owner of this repo has access to it; you do not; do not
->    fabricate a key or synthesize flights.
-> 3. The user must obtain the key from Flybasis (docs:
->    https://flybasis.github.io/searchapi.docs/ — token is issued by their
->    middleware; no public self-serve portal).
-> 4. `backend/.env` loading now works (python-dotenv added to
->    backend/requirements.txt and requirements.txt; run.sh also sources
->    backend/.env). Provider errors already surface verbatim via
->    `providers[].error` (verified with a dummy key: `Flybasis connection
->    failed: Connection error`).
->
-> Actions:
-> - If the user provides `FLYBASIS_API_KEY`: put it in `.env` (never commit),
->   start with `SPICYTOOL_PROVIDERS=Flybasis SPICYTOOL_MODELED_ENGINE=0`, run a
->   real search, and confirm `providers[].ok == true` with live results. If the
->   socket errors, surface the exact `ProviderError` and do not mask it.
-> - If the user has NOT obtained the key: do not reuse this chat's workarounds;
->   state plainly that live award results require the Flybasis-issued key and
->   stop. Keep the empty state honest.
-> - Quality gate: `cd flybasis-mcp && npm run test:offline` must pass, and
->   `bash acceptance_check.sh` (server with
->   `SPICYTOOL_PROVIDERS=all SPICYTOOL_MODELED_ENGINE=1`) must finish with
->   **0 failed** — it grows over time, so gate on "0 failed", not on a count.
+The socket verifier's default mode starts local HTTP/WebSocket mocks with
+synthetic credentials, single-use refresh rotation and the captured account
+header/body shape. It proves the client contract, **not production access**.
+The workflow template is `ci/live-check.workflow.yml`; it runs on GitHub only
+after the repository owner installs it under `.github/workflows/`.

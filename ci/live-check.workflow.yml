@@ -1,9 +1,9 @@
 # SpicyTool LIVE verification — runs on a GitHub Actions runner, which has
 # full outbound internet access.
 #
-# ── INSTALLED ────────────────────────────────────────────────────────────────
-# This workflow now lives at .github/workflows/live-check.yml and runs on every
-# push, weekly (Monday), and on manual dispatch (Actions tab → Run workflow).
+# ── TEMPLATE (not active in ci/) ─────────────────────────────────────────────
+# The repository owner must install this at .github/workflows/live-check.yml.
+# Once installed it runs on push, weekly, and via manual dispatch.
 #
 # Live gates are credential-gated and NEVER fabricate availability: a step is
 # skipped (not faked, not failed-to-green) while its secret is absent. Add the
@@ -59,10 +59,25 @@ jobs:
       # Always-green gates: these need no credential and no outbound access.
       - name: Offline integration suite
         working-directory: backend
+        # Offline assertions must not inherit real provider credentials.
+        env:
+          FLYBASIS_API_KEY: ""
+          FLYBASIS_REFRESH_TOKEN: ""
+          FLYBASIS_SUPABASE_ANON_KEY: ""
+          AGENTSEARCH_API_KEY: ""
         run: python tests_integration.py
+
+      - name: Flybasis session, private HAR import and live-verifier regressions
+        run: python -m unittest discover -s backend/tests -p 'test_*.py' -v
 
       - name: Real-HTTP verification against the local mock upstream
         working-directory: backend
+        # Its award-isolation check must never dial a real account session.
+        env:
+          FLYBASIS_API_KEY: ""
+          FLYBASIS_REFRESH_TOKEN: ""
+          FLYBASIS_SUPABASE_ANON_KEY: ""
+          AGENTSEARCH_API_KEY: ""
         run: python tools/verify_agentsearch.py
 
       # The one provider production actually relays. Its socket handshake had
@@ -76,10 +91,7 @@ jobs:
         working-directory: frontend/test
         run: |
           npm install --silent
-          node web-context.mjs
-          node search-stream-race.mjs
-          node no-provider-empty.mjs
-          node booking-window.mjs
+          npm test
 
       # ─── LIVE gates ────────────────────────────────────────────────────────
       # Each skips (does not fail, does not fake) when its secret is absent, so

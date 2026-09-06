@@ -4,7 +4,7 @@
   "functions": {
     "app.py": {
       "maxDuration": 60,
-      "excludeFiles": "{screen*.png,code*.html,logo.png,*.md,acceptance_check.sh,run.sh,docker-compose.yml,backend/tests_integration.py,backend/Dockerfile}"
+      "excludeFiles": "{screen*.png,code*.html,logo.png,*.md,**/*.har,**/.env*,**/.auth_secret,**/.flybasis_refresh_token*,*.sh,docker-compose.yml,backend/tests_integration.py,backend/tests/**,backend/tools/**,frontend/test/**,backend/Dockerfile}"
     }
   }
 }

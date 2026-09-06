@@ -1,37 +1,38 @@
 """Supabase-session auth for the Flybasis award socket (operator's own account).
 
-The Flybasis web app authenticates against Supabase (``sb.flybasis.com``):
-a ``refresh_token`` (or ``email``+``password``) is exchanged for a
-short-lived ``access_token`` (~1h), and that access_token is what the
-Socket.IO middleware expects as ``auth={"token": ...}``.
+The Flybasis web app exchanges a refresh token (or email/password) at
+``sb.flybasis.com`` for the short-lived Socket.IO ``auth={"token": ...}``.
+The official ``FLYBASIS_API_KEY`` path remains preferred. Session mode uses
+that account's quota; operators must have permission to automate its use.
 
-This module is the **session** credential path. It is NOT a Flybasis-issued
-API token: it uses the operator's own account session, consumes that
-account's search quota, and automated use may conflict with Flybasis terms
-of service. The official path (``FLYBASIS_API_KEY`` issued by Flybasis)
-remains preferred and is checked first.
+Required: FLYBASIS_SUPABASE_ANON_KEY and either FLYBASIS_REFRESH_TOKEN or
+FLYBASIS_EMAIL + FLYBASIS_PASSWORD. Optional endpoint overrides:
+FLYBASIS_SUPABASE_URL / FLYBASIS_API2_URL.
 
-Env:
-    FLYBASIS_SUPABASE_URL        default https://sb.flybasis.com
-    FLYBASIS_SUPABASE_ANON_KEY   Supabase anon/publishable key
-    FLYBASIS_REFRESH_TOKEN       refresh_token for the operator's account
-    FLYBASIS_EMAIL / FLYBASIS_PASSWORD   password-grant fallback
-    FLYBASIS_API2_URL            default https://api2.flybasis.com (quota lookup)
-    FLYBASIS_REFRESH_FILE        override the rotated-token store path (tests)
+Refresh env values are bootstrap credentials, NOT the current token after
+Supabase rotates it. Keep the latest rotation in memory and in an atomic,
+private FLYBASIS_REFRESH_FILE, bound to the originating configuration. A new
+env credential invalidates both old caches. Concurrent searches in one event
+loop share one exchange, rather than spending the same refresh token twice.
 
-HTTP only (no socket here). The access token is cached until ~30s before its
-expiry; the rotated refresh token is persisted in the gitignored backend/data
-dir so long-running deployments survive token rotation.
+The default file is backend/data/.flybasis_refresh_token (gitignored), or
+/tmp/spicytool/.flybasis_refresh_token on Vercel. Files and locks are local to
+ONE instance: serverless cold starts/replicas do not share refresh state. Use
+an official API key for production, or independent password-grant sessions;
+a refresh token in Vercel env alone is not durable multi-instance auth.
 
-Why a client per exchange (not the shared engine): a refresh happens about
-once per hour, so a throwaway ``httpx.AsyncClient`` costs nothing, and it
-cannot hold keep-alive connections bound to a closed event loop (which
-happens when the same process serves more than one loop — e.g. the socket
-verifier runs each check in its own ``asyncio.run``).
+HTTP clients are per exchange to avoid reusing pools from closed event loops
+(CLI checks use multiple asyncio.run calls). No response body or credential
+is included in errors.
 """
 from __future__ import annotations
 
+import asyncio
+import hashlib
+import json
+import math
 import os
+import tempfile
 import time
 from pathlib import Path
 
@@ -49,145 +50,221 @@ API2_URL_ENV = "FLYBASIS_API2_URL"
 API2_URL = "https://api2.flybasis.com"
 REFRESH_FILE_ENV = "FLYBASIS_REFRESH_FILE"
 
-# Rotated refresh token cache (Supabase rotates refresh tokens on use).
-# Overridable so tests/containers never dirty the repo or a shared volume.
-def refresh_file() -> Path:
-    explicit = env(REFRESH_FILE_ENV)
-    if explicit:
-        return Path(explicit)
-    return Path(__file__).resolve().parent.parent / "data" / ".flybasis_refresh_token"
-
-# Cached access token: (token, monotonic expiry).
-_cache: tuple[str, float] | None = None
-_CACHE_SKEW = 30.0  # refresh this far before the token actually expires
+_cache: tuple[str, float] | None = None  # access token, monotonic expiry
+_context_key: str | None = None
+_rotated_refresh: str | None = None
+_refresh_lock: asyncio.Lock | None = None
+_lock_loop: asyncio.AbstractEventLoop | None = None
+_CACHE_SKEW = 30.0
 
 
 def env(name: str) -> str:
     return (os.environ.get(name) or "").strip()
 
 
+def refresh_file() -> Path:
+    if explicit := env(REFRESH_FILE_ENV):
+        return Path(explicit).expanduser()
+    if env("VERCEL"):
+        return Path(tempfile.gettempdir()) / "spicytool" / ".flybasis_refresh_token"
+    return Path(__file__).resolve().parent.parent / "data" / ".flybasis_refresh_token"
+
+
 def supabase_url() -> str:
-    return env(SUPABASE_URL_ENV) or SUPABASE_URL
+    return (env(SUPABASE_URL_ENV) or SUPABASE_URL).rstrip("/")
 
 
 def anon_key() -> str | None:
     return env(ANON_KEY_ENV) or None
 
 
+def _ensure_context() -> str:
+    """Bind rotations/cache to the configured account, origin and token store."""
+    global _context_key, _cache, _rotated_refresh
+    config = [supabase_url(), anon_key(), env(REFRESH_ENV), env(EMAIL_ENV),
+              env(PASSWORD_ENV), str(refresh_file().absolute())]
+    key = hashlib.sha256(json.dumps(config).encode()).hexdigest()
+    if key != _context_key:
+        _cache = None
+        _rotated_refresh = None
+        _context_key = key
+    return key
+
+
+def _stored_refresh(context: str) -> str | None:
+    try:
+        raw = refresh_file().read_text(encoding="utf-8").strip()
+    except (OSError, UnicodeError):
+        return None  # missing/unreadable/read-only storage must not break auth
+    if not raw:
+        return None
+    try:
+        stored = json.loads(raw)
+    except ValueError:
+        # Legacy plain-token files have no account binding. Only use one when
+        # no explicit env credential could accidentally be overridden by it.
+        if not (env(REFRESH_ENV) or env(EMAIL_ENV) or env(PASSWORD_ENV)):
+            return raw
+        return None
+    if not isinstance(stored, dict) or stored.get("context") != context:
+        return None
+    token = stored.get("refresh_token")
+    return token.strip() if isinstance(token, str) and token.strip() else None
+
+
 def refresh_token() -> str | None:
-    value = env(REFRESH_ENV) or ""
-    if not value:
-        f = refresh_file()
-        if f.exists():
-            value = f.read_text(encoding="utf-8").strip()
-    return value or None
+    context = _ensure_context()
+    return _rotated_refresh or _stored_refresh(context) or env(REFRESH_ENV) or None
 
 
 def configured() -> bool:
-    """True when a supabase-session credential is available (refresh or password)."""
-    if refresh_token():
-        return True
-    return bool(env(EMAIL_ENV) and env(PASSWORD_ENV))
+    """Both the Supabase app key and an account credential are required."""
+    return bool(anon_key() and (refresh_token() or (env(EMAIL_ENV) and env(PASSWORD_ENV))))
 
 
 def session_source() -> str:
     return "Supabase refresh token" if refresh_token() else "Supabase email/password"
 
 
+def _lock() -> asyncio.Lock:
+    global _refresh_lock, _lock_loop
+    loop = asyncio.get_running_loop()
+    if _refresh_lock is None or _lock_loop is not loop:
+        _refresh_lock = asyncio.Lock()
+        _lock_loop = loop
+    return _refresh_lock
+
+
 async def access_token(engine: HttpEngine | None = None) -> str:
-    """Return a valid Supabase access token, refreshing when needed."""
-    global _cache
-    if _cache and _cache[1] > time.monotonic() + _CACHE_SKEW:
+    """Return an access token; at most one refresh per instance/event loop."""
+    global _cache, _rotated_refresh
+    async with _lock():
+        _ensure_context()
+        if not configured():
+            raise ProviderError(
+                "Flybasis session mode is not configured. Set "
+                f"{ANON_KEY_ENV} and {REFRESH_ENV} "
+                f"(or {EMAIL_ENV} + {PASSWORD_ENV})."
+            )
+        if _cache and _cache[1] > time.monotonic() + _CACHE_SKEW:
+            return _cache[0]
+        headers = {
+            "apikey": anon_key() or "",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        refresh = refresh_token()
+        if refresh:
+            params = {"grant_type": "refresh_token"}
+            body = {"refresh_token": refresh}
+        else:
+            params = {"grant_type": "password"}
+            body = {"email": env(EMAIL_ENV), "password": env(PASSWORD_ENV)}
+        try:
+            resp = await _post(
+                engine, f"{supabase_url()}/auth/v1/token",
+                headers=headers, params=params, json=body,
+            )
+        except Exception as exc:  # no upstream body/credential in public errors
+            raise ProviderError(
+                f"Flybasis session auth unreachable: {exc.__class__.__name__}"
+            ) from None
+        if resp.status_code in (400, 401, 403):
+            raise ProviderError(
+                "Flybasis session login was rejected. The refresh token may "
+                "have expired, rotated in another instance, or been revoked; "
+                "email/password may be incorrect. Sign in again and privately "
+                f"replace {REFRESH_ENV} with the latest auth response's "
+                "refresh_token, or update your password-grant credentials."
+            )
+        if not 200 <= resp.status_code < 300:
+            raise ProviderError(f"Flybasis session auth error HTTP {resp.status_code}")
+        try:
+            data = resp.json()
+            if not isinstance(data, dict):
+                raise ValueError
+            token = data.get("access_token")
+            new_refresh = data.get("refresh_token")
+            expires_in = float(data.get("expires_in", 3600))
+            if not isinstance(token, str) or not token.strip():
+                raise ValueError
+            if new_refresh is not None and not isinstance(new_refresh, str):
+                raise ValueError
+            if not math.isfinite(expires_in) or expires_in <= 0:
+                raise ValueError
+        except (ValueError, TypeError, OverflowError):
+            raise ProviderError("Flybasis session auth returned an invalid token response") from None
+
+        # Keep rotations even if storage is unavailable (e.g. a read-only
+        # serverless filesystem). Never fall back to the spent env seed.
+        _rotated_refresh = (new_refresh or "").strip() or refresh
+        if _rotated_refresh:
+            _persist_refresh(_rotated_refresh)
+        _cache = (token.strip(), time.monotonic() + expires_in)
         return _cache[0]
-    if not configured():
-        raise ProviderError(
-            "Flybasis session mode is not configured. Set FLYBASIS_REFRESH_TOKEN "
-            f"(or {EMAIL_ENV} + {PASSWORD_ENV}) and {ANON_KEY_ENV}."
-        )
-    headers = {
-        "apikey": anon_key() or "",
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-    }
-    refresh = refresh_token()
-    if refresh:
-        params = {"grant_type": "refresh_token"}
-        body: dict[str, str] = {"refresh_token": refresh}
-    else:
-        params = {"grant_type": "password"}
-        body = {"email": env(EMAIL_ENV), "password": env(PASSWORD_ENV)}
-    url = f"{supabase_url().rstrip('/')}/auth/v1/token"
-    try:
-        resp = await _post(engine, url, headers=headers, params=params, json=body)
-    except ProviderError:
-        raise
-    except Exception as exc:  # noqa: BLE001 — surface as actionable
-        raise ProviderError(
-            f"Flybasis session auth unreachable: {exc.__class__.__name__}"
-        ) from exc
-    if resp.status_code in (400, 401, 403):
-        raise ProviderError(
-            "Flybasis session login was rejected (the refresh token was "
-            "rotated/expired, or email+password are wrong). Re-capture it from "
-            "your browser (Network -> auth/v1/token -> refresh_token) and set "
-            f"{REFRESH_ENV}."
-        )
-    if resp.status_code >= 400:
-        raise ProviderError(f"Flybasis session auth error HTTP {resp.status_code}")
-    data = resp.json() if hasattr(resp, "json") else {}
-    token = str(data.get("access_token") or "").strip()
-    if not token:
-        raise ProviderError("Flybasis session auth returned no access_token")
-    new_refresh = str(data.get("refresh_token") or "").strip()
-    if new_refresh and new_refresh != refresh:
-        _persist_refresh(new_refresh)
-    expires_in = float(data.get("expires_in") or 3600)
-    _cache = (token, time.monotonic() + expires_in)
-    return token
 
 
 def _persist_refresh(token: str) -> None:
+    temporary: str | None = None
     try:
-        f = refresh_file()
-        f.parent.mkdir(parents=True, exist_ok=True)
-        f.write_text(token, encoding="utf-8")
+        path = refresh_file()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd, temporary = tempfile.mkstemp(prefix=path.name + ".", dir=path.parent)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            # mkstemp creates mode 0600, including when replacing a legacy
+            # world-readable file. replace is atomic: no partial token reads.
+            json.dump({"context": _context_key, "refresh_token": token}, f)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temporary, path)
     except OSError:
-        pass  # cache-only; next refresh still works from the env value
+        pass  # _rotated_refresh still contains the only valid next token
+    finally:
+        if temporary:
+            try:
+                Path(temporary).unlink(missing_ok=True)
+            except OSError:
+                pass
 
 
 def reset_cache() -> None:
-    """Drop the cached access token (tests / after a rotated secret)."""
-    global _cache
+    """Clear in-memory session state (restart simulation / tests)."""
+    global _cache, _context_key, _rotated_refresh, _refresh_lock, _lock_loop
     _cache = None
+    _context_key = None
+    _rotated_refresh = None
+    _refresh_lock = None
+    _lock_loop = None
 
 
 async def _post(engine: HttpEngine | None, url: str, **kwargs):
-    """POST via the injected engine, or a throwaway client (see module docstring)."""
     if engine is not None:
-        return await engine.request("POST", url, **kwargs)
+        return await engine.request("POST", url, retries=1, **kwargs)
+    # Refresh tokens are single use: do not replay failed POSTs automatically.
     async with httpx.AsyncClient(timeout=10.0) as client:
         return await client.post(url, **kwargs)
 
 
 async def searches_remaining(engine: HttpEngine | None = None) -> int | None:
-    """Best-effort account quota (maxSearchesRemaining), or None when unknown."""
-    token = await access_token(engine)
+    """Best-effort account quota; unknown/auth/network failures return None."""
     try:
+        token = await access_token(engine)
         resp = await _post(
             engine,
             f"{(env(API2_URL_ENV) or API2_URL).rstrip('/')}/trpc/user.whoami?batch=1",
-            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            # api2 uses access-token, not Supabase's Authorization header.
+            headers={"access-token": token, "Content-Type": "application/json"},
+            json={},
         )
         if resp.status_code != 200:
             return None
-        data = resp.json() if hasattr(resp, "json") else {}
-        rows = data if isinstance(data, list) else [data]
-        for row in rows:
-            result = row.get("result", {}) if isinstance(row, dict) else {}
-            inner = result.get("data", {}) if isinstance(result, dict) else {}
-            value = inner.get("maxSearchesRemaining")
-            if isinstance(value, int):
+        data = resp.json()
+        for row in data if isinstance(data, list) else [data]:
+            result = row.get("result") if isinstance(row, dict) else None
+            inner = result.get("data") if isinstance(result, dict) else None
+            value = inner.get("maxSearchesRemaining") if isinstance(inner, dict) else None
+            if type(value) is int and value >= 0:
                 return value
     except Exception:  # noqa: BLE001 — quota is informational only
-        return None
+        pass
     return None

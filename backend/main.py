@@ -5,6 +5,7 @@ router, static frontend served from the same origin.
 """
 from __future__ import annotations
 
+import asyncio
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -134,6 +135,32 @@ async def auth_session(request: Request):
 async def auth_logout():
     # Stateless tokens: the client discards the session after this call.
     return {"ok": True}
+
+
+@app.get("/api/v2/super-hc/quota", dependencies=[Depends(require_auth)])
+async def super_hc_quota():
+    """Only the monthly counter, never account details or upstream tokens."""
+    from providers import flybasis_session
+    from providers.flybasis import Flybasis
+    from services import aggregator
+
+    remaining = None
+    provider = next((p for p in aggregator.registry() if isinstance(p, Flybasis)), None)
+    # An official socket key may belong to a different account from an optional
+    # Supabase session. Do not display that unrelated session's quota.
+    if provider and not provider.socket_credential and flybasis_session.configured():
+        try:
+            value = await asyncio.wait_for(flybasis_session.searches_remaining(), timeout=10.0)
+            if type(value) is int and value >= 0:
+                remaining = value
+        except Exception:  # upstream failure is unknown, NOT zero; never echo secrets
+            pass
+    return JSONResponse(
+        {"provider": "Flybasis", "remaining": remaining, "period": "month",
+         "available": remaining is not None},
+        headers={"Cache-Control": "private, no-store"},
+    )
+
 
 from api_v2 import router as v2_router  # noqa: E402
 
