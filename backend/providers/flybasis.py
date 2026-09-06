@@ -313,7 +313,13 @@ class Flybasis(BaseProvider):
 
         if looks_like_rapidapi_key(self.credential):
             return False
-        return super().enabled
+        # Two valid credentials: an official FLYBASIS_API_KEY, or the
+        # operator's own Supabase session (flybasis_session).
+        if self.credential:
+            return True
+        from providers import flybasis_session
+
+        return flybasis_session.configured()
 
     def disabled_reason(self) -> str | None:
         from services.agentsearch import looks_like_rapidapi_key
@@ -326,7 +332,17 @@ class Flybasis(BaseProvider):
                 "panel. Set FLYBASIS_API_KEY to a token issued by Flybasis to "
                 "search live award availability."
             )
-        return super().disabled_reason()
+        if self.enabled:
+            return None
+        from providers import flybasis_session
+
+        return (
+            "Disabled: no credential for Flybasis. Set the "
+            "FLYBASIS_API_KEY environment variable to a token issued to you by "
+            "Flybasis, or (session mode) the "
+            f"{flybasis_session.REFRESH_ENV} + {flybasis_session.ANON_KEY_ENV} "
+            "environment variables to search with your own Flybasis account."
+        )
 
     async def fetch_raw(self, q: SearchQuery, engine) -> object:
         try:
@@ -340,6 +356,12 @@ class Flybasis(BaseProvider):
             raise ProviderError(self.disabled_reason())
 
         token = self.credential or ""
+        if not token:
+            # Session mode: exchange the operator's Supabase session for the
+            # Socket.IO auth token the docs describe as auth={"token": ...}.
+            from providers import flybasis_session
+
+            token = await flybasis_session.access_token()
         client = socketio.AsyncClient(
             logger=False, engineio_logger=False, reconnection=False
         )

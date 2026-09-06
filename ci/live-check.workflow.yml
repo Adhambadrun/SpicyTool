@@ -14,6 +14,10 @@
 #   Name:  FLYBASIS_API_KEY      (token issued to you by Flybasis for the
 #                                 award socket — the one provider that produces
 #                                 results; see FLYBASIS_GO_LIVE.md)
+#   Name:  FLYBASIS_REFRESH_TOKEN / FLYBASIS_SUPABASE_ANON_KEY
+#                                 (OPTIONAL alternative — session mode, see
+#                                 FLYBASIS_GO_LIVE.md Option B. Used only when
+#                                 FLYBASIS_API_KEY is blank. Never commit these.)
 #   Name:  AGENTSEARCH_API_KEY   (OPTIONAL — RapidAPI key for the web-context
 #                                 backend only; never an award feed)
 #
@@ -37,6 +41,8 @@ jobs:
     # are masked for every step). Empty while the repo secret is unset.
     env:
       FLYBASIS_API_KEY: ${{ secrets.FLYBASIS_API_KEY }}
+      FLYBASIS_REFRESH_TOKEN: ${{ secrets.FLYBASIS_REFRESH_TOKEN }}
+      FLYBASIS_SUPABASE_ANON_KEY: ${{ secrets.FLYBASIS_SUPABASE_ANON_KEY }}
       AGENTSEARCH_API_KEY: ${{ secrets.AGENTSEARCH_API_KEY }}
     steps:
       - uses: actions/checkout@v4
@@ -81,9 +87,10 @@ jobs:
       # moment a real key is added to the repo secret, the gate runs for real.
 
       # The award-feed contract test against production. This is THE live gate:
-      # it proves a Flybasis-issued key actually connects and returns frames.
+      # it proves a Flybasis-issued key (or a Supabase session) actually
+      # connects and returns frames.
       - name: Flybasis live socket (real upstream)
-        if: ${{ env.FLYBASIS_API_KEY != '' }}
+        if: ${{ env.FLYBASIS_API_KEY != '' || env.FLYBASIS_REFRESH_TOKEN != '' }}
         working-directory: backend
         run: python tools/verify_flybasis_socket.py --live
 
@@ -110,9 +117,10 @@ jobs:
         run: python tools/verify_agentsearch.py --live
 
       - name: Note when live gates were skipped
-        if: ${{ env.FLYBASIS_API_KEY == '' && env.AGENTSEARCH_API_KEY == '' }}
+        if: ${{ env.FLYBASIS_API_KEY == '' && env.FLYBASIS_REFRESH_TOKEN == '' && env.AGENTSEARCH_API_KEY == '' }}
         run: |
           echo "::warning::No live credential set — live checks were skipped" \
                "(never faked). Add FLYBASIS_API_KEY (required for award" \
-               "results) and optionally AGENTSEARCH_API_KEY under Settings →" \
-               "Secrets and variables → Actions to enable them."
+               "results; or the Option-B session secrets) and optionally " \
+               "AGENTSEARCH_API_KEY under Settings → Secrets and variables →" \
+               "Actions to enable them."

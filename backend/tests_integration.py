@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SpicyTool integration tests — 41 assertions, no live network calls.
+"""SpicyTool integration tests — 45 assertions, no live network calls.
 
 Uses httpx.MockTransport for the HTTP-layer tests; everything else exercises
 the real normalization, enrichment and dedupe code paths directly.
@@ -10,9 +10,12 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import json
 import os
 import sys
+import tempfile
 import time
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -1157,8 +1160,176 @@ def test_provider_cache_key_distinguishes_round_trip() -> None:
     return "one-way key byte-identical; round trip keyed apart"
 
 
+# --------------------------------------------------------------------------
+# Flybasis session auth (Supabase, via MockTransport — no live network)
+# --------------------------------------------------------------------------
+
+_SESSION_KEYS = (
+    "FLYBASIS_SUPABASE_URL",
+    "FLYBASIS_SUPABASE_ANON_KEY",
+    "FLYBASIS_REFRESH_TOKEN",
+    "FLYBASIS_EMAIL",
+    "FLYBASIS_PASSWORD",
+    "FLYBASIS_REFRESH_FILE",
+    "FLYBASIS_API2_URL",
+)
+
+
+def _session_snapshot() -> dict[str, str | None]:
+    return {k: os.environ.get(k) for k in _SESSION_KEYS}
+
+
+def _session_restore(snap: dict[str, str | None]) -> None:
+    for k, v in snap.items():
+        if v is None:
+            os.environ.pop(k, None)
+        else:
+            os.environ[k] = v
+
+
+def _session_engine(handler) -> HttpEngine:
+    engine = HttpEngine(timeout=2.0)
+    engine.client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    return engine
+
+
+def test_session_refresh_exchange_and_cache():
+    """42. refresh_token grant: exchange once, cache the access token."""
+    from providers import flybasis_session
+
+    calls = {"token": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path.endswith("/auth/v1/token"), request.url
+        assert "grant_type=refresh_token" in str(request.url), request.url
+        assert request.headers.get("apikey") == "anon-key", request.headers
+        body = request.read()
+        assert b"verify-refresh" in body, body
+        calls["token"] += 1
+        return httpx.Response(200, json={
+            "access_token": "access-1",
+            "token_type": "bearer",
+            "expires_in": 3600,
+            "refresh_token": "rotated-refresh",
+        })
+
+    snap = _session_snapshot()
+    fd, store = tempfile.mkstemp(); os.close(fd)
+    os.environ["FLYBASIS_SUPABASE_URL"] = "http://supabase.test"
+    os.environ["FLYBASIS_SUPABASE_ANON_KEY"] = "anon-key"
+    os.environ["FLYBASIS_REFRESH_TOKEN"] = "verify-refresh"
+    os.environ["FLYBASIS_REFRESH_FILE"] = store
+    engine = _session_engine(handler)
+    try:
+        async def run():
+            first = await flybasis_session.access_token(engine)
+            second = await flybasis_session.access_token(engine)
+            return first, second
+        first, second = asyncio.run(run())
+        assert calls["token"] == 1, f"expected 1 exchange, saw {calls['token']}"
+        assert first == second == "access-1"
+        # Rotated refresh token is persisted where the process can find it again.
+        assert Path(store).read_text(encoding="utf-8").strip() == "rotated-refresh"
+        return "1 exchange; token cached; rotated refresh persisted"
+    finally:
+        flybasis_session.reset_cache()
+        _session_restore(snap)
+        Path(store).unlink(missing_ok=True)
+
+
+def test_session_rejected_login_is_actionable():
+    """43. HTTP 400 from Supabase -> actionable ProviderError, never silent."""
+    from core.http_engine import ProviderError
+    from providers import flybasis_session
+
+    engine = _session_engine(
+        lambda r: httpx.Response(400, json={"error": "invalid_grant", "hint": "bad"})
+    )
+    snap = _session_snapshot()
+    os.environ["FLYBASIS_SUPABASE_URL"] = "http://supabase.test"
+    os.environ["FLYBASIS_SUPABASE_ANON_KEY"] = "anon-key"
+    os.environ["FLYBASIS_REFRESH_TOKEN"] = "bad-refresh"
+    try:
+        asyncio.run(flybasis_session.access_token(engine))
+        raise AssertionError("rejected login must raise")
+    except ProviderError as exc:
+        assert "rejected" in str(exc).lower(), str(exc)
+        return "provides the 'rejected' fix-it signal"
+    finally:
+        flybasis_session.reset_cache()
+        _session_restore(snap)
+
+
+def test_session_password_grant_and_quota():
+    """44. email/password grant + whoami quota lookup."""
+    from providers import flybasis_session
+
+    body_seen = {}
+    calls = {"token": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/auth/v1/token"):
+            assert "grant_type=password" in str(request.url), request.url
+            body_seen.update(json.loads(request.read()))
+            calls["token"] += 1
+            return httpx.Response(200, json={
+                "access_token": "access-pass",
+                "expires_in": 3600,
+                "refresh_token": "rotated-pass",
+            })
+        assert request.url.path.endswith("/trpc/user.whoami"), request.url
+        assert request.headers.get("authorization") == "Bearer access-pass", request.headers
+        return httpx.Response(200, json=[{"result": {"data": {
+            "email": "me@example.com",
+            "permissions": ["canMax"],
+            "maxSearchesRemaining": 7,
+        }}}])
+
+    snap = _session_snapshot()
+    fd, store = tempfile.mkstemp(); os.close(fd)
+    os.environ["FLYBASIS_SUPABASE_URL"] = "http://supabase.test"
+    os.environ["FLYBASIS_SUPABASE_ANON_KEY"] = "anon-key"
+    os.environ["FLYBASIS_REFRESH_FILE"] = store
+    os.environ["FLYBASIS_EMAIL"] = "me@example.com"
+    os.environ["FLYBASIS_PASSWORD"] = "pw"
+    engine = _session_engine(handler)
+    try:
+        remaining = asyncio.run(flybasis_session.searches_remaining(engine))
+        assert remaining == 7, remaining
+        assert body_seen.get("email") == "me@example.com", body_seen
+        assert body_seen.get("password") == "pw", body_seen
+        return "password grant authenticated; quota read from whoami"
+    finally:
+        flybasis_session.reset_cache()
+        _session_restore(snap)
+        Path(store).unlink(missing_ok=True)
+
+
+def test_session_unconfigured_is_actionable():
+    """45. No session credential -> clear ProviderError, provider stays inert."""
+    from core.http_engine import ProviderError
+    from providers import flybasis_session
+    from providers.flybasis import Flybasis
+
+    snap = _session_snapshot()
+    os.environ.pop("FLYBASIS_API_KEY", None)
+    try:
+        assert Flybasis().enabled is False, "provider must stay inert without either credential"
+        reason = Flybasis().disabled_reason() or ""
+        assert "FLYBASIS_REFRESH_TOKEN" in reason or "FLYBASIS_API_KEY" in reason, reason
+        try:
+            asyncio.run(flybasis_session.access_token())
+            raise AssertionError("unconfigured session must raise")
+        except ProviderError as exc:
+            assert "not configured" in str(exc).lower(), str(exc)
+        return "inert provider + actionable reason"
+    finally:
+        flybasis_session.reset_cache()
+        _session_restore(snap)
+
+
 def main() -> int:
-    print(f"\n{DIM}SpicyTool integration tests — 41 assertions, offline{RESET}\n")
+    print(f"\n{DIM}SpicyTool integration tests — 45 assertions, offline{RESET}\n")
     tests = [
         test_retry,
         test_timeout_isolation,
@@ -1201,6 +1372,10 @@ def main() -> int:
         test_sa_program_and_enrichment,
         test_sa_request_shape_and_errors,
         test_provider_cache_key_distinguishes_round_trip,
+        test_session_refresh_exchange_and_cache,
+        test_session_rejected_login_is_actionable,
+        test_session_password_grant_and_quota,
+        test_session_unconfigured_is_actionable,
     ]
     for i, fn in enumerate(tests, start=1):
         check(i, fn.__doc__.splitlines()[0].strip() if fn.__doc__ else fn.__name__, fn)

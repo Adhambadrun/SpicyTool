@@ -93,7 +93,12 @@ caches per query hash.
   fine without them. Its normalization is pure `normalize_payload(raw, q)`,
   covered by the fixture-driven assertions 17–22 in `tests_integration.py`.
   Credential gating is identical to the HTTP adapters: inert until
-  `FLYBASIS_API_KEY` is set, clear disabled reason otherwise.
+  `FLYBASIS_API_KEY` is set, clear disabled reason otherwise. Second credential
+  path: `providers/flybasis_session.py` exchanges the operator's own Flybasis
+  account session (Supabase `auth/v1/token` — refresh token or email/password)
+  for the socket's `auth={"token": …}`, caches it, persists Supabase's rotated
+  refresh token, and reads `maxSearchesRemaining` from `user.whoami`. Used only
+  when the API key is blank; see `FLYBASIS_GO_LIVE.md` § Option B.
 - **Currencies**: use `providers.enrich.to_usd()` so cash fees normalize to
   USD before dedupe compares them.
 - **Tests**: add a fixture-driven case to `tests_integration.py` following

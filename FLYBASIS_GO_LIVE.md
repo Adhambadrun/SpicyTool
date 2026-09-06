@@ -96,6 +96,49 @@ errors, the response now carries the **exact** ProviderError
 (`providers[0].error`), e.g. `Flybasis connection failed: <reason>` or
 `Flybasis error event: <message>` — sent as given by the server.
 
+### Option B (advanced): authenticate with your own Flybasis account session
+
+Flybasis' own site (agentsearch.vercel.app) does not use a static key — it
+logs into Supabase and passes the resulting access token to the award socket.
+SpicyTool now supports that exact path. This is **not** a Flybasis-issued API
+token and it is **not** recommended for production:
+
+- It consumes your **personal account** search quota (the account
+  `maxSearchesRemaining` is read from `user.whoami` and surfaced in errors).
+- Automated use may violate Flybasis' terms of service — this is your own
+  account doing your own thing, but be aware.
+- The official `FLYBASIS_API_KEY` path above stays preferred; session mode is
+  used **only when** `FLYBASIS_API_KEY` is blank.
+
+Setup (browser DevTools → Network → `sb.flybasis.com/auth/v1/token`):
+
+```bash
+# backend/.env or deployment env — NEVER commit these values
+FLYBASIS_SUPABASE_URL=https://sb.flybasis.com
+FLYBASIS_SUPABASE_ANON_KEY=<the 'apikey' request header value>
+FLYBASIS_REFRESH_TOKEN=<refresh_token from the request payload>
+# or, instead of a refresh token:
+# FLYBASIS_EMAIL=you@example.com
+# FLYBASIS_PASSWORD=<password>
+```
+
+SpicyTool then exchanges the session for an access token, passes it as
+`auth={"token": …}` to `enterprise-api.flybasis.com/sockets/v1/stream-flights`,
+caches it until ~30s before expiry, and persists Supabase's **rotated**
+refresh token to `backend/data/.flybasis_refresh_token` (gitignored) so
+long-running processes stay valid. Verify before you deploy:
+
+```bash
+cd backend
+FLYBASIS_SUPABASE_URL=… FLYBASIS_SUPABASE_ANON_KEY=… FLYBASIS_REFRESH_TOKEN=… \
+  python3 tools/verify_flybasis_socket.py --live
+# EXPECT: 16 checks (13 offline + session auth + live handshake)
+```
+
+> ⚠️ Do **not** reuse credentials from `agentsearch.vercel.app.har` — that
+> capture contains live third-party session tokens for a real account and is
+> removed from the repo; rotate that account's password now.
+
 ### Alternative live source you can get TODAY — Seats.aero
 
 Flybasis is not the only way to get real award availability. The repo now
@@ -130,20 +173,27 @@ socket at any host, so the whole live path can be exercised without a
 credential and without outbound network:
 
 ```bash
-cd backend && ../.venv/bin/python tools/verify_flybasis_socket.py
-# 9 checks over a REAL websocket against tools/flybasis_mock.py: connect + auth
-# payload, the documented `search` body, stops/layover/mixed-cabin/bookability
-# normalization, both directions of a round trip, `error` events surfaced
-# verbatim, a silent upstream failing loudly inside its budget, a rejected
-# token reading as auth failure (never as "no results"), and the provider cache.
+cd backend && python3 tools/verify_flybasis_socket.py
+# 16 checks over REAL websockets/HTTP against tools/flybasis_mock.py +
+# tools/flybasis_supabase_mock.py: connect + auth payload, the documented
+# `search` body, stops/layover/mixed-cabin/bookability normalization, both
+# directions of a round trip, `error` events surfaced verbatim, a silent
+# upstream failing loudly inside its budget, a rejected token reading as auth
+# failure (never as "no results"), the provider cache — and SESSION MODE end
+# to end: Supabase refresh/password -> access token -> socket auth -> flights,
+# token caching, rotated-refresh persistence, quota lookup, rejected-session
+# handling.
 ```
 
-If that passes, the ONLY thing between you and live results is the key — which
-is the answer to "search returns nothing". To confirm a real key on a real
-endpoint, the same checks run against production:
+If that passes, the ONLY thing between you and live results is the credential —
+which is the answer to "search returns nothing". To confirm a real credential
+on a real endpoint, the same checks run against production:
 
 ```bash
-FLYBASIS_API_KEY=<your key> ../.venv/bin/python tools/verify_flybasis_socket.py --live
+# official key, or the Supabase session in Option B:
+FLYBASIS_API_KEY=<your key> python3 tools/verify_flybasis_socket.py --live
+FLYBASIS_REFRESH_TOKEN=… FLYBASIS_SUPABASE_ANON_KEY=… \
+  python3 tools/verify_flybasis_socket.py --live
 ```
 
 ### Also redeploy the web-context connector (free, no keys)

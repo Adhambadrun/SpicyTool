@@ -76,10 +76,14 @@ def _no_live_reason(providers: list[BaseProvider]) -> str | None:
         return None
     from services import agentsearch
 
+    from providers import flybasis_session
+
     base = (
         "No live award data is available. SpicyTool relays the Flybasis search "
-        "engine only — set FLYBASIS_API_KEY to a key issued to you by Flybasis "
-        "to search real availability."
+        "engine only — set FLYBASIS_API_KEY to a key issued to you by Flybasis, "
+        "or enable session mode "
+        f"({flybasis_session.REFRESH_ENV} + {flybasis_session.ANON_KEY_ENV}) "
+        "to search with your own Flybasis account."
     )
     if agentsearch.configured():
         # An operator supplied a RapidAPI/AgentSearch key. It powers the Web

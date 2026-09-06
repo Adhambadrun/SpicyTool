@@ -12,13 +12,23 @@ documented protocol: auth payload, ``search`` in, ``data``/``error`` out) and
 drives the REAL adapter against it through ``FLYBASIS_BASE_URL``, over a real
 TCP socket. No outbound network and no live credential are required.
 
+It also boots ``tools/flybasis_supabase_mock.py`` and exercises SESSION mode
+end to end: Supabase refresh/password exchange -> access token -> socket auth
+token -> real search, plus token caching, rotated-refresh persistence, quota
+lookup and the actionable failed-login path. The session path needs no
+``FLYBASIS_API_KEY`` at all.
+
 Live mode (``--live``) runs the same handshake against the real
-``enterprise-api.flybasis.com`` using ``FLYBASIS_API_KEY``, to confirm a key
-issued to you actually works before you deploy.
+``enterprise-api.flybasis.com`` using either ``FLYBASIS_API_KEY`` (official
+token) or a configured Supabase session (``FLYBASIS_REFRESH_TOKEN`` +
+``FLYBASIS_SUPABASE_ANON_KEY``), to confirm your credential actually works
+before you deploy.
 
 Usage:
     python3 tools/verify_flybasis_socket.py
     FLYBASIS_API_KEY=<key> python3 tools/verify_flybasis_socket.py --live
+    FLYBASIS_REFRESH_TOKEN=<rt> FLYBASIS_SUPABASE_ANON_KEY=<anon> \
+        python3 tools/verify_flybasis_socket.py --live
 """
 from __future__ import annotations
 
@@ -92,11 +102,13 @@ async def _search(**over):
     return await Flybasis().search(q)
 
 
-def run_checks(port: int | None) -> int:
+def run_checks(port: int | None, supabase_port: int | None = None) -> int:
     from providers.flybasis import Flybasis
 
-    print(f"\n{DIM}Verifying the Flybasis award socket against "
-          f"{'the real upstream' if port is None else 'the local mock upstream'}{RESET}\n")
+    upstream = "the real upstream" if port is None else "the local mock upstream"
+    if supabase_port:
+        upstream = f"{upstream} + mock Supabase session auth"
+    print(f"\n{DIM}Verifying the Flybasis award socket against {upstream}{RESET}\n")
 
     p = Flybasis()
 
@@ -220,7 +232,109 @@ def run_checks(port: int | None) -> int:
             return f"ok=False: {res.status.error[:46]}…"
         check("a rejected credential reads as auth failure, never as empty results", _bad_token)
 
-    # ---- 9. results are cached like every other provider ------------------
+    if supabase_port is not None:
+        from providers import flybasis_session
+
+        # The session block must prove the session path on its own: drop the
+        # API key for its whole duration, then restore it for the cache check.
+        saved_key = os.environ.pop("FLYBASIS_API_KEY", None)
+
+        # ---- 9. session mode is a real credential -------------------------
+        def _session_enabled():
+            assert p.credential is None, "session check must run with NO API key"
+            assert p.enabled, "session mode is not enabling Flybasis"
+            assert p.disabled_reason() is None, p.disabled_reason()
+            return f"enabled via {flybasis_session.session_source()}"
+        check("session mode enables Flybasis with no FLYBASIS_API_KEY", _session_enabled)
+
+        # ---- 10. Supabase session -> socket auth -> search ----------------
+        def _session_roundtrip():
+            flybasis_session.reset_cache()
+            res = asyncio.run(_search(date="2026-11-30"))
+            assert res.status.ok, f"session search failed: {res.status.error}"
+            assert len(res.results) == 2, f"expected 2, got {len(res.results)}"
+            issued = _get(supabase_port, "/__tokens")["issued"]
+            assert issued, "the Supabase mock issued no access token"
+            seen = _get(port, "/__tokens")["tokens"]
+            assert any(t in seen for t in issued), (
+                "the socket saw a token that was never issued: "
+                f"socket={seen}, issued={issued}"
+            )
+            return f"{len(res.results)} itineraries via Supabase session"
+        check("refresh_token -> access_token -> socket auth -> flights", _session_roundtrip)
+
+        # ---- 11. tokens are cached (one exchange per cache window) --------
+        def _cached_token():
+            before = len(_get(supabase_port, "/__tokens")["issued"])
+            flybasis_session.reset_cache()
+            res = asyncio.run(_search(date="2026-12-02"))
+            assert res.status.ok, res.status.error
+            after = len(_get(supabase_port, "/__tokens")["issued"])
+            assert after == before + 1, f"expected 1 exchange, saw {after - before}"
+            flown = asyncio.run(_search(date="2026-12-03"))
+            assert flown.status.ok, flown.status.error
+            still = len(_get(supabase_port, "/__tokens")["issued"])
+            assert still == after, "a warm access token should not hit Supabase again"
+            return f"{after - before} exchange for 2 searches"
+        check("the access token is cached until it nears expiry", _cached_token)
+
+        # ---- 12. the rotated refresh token is persisted --------------------
+        def _rotation_persisted():
+            store = Path(os.environ["FLYBASIS_REFRESH_FILE"])
+            assert store.exists(), f"{store} missing"
+            value = store.read_text(encoding="utf-8").strip()
+            assert value == "rotated-verify-refresh", value
+            return "rotated refresh token persisted"
+        check("Rotated refresh token is persisted (survives process restarts)", _rotation_persisted)
+
+        # ---- 13. account quota is surfaced (whoami) -----------------------
+        def _quota():
+            flybasis_session.reset_cache()
+            remaining = asyncio.run(flybasis_session.searches_remaining())
+            assert remaining == 9, remaining
+            return f"maxSearchesRemaining = {remaining}"
+        check("account quota is read from whoami", _quota)
+
+        # ---- 14. a rejected session is actionable, never empty results ----
+        def _bad_session():
+            flybasis_session.reset_cache()
+            old = os.environ["FLYBASIS_REFRESH_TOKEN"]
+            os.environ["FLYBASIS_REFRESH_TOKEN"] = "bad"
+            try:
+                res = asyncio.run(_search(date="2026-12-04"))
+            finally:
+                os.environ["FLYBASIS_REFRESH_TOKEN"] = old
+            assert not res.status.ok, "a rejected session must not look like 'no results'"
+            err = (res.status.error or "").lower()
+            assert "rejected" in err or "login" in err, res.status.error
+            return f"ok=False: {res.status.error[:52]}…"
+        check("rejected session login reads as auth failure", _bad_session)
+
+        # ---- 15. email/password grant works too ---------------------------
+        def _password_grant():
+            flybasis_session.reset_cache()
+            env_rt = os.environ.pop("FLYBASIS_REFRESH_TOKEN")
+            # Make sure the persisted rotated token cannot leak into this path.
+            env_store = os.environ.pop("FLYBASIS_REFRESH_FILE")
+            os.environ["FLYBASIS_REFRESH_FILE"] = str(HERE / ".no_such_rt")
+            os.environ["FLYBASIS_EMAIL"] = "verify@example.com"
+            os.environ["FLYBASIS_PASSWORD"] = "verify-pass"
+            try:
+                res = asyncio.run(_search(date="2026-12-05"))
+            finally:
+                os.environ["FLYBASIS_REFRESH_TOKEN"] = env_rt
+                os.environ["FLYBASIS_REFRESH_FILE"] = env_store
+                os.environ.pop("FLYBASIS_EMAIL", None)
+                os.environ.pop("FLYBASIS_PASSWORD", None)
+                Path(str(HERE / ".no_such_rt")).unlink(missing_ok=True)
+            assert res.status.ok, res.status.error
+            return f"{len(res.results)} itineraries via email/password"
+        check("email + password grant_type=password authenticates and searches", _password_grant)
+
+        if saved_key is not None:
+            os.environ["FLYBASIS_API_KEY"] = saved_key
+
+    # ---- 16. results are cached like every other provider ------------------
     def _cached():
         date = "2027-04-19"  # unique enough to miss any warm cache
         first = asyncio.run(_search(date=date))
@@ -252,9 +366,14 @@ def main() -> int:
     if args.live:
         key = (os.environ.get("FLYBASIS_API_KEY") or "").strip()
         if not key:
-            print(f"{RED}No credential.{RESET} Set FLYBASIS_API_KEY to a token issued "
-                  "by Flybasis to run --live.\n")
-            return 2
+            from providers import flybasis_session
+
+            if not flybasis_session.configured():
+                print(f"{RED}No credential.{RESET} Set FLYBASIS_API_KEY (a token issued "
+                      "by Flybasis) or a Supabase session "
+                      "(FLYBASIS_REFRESH_TOKEN + FLYBASIS_SUPABASE_ANON_KEY) "
+                      "to run --live.\n")
+                return 2
         os.environ.pop("FLYBASIS_BASE_URL", None)
         return run_checks(port=None)
 
@@ -264,20 +383,38 @@ def main() -> int:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
+    sup_port = _free_port()
+    sup_proc = subprocess.Popen(
+        [sys.executable, str(HERE / "flybasis_supabase_mock.py"), "--port", str(sup_port)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
     try:
         _wait_for_port(port)
-        # The mock only accepts the socket at this path; a real token is not
-        # needed, which is the whole point of the override.
+        _wait_for_port(sup_port)
+        # The socket mock accepts the verified contract; the Supabase mock
+        # speaks the session flow, so NO Flybasis API key is needed here.
         os.environ["FLYBASIS_BASE_URL"] = f"http://127.0.0.1:{port}"
         os.environ["FLYBASIS_API_KEY"] = "verify-good-token"
+        os.environ["FLYBASIS_SUPABASE_URL"] = f"http://127.0.0.1:{sup_port}"
+        os.environ["FLYBASIS_SUPABASE_ANON_KEY"] = "mock-anon-key"
+        os.environ["FLYBASIS_REFRESH_TOKEN"] = "verify-refresh"
+        os.environ["FLYBASIS_API2_URL"] = f"http://127.0.0.1:{sup_port}"
+        os.environ["FLYBASIS_REFRESH_FILE"] = str(HERE / ".flybasis_refresh_token_test")
         os.environ.setdefault("SPICYTOOL_PROVIDERS", "Flybasis")
-        return run_checks(port=port)
+        try:
+            return run_checks(port=port, supabase_port=sup_port)
+        finally:
+            Path(os.environ["FLYBASIS_REFRESH_FILE"]).unlink(missing_ok=True)
+            os.environ.pop("FLYBASIS_REFRESH_FILE", None)
     finally:
         proc.terminate()
-        try:
-            proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            proc.kill()
+        sup_proc.terminate()
+        for child in (proc, sup_proc):
+            try:
+                child.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                child.kill()
 
 
 if __name__ == "__main__":

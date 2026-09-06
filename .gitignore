@@ -15,6 +15,10 @@ venv/
 # Per-install auth signing secret (generated at first run)
 backend/data/.auth_secret
 
+# Supabase rotated refresh token (Flybasis session mode) — a live credential
+backend/data/.flybasis_refresh_token
+backend/data/.flybasis_refresh_token*
+
 # Node (flybasis-mcp)
 node_modules/
 

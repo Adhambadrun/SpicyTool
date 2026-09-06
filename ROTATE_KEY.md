@@ -1,4 +1,46 @@
-# Rotating the exposed RapidAPI key
+# Rotating exposed credentials
+
+Two separate exposures were found in this public repo. **Rotate both — today.**
+
+---
+
+## A. Session credentials from `agentsearch.vercel.app.har`  ⚠️ MOST URGENT
+
+`agentsearch.vercel.app.har` was uploaded to this **public** repo. It contains
+a live web session for a real Flybasis user account
+(`solomon@lux-flights.com`, id `59e79ed3-…`):
+
+- a **Supabase refresh_token** and **access_token** for
+  `sb.flybasis.com` (project ref `zdghaeihevurffircfun`),
+- the account's permission flags (`canHC`, `canMax`) and
+  `maxSearchesRemaining: 5` from `api2.flybasis.com/trpc/user.whoami`.
+
+Anyone who has seen the repo can mint live sessions as that account and spend
+its remaining searches. The file is removed from the branch and `*.har` is
+now gitignored, but it remains in `main`'s history (`f8e93ad`) — deletion does
+**not** un-leak it.
+
+**Rotate now (no code change needed):**
+
+1. Change the password of the `solomon@lux-flights.com` Flybasis account
+   (Flybasis account settings). Supabase refresh tokens die when the password
+   changes — this kills the leaked session.
+2. If that account belongs to Lux Flights and is shared, coordinate with them:
+   the token grants access to whatever that account can see.
+3. Watch Flybasis/agency usage for the coming weeks; if the session was
+   already used, ask Flybasis `support@flybasis.com` to review the account's
+   search history.
+4. Optionally ask GitHub Support to purge the file from history
+   (Support → "Sensitive data"), since the repo is public.
+
+**Never use the HAR tokens in SpicyTool** — they belong to a third-party
+account, and using them would (a) be unauthorized credential use and (b) burn
+that account's quota. There is a safe session path documented in
+`FLYBASIS_GO_LIVE.md` § Option B that uses *your own* credentials.
+
+---
+
+## B. The exposed RapidAPI key
 
 The key `ebd27a2097msh…4156` was committed to this **public** repo in commit
 `bbd85a2` (as a test fixture in `backend/tests_integration.py`). The file is
@@ -88,6 +130,9 @@ anyway. Revocation is the real fix; history scrubbing is cosmetic.
 - Keep credentials in `.env` (git-ignored) or a platform secret store, never in
   a tracked file — including test fixtures. The suite now uses a synthetic
   RapidAPI-shaped value (`0123456789msh…`) instead.
+- Never upload browser captures: a HAR records every token your session uses
+  (`*.har` is gitignored here; inspect captures with a text editor or the
+  browser before sharing anywhere, and scrub auth headers/payloads).
 - Enable **GitHub secret scanning + push protection** on the repo
   (Settings → Code security). It blocks commits containing recognised
   credential formats before they land.
