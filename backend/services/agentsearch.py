@@ -39,6 +39,8 @@ from core.http_engine import HttpEngine, ProviderError
 
 KEY_ENV = "AGENTSEARCH_API_KEY"
 HOST_ENV = "AGENTSEARCH_HOST"
+SCHEME_ENV = "AGENTSEARCH_SCHEME"
+BASE_URL_ENV = "AGENTSEARCH_BASE_URL"
 PROVIDER_ENV = "AGENTSEARCH_PROVIDER"
 COUNTRY_ENV = "AGENTSEARCH_COUNTRY"
 TIMEOUT_ENV = "AGENTSEARCH_TIMEOUT"
@@ -57,7 +59,13 @@ FETCH_PATH = "/v1/fetch"
 # A RapidAPI key looks like: <20 hex>msh<hex>p<hex>jsn<hex>
 _RAPIDAPI_KEY_RE = re.compile(r"^[A-Za-z0-9]{10,}msh[A-Za-z0-9]+jsn[A-Za-z0-9]+$")
 
+# The pooled client binds to the event loop that created it. A process can run
+# more than one loop over its lifetime (uvicorn reload, CLI tools, tests), and
+# reusing a pool from a closed loop raises "Event loop is closed" on the next
+# request — so the engine is cached per running loop, not globally.
 _engine: HttpEngine | None = None
+_engine_loop: object | None = None
+_engine_pinned: bool = False
 
 
 def looks_like_rapidapi_key(value: str | None) -> bool:
@@ -86,8 +94,18 @@ def host() -> str:
     return (os.environ.get(HOST_ENV) or DEFAULT_HOST).strip().strip("/")
 
 
+def scheme() -> str:
+    """https in production; http only for a local mock/self-hosted upstream."""
+    value = (os.environ.get(SCHEME_ENV) or "").strip().lower()
+    return value if value in ("http", "https") else "https"
+
+
 def base_url() -> str:
-    return f"https://{host()}"
+    """Upstream origin. AGENTSEARCH_BASE_URL wins (self-hosted/local mock)."""
+    explicit = (os.environ.get(BASE_URL_ENV) or "").strip().rstrip("/")
+    if explicit:
+        return explicit
+    return f"{scheme()}://{host()}"
 
 
 def provider() -> str:
@@ -109,9 +127,19 @@ def timeout() -> float:
 
 
 def _get_engine() -> HttpEngine:
-    global _engine
-    if _engine is None:
+    """Pooled client for the currently-running loop (rebuilt if the loop changed)."""
+    global _engine, _engine_loop
+    import asyncio
+
+    try:
+        loop: object | None = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    if _engine is not None and _engine_pinned:
+        return _engine
+    if _engine is None or _engine_loop is not loop:
         _engine = HttpEngine(timeout=timeout())
+        _engine_loop = loop
     return _engine
 
 
@@ -372,8 +400,22 @@ async def status() -> dict:
     }
 
 
+def set_engine(engine: HttpEngine | None) -> None:
+    """Pin a specific HttpEngine (tests / a self-hosted harness).
+
+    A pinned engine is never rebuilt on a loop change; pass None to restore the
+    normal per-loop pooling.
+    """
+    global _engine, _engine_loop, _engine_pinned
+    _engine = engine
+    _engine_loop = None
+    _engine_pinned = engine is not None
+
+
 async def aclose() -> None:
-    global _engine
+    global _engine, _engine_loop, _engine_pinned
     if _engine is not None:
         await _engine.aclose()
         _engine = None
+        _engine_loop = None
+        _engine_pinned = False

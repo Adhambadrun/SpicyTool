@@ -63,7 +63,10 @@ AGENTSEARCH_DISCLAIMER = (
 
 # Web search is slower than an award lookup, so this module keeps its own
 # pooled client instead of borrowing the 3.5s provider engine.
+# Cached per running event loop — a pool bound to a closed loop raises
+# "Event loop is closed" on its next request (see services/agentsearch.py).
 _engine: HttpEngine | None = None
+_engine_loop: object | None = None
 
 
 def mcp_url() -> str:
@@ -86,9 +89,16 @@ def timeout() -> float:
 
 
 def _get_engine() -> HttpEngine:
-    global _engine
-    if _engine is None:
+    global _engine, _engine_loop
+    import asyncio
+
+    try:
+        loop: object | None = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    if _engine is None or _engine_loop is not loop:
         _engine = HttpEngine(timeout=timeout())
+        _engine_loop = loop
     return _engine
 
 
@@ -338,8 +348,9 @@ async def status() -> dict:
 
 
 async def aclose() -> None:
-    global _engine
+    global _engine, _engine_loop
     if _engine is not None:
         await _engine.aclose()
         _engine = None
+        _engine_loop = None
     await agentsearch.aclose()

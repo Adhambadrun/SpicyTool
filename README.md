@@ -281,6 +281,26 @@ more than 3 airports per side → `400 "At most 3 origin airports"`;
 `return_date` before `date` → `400 "Return date must be on or after the
 departure date"`.
 
+## Verifying the AgentSearch integration
+
+The web-context backend has a self-contained verifier that exercises the real
+client over real HTTP — no outbound network needed:
+
+```bash
+cd backend
+../.venv/bin/python tools/verify_agentsearch.py          # offline: boots a local
+                                                          # mock of the documented
+                                                          # /v1 schema
+AGENTSEARCH_API_KEY=<key> \
+  ../.venv/bin/python tools/verify_agentsearch.py --live  # real RapidAPI endpoint
+```
+
+Both modes run the same five assertions: `/v1/search` returns the documented
+envelope, `/v1/answer` and `/v1/fetch` work, web context is labelled
+`is_award_data:false`, and award search stays isolated from the web backend.
+`tools/agentsearch_mock.py` serves the published schema byte-for-byte and is
+dev-only — the app never imports it.
+
 ## Configuration (`.env`)
 
 | Variable | Default | Meaning |

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SpicyTool integration tests — 31 assertions, no live network calls.
+"""SpicyTool integration tests — 33 assertions, no live network calls.
 
 Uses httpx.MockTransport for the HTTP-layer tests; everything else exercises
 the real normalization, enrichment and dedupe code paths directly.
@@ -713,11 +713,11 @@ def test_as_search_over_mock_transport():
     os.environ["AGENTSEARCH_API_KEY"] = "test-key"
     engine = HttpEngine(timeout=2.0)
     engine.client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
-    agentsearch._engine = engine
+    agentsearch.set_engine(engine)
     try:
         out = asyncio.run(agentsearch.search("JFK to LHR award", limit=5))
     finally:
-        agentsearch._engine = None
+        agentsearch.set_engine(None)
         os.environ.pop("AGENTSEARCH_API_KEY", None)
     assert seen["headers"]["x-rapidapi-key"] == "test-key", seen["headers"]
     assert seen["headers"]["x-rapidapi-host"] == "agentsearch.p.rapidapi.com"
@@ -735,14 +735,14 @@ def test_as_surfaces_auth_and_rate_errors():
             transport=httpx.MockTransport(lambda r, c=code: httpx.Response(c, text="no"))
         )
         os.environ["AGENTSEARCH_API_KEY"] = "bad"
-        agentsearch._engine = engine
+        agentsearch.set_engine(engine)
         try:
             asyncio.run(agentsearch.search("q"))
             raise AssertionError(f"HTTP {code} should raise")
         except ProviderError as exc:
             assert needle in str(exc).lower(), (code, str(exc))
         finally:
-            agentsearch._engine = None
+            agentsearch.set_engine(None)
             os.environ.pop("AGENTSEARCH_API_KEY", None)
 
 
@@ -755,7 +755,7 @@ def test_as_context_is_never_award_data():
         transport=httpx.MockTransport(lambda r: httpx.Response(200, json=_AGENTSEARCH_BRAVE))
     )
     os.environ["AGENTSEARCH_API_KEY"] = "test-key"
-    agentsearch._engine = engine
+    agentsearch.set_engine(engine)
     try:
         assert web_context.backend_name() == "agentsearch"
         out = asyncio.run(web_context.route_context("JFK", "LHR", cabin="business"))
@@ -763,7 +763,7 @@ def test_as_context_is_never_award_data():
         assert out["is_award_data"] is False and out["kind"] == "web_context"
         assert len(out["data"]["results"]) == 2
     finally:
-        agentsearch._engine = None
+        agentsearch.set_engine(None)
         os.environ.pop("AGENTSEARCH_API_KEY", None)
 
 
@@ -795,12 +795,12 @@ def test_as_answer_and_fetch_endpoints():
     os.environ["AGENTSEARCH_API_KEY"] = "test-key"
     engine = HttpEngine(timeout=2.0)
     engine.client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
-    agentsearch._engine = engine
+    agentsearch.set_engine(engine)
     try:
         ans = asyncio.run(agentsearch.instant_answer("Aeroplan"))
         doc = asyncio.run(agentsearch.fetch_url("https://example.com/guide"))
     finally:
-        agentsearch._engine = None
+        agentsearch.set_engine(None)
         os.environ.pop("AGENTSEARCH_API_KEY", None)
     assert seen == ["/v1/answer", "/v1/fetch"], seen
     assert ans["heading"] == "Aeroplan" and ans["text"].startswith("Air Canada")
@@ -819,18 +819,57 @@ def test_as_answer_falls_back_to_serp():
     os.environ["AGENTSEARCH_API_KEY"] = "test-key"
     engine = HttpEngine(timeout=2.0)
     engine.client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
-    agentsearch._engine = engine
+    agentsearch.set_engine(engine)
     try:
         ans = asyncio.run(agentsearch.instant_answer("anthropic claude"))
     finally:
-        agentsearch._engine = None
+        agentsearch.set_engine(None)
         os.environ.pop("AGENTSEARCH_API_KEY", None)
     assert ans["text"].startswith("Claude is a family"), ans
     assert ans["sourceUrl"] == "https://www.anthropic.com/claude"
 
 
+
+def test_as_engine_rebuilt_per_event_loop():
+    """32. The pooled client is rebuilt when the event loop changes."""
+    # Regression: a pool bound to a closed loop raised "Event loop is closed"
+    # on the next request, which broke every call after the first asyncio.run().
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=_AGENTSEARCH_BRAVE)
+
+    os.environ["AGENTSEARCH_API_KEY"] = "test-key"
+    agentsearch.set_engine(None)
+    try:
+        # Two separate asyncio.run() calls == two distinct, closed-then-new loops.
+        seen = []
+        for _ in range(2):
+            async def go():
+                eng = agentsearch._get_engine()
+                eng.client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+                out = await agentsearch.search("anthropic claude", limit=2)
+                seen.append(len(out["results"]))
+            asyncio.run(go())
+        assert seen == [2, 2], seen
+    finally:
+        agentsearch.set_engine(None)
+        agentsearch._engine_loop = None
+        os.environ.pop("AGENTSEARCH_API_KEY", None)
+
+
+def test_as_base_url_override():
+    """33. AGENTSEARCH_BASE_URL points the client at a self-hosted upstream."""
+    for var in ("AGENTSEARCH_BASE_URL", "AGENTSEARCH_SCHEME", "AGENTSEARCH_HOST"):
+        os.environ.pop(var, None)
+    try:
+        assert agentsearch.base_url() == "https://agentsearch.p.rapidapi.com"
+        os.environ["AGENTSEARCH_BASE_URL"] = "http://127.0.0.1:8899/"
+        assert agentsearch.base_url() == "http://127.0.0.1:8899", agentsearch.base_url()
+    finally:
+        os.environ.pop("AGENTSEARCH_BASE_URL", None)
+
+
 def main() -> int:
-    print(f"\n{DIM}SpicyTool integration tests — 31 assertions, offline{RESET}\n")
+    print(f"\n{DIM}SpicyTool integration tests — 33 assertions, offline{RESET}\n")
     tests = [
         test_retry,
         test_timeout_isolation,
@@ -863,6 +902,8 @@ def main() -> int:
         test_as_context_is_never_award_data,
         test_as_answer_and_fetch_endpoints,
         test_as_answer_falls_back_to_serp,
+        test_as_engine_rebuilt_per_event_loop,
+        test_as_base_url_override,
     ]
     for i, fn in enumerate(tests, start=1):
         check(i, fn.__doc__.splitlines()[0].strip() if fn.__doc__ else fn.__name__, fn)
