@@ -117,7 +117,16 @@ button{font-family:inherit}
 .date-field{cursor:pointer}
 .date-val{font-size:14px;font-weight:500;color:#fff;display:flex;align-items:center;gap:8px;flex:1;min-width:0}
 
-/* advanced toggles — code 7/12: pt-4 border-t-[#1F1F24] text-xs */
+/* advanced toggles — code 7/12: pt-4 border-t-[#1F1F24] text-xs (dashed divider, round check pills) */
+.adv{margin-top:20px;padding-top:18px;border-top:1px dashed #2A2A31;display:flex;flex-direction:column;gap:14px;font-size:14px;color:#D1D1D6}
+.adv-opt{display:inline-flex;align-items:center;gap:12px;cursor:pointer;background:none;border:none;padding:0;color:#8E8E93;font:inherit;text-align:left;transition:color .15s}
+.adv-opt:hover{color:#D1D1D6}
+.adv-opt.on{color:#fff}
+.adv-dot{width:22px;height:22px;border-radius:9999px;border:2px solid #4A4A52;background:transparent;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,border-color .15s}
+.adv-dot svg{width:12px;height:12px;opacity:0;transition:opacity .15s}
+.adv-opt.on .adv-dot{background:#22C55E;border-color:#22C55E;color:#fff}
+.adv-opt.on .adv-dot svg{opacity:1}
+.adv-opt.on.hc-super .adv-dot{background:var(--brand);border-color:var(--brand)}
 /* search CTA — Search sits on the RIGHT-HAND side of the card (image-1 style); full-width pill on mobile */
 .cta{width:100%;padding:12px 40px;background:var(--brand);color:#fff;border:none;border-radius:9999px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 10px 15px -3px rgba(225,29,46,.3);transition:background .15s,transform .1s;align-self:flex-end;margin-top:20px}
 .cta:hover{background:var(--brand-hover)}
@@ -622,6 +631,17 @@ a.brand:hover .wordmark{opacity:.9}
           <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
           <span class="date-val" id="date-val">Sep 16, 2026</span>
         </div>
+      </div>
+
+      <div class="adv" id="adv-toggles">
+        <button type="button" class="adv-opt on" id="adv-hc" role="checkbox" aria-checked="true" title="Include hidden-city and upgrade-award fares in the results">
+          <span class="adv-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
+          <span>Check hidden city and upgrade fares.</span>
+        </button>
+        <button type="button" class="adv-opt hc-super" id="adv-super" role="checkbox" aria-checked="false" title="Deeper hidden-city sweep — also tries one extra beyond-point per route">
+          <span class="adv-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
+          <span>Enable super hc mode</span>
+        </button>
       </div>
 
       <button type="button" class="cta" id="btn-search">Search</button>
@@ -1152,7 +1172,8 @@ const esc = (s) => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;","
 const state = {
   origins: ["CAI"], destinations: ["LHR"],
   date: "2026-09-16", returnDate: null, cabin: "business",
-  pax: { adults: 1, children: 0, infants: 0 }, flex: 0, retFlex: 0, trip: "oneway",   /* flex/retFlex = ±N-day search window around departure/return (not stay length) */
+  pax: { adults: 1, children: 0, infants: 0 }, flex: 0, retFlex: 0, trip: "oneway",
+  hc: true, superHc: false,   /* advanced toggles — include hidden-city/upgrade fares; super hc = deeper hidden-city sweep */   /* flex/retFlex = ±N-day search window around departure/return (not stay length) */
   results: [], routes: [], streaming: false, sort: "best",
   filters: {
     stops:"any", airline:"", ticket:"", program:"",
@@ -1518,6 +1539,23 @@ function openDD(host, items, onPick){
 }
 
 /* ============================ search ============================ */
+/* advanced toggles (code 12): hidden-city/upgrade fares + super hc mode — persisted, sent with every search */
+const ADV_KEY = "st_adv";
+function advQS(){ return `&hidden_city=${state.hc ? 1 : 0}&super_hc=${state.superHc ? 1 : 0}`; }
+function syncAdvToggles(){
+  const hc = $("adv-hc"), su = $("adv-super"); if (!hc || !su) return;
+  hc.classList.toggle("on", !!state.hc); hc.setAttribute("aria-checked", String(!!state.hc));
+  su.classList.toggle("on", !!state.superHc); su.setAttribute("aria-checked", String(!!state.superHc));
+  su.disabled = !state.hc; su.style.opacity = state.hc ? "" : ".45";   /* super hc needs hidden-city fares on */
+  try { localStorage.setItem(ADV_KEY, JSON.stringify({ hc: !!state.hc, superHc: !!state.superHc })); } catch {}
+}
+function loadAdvToggles(){
+  try {
+    const v = JSON.parse(localStorage.getItem(ADV_KEY) || "null");
+    if (v){ state.hc = v.hc !== false; state.superHc = !!v.superHc && state.hc; }
+  } catch {}
+  syncAdvToggles();
+}
 function setTrip(t){
   state.trip = t;
   $("tab-round").classList.toggle("active", t === "roundtrip");
@@ -1569,10 +1607,10 @@ async function runSearch(){
     airports:"", cabinF:"any", alliance:"any", premium:"any",
     depTime:"any", arrTime:"any", duration:"any", dates:"any"
   };
-  state.lastQuery = { origins:[...state.origins], destinations:[...state.destinations], date:state.date, cabin:state.cabin, trip:state.trip, returnDate:state.returnDate, flex:state.flex, retFlex:state.retFlex };
+  state.lastQuery = { origins:[...state.origins], destinations:[...state.destinations], date:state.date, cabin:state.cabin, trip:state.trip, returnDate:state.returnDate, flex:state.flex, retFlex:state.retFlex, hc:state.hc, superHc:state.superHc };
   renderResults(); renderFilterBar();
   if (state.flex > 0 || (state.trip === "roundtrip" && state.returnDate && state.retFlex > 0)){ await flexSearch(); return; }
-  const qsBase = `origin=${state.origins.join(",")}&destination=${state.destinations.join(",")}&date=${state.date}&cabin=${state.cabin}&passengers=${paxTotal()}&max_stops=1`;
+  const qsBase = `origin=${state.origins.join(",")}&destination=${state.destinations.join(",")}&date=${state.date}&cabin=${state.cabin}&passengers=${paxTotal()}&max_stops=1${advQS()}`;
   const qsRT = (state.trip === "roundtrip" && state.returnDate) ? `&return_date=${state.returnDate}` : "";
   // try v2 stream first (real providers + local engine)
   const tryV2 = () => new Promise((resolve, reject) => {
@@ -1673,7 +1711,7 @@ async function flexSearch(){
   const depDates = flexDates();
   const retDates = retFlexDates();
   const rt = state.trip === "roundtrip" && !!state.returnDate;
-  const qsBaseV2 = `origin=${state.origins.join(",")}&destination=${state.destinations.join(",")}&cabin=${state.cabin}&passengers=${paxTotal()}&max_stops=1`;
+  const qsBaseV2 = `origin=${state.origins.join(",")}&destination=${state.destinations.join(",")}&cabin=${state.cabin}&passengers=${paxTotal()}&max_stops=1${advQS()}`;
   try {
     // try v2 first for each departure date (v2 is one-way only, same as the non-flex path)
     const jobsV2 = depDates.map(d => fetch(`/api/v2/search?${qsBaseV2}&date=${d}`).then(r => r.ok ? r.json() : null).catch(() => null));
@@ -1894,6 +1932,7 @@ function passesFilters(r){
   if (f.stops !== "any" && !legs.every(x => x.route.stops <= +f.stops)) return false;
   if (f.airline && !legs.every(x => x.airline_code === f.airline)) return false;
   if (f.ticket && !legs.every(x => ticketOfLeg(x) === f.ticket)) return false;
+  if (!state.hc && legs.some(x => ticketOfLeg(x) === "hc" || ticketOfLeg(x) === "upg")) return false;   /* "Check hidden city and upgrade fares" off */
   if (f.program && !legs.every(x => x.pricing.program_code === f.program)) return false;
   if (f.airports && !legs.some(x => {
     const all = [x.route.origin, x.route.destination].concat((x.route.layovers||[]).map(l=>l.airport));
@@ -2367,6 +2406,9 @@ function restoreSearch(){
     if (q.cabin) state.cabin = q.cabin;
     state.flex = q.flex || 0;
     state.retFlex = q.retFlex || 0;
+    if (typeof q.hc === "boolean") state.hc = q.hc;
+    if (typeof q.superHc === "boolean") state.superHc = q.superHc;
+    syncAdvToggles();
     setTrip(q.trip === "roundtrip" ? "roundtrip" : "oneway");
     $("cabin-val").textContent = CABIN_LABEL[state.cabin] || state.cabin;
     renderField("origin"); renderField("destination"); syncPaxLabel();
@@ -2625,6 +2667,21 @@ function init(){
       syncPaxLabel();
     });
   });
+  /* advanced toggles */
+  $("adv-hc").addEventListener("click", e => {
+    e.stopPropagation();
+    state.hc = !state.hc;
+    if (!state.hc) state.superHc = false;
+    syncAdvToggles();
+    if (state.results.length){ renderResults(); renderFilterBar(); }   /* re-filter an open result set live */
+  });
+  $("adv-super").addEventListener("click", e => {
+    e.stopPropagation();
+    if (!state.hc) return;
+    state.superHc = !state.superHc;
+    syncAdvToggles();
+  });
+  loadAdvToggles();
   /* trip tabs — round-trip combines both one-way legs (mixed programs allowed) */
   $("tab-round").addEventListener("click", e => { e.stopPropagation(); setTrip("roundtrip"); openDP(); });
   $("tab-oneway").addEventListener("click", e => { e.stopPropagation(); setTrip("oneway"); closeDP(); });
