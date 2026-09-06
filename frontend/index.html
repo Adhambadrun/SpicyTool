@@ -699,6 +699,12 @@ const PROGRAM_SHORT = {
    All airline logos are 24x24 rounded (6px) squares with brand bg and white icon/text, same for every airline.
    This matches image-3.png exactly for all airlines: uniform size, radius, shadow, centering. */
 const CARRIER_COLORS = {"A3":"#0B4EA2","EI":"#008C6D","AC":"#DA2128","EN":"#7A1F5E","UX":"#005FA3","AF":"#002157","JU":"#E21B23","AA":"#0078D2","OS":"#C8102E","AV":"#E3121B","BA":"#075AAA","SN":"#002D73","DE":"#C99700","OU":"#0D5C8C","DL":"#B31E32","4Y":"#2E3192","MS":"#0B4EA2","EK":"#D71920","ET":"#00944C","EY":"#B58500","EW":"#C2116A","AY":"#0B1560","FZ":"#0085CA","IB":"#C6001D","FI":"#0066B3","AZ":"#00683C","B6":"#003876","KL":"#00A1DE","LO":"#0A2A66","LH":"#0B2E6D","VL":"#2A3B7C","AT":"#C1272D","RJ":"#0C2D6E","SK":"#003D85","LX":"#E11D2E","TP":"#00A04E","TK":"#E30A17","UA":"#00A1DE","VS":"#E4002B"};
+const CARRIER_ALLIANCE = {
+  "A3":"Star Alliance","AC":"Star Alliance","EN":"Star Alliance","OS":"Star Alliance","AV":"Star Alliance","SN":"Star Alliance","OU":"Star Alliance","4Y":"Star Alliance","MS":"Star Alliance","ET":"Star Alliance","EW":"Star Alliance","LO":"Star Alliance","LH":"Star Alliance","VL":"Star Alliance","LX":"Star Alliance","TP":"Star Alliance","TK":"Star Alliance","UA":"Star Alliance",
+  "UX":"SkyTeam","AF":"SkyTeam","DL":"SkyTeam","AZ":"SkyTeam","KL":"SkyTeam","SK":"SkyTeam",
+  "AA":"Oneworld","BA":"Oneworld","AY":"Oneworld","IB":"Oneworld","AT":"Oneworld","RJ":"Oneworld",
+  "EI":"Independent","JU":"Independent","DE":"Independent","EK":"Independent","EY":"Independent","FZ":"Independent","FI":"Independent","B6":"Independent","VS":"Independent"
+};
 
 /* exact logo rendering as in image-3.png / screen 8.png / screen 11.png — uniform 24x24 rounded squares */
 const AIRLINE_ICONS = {
@@ -768,6 +774,46 @@ const TICKET_LABEL = { award:"Award", hc:"Hidden City", upg:"Upgraded", dis:"AME
 const STOPS_OPTS = [
   { v:"any", l:"Any number of stops" }, { v:"0", l:"Non-Stop Only" },
   { v:"1", l:"One stop or fewer" }, { v:"2", l:"Two stops or fewer" },
+];
+const ALLIANCE_OPTS = [
+  { v:"any", l:"Any alliance" },
+  { v:"Star Alliance", l:"Star Alliance" },
+  { v:"Oneworld", l:"Oneworld" },
+  { v:"SkyTeam", l:"SkyTeam" },
+  { v:"Independent", l:"Independent" },
+];
+const DEP_TIME_OPTS = [
+  { v:"any", l:"Any departure time" },
+  { v:"morning", l:"Morning (5am–12pm)" },
+  { v:"afternoon", l:"Afternoon (12pm–5pm)" },
+  { v:"evening", l:"Evening (5pm–9pm)" },
+  { v:"night", l:"Night (9pm–5am)" },
+];
+const ARR_TIME_OPTS = [
+  { v:"any", l:"Any arrival time" },
+  { v:"morning", l:"Morning (5am–12pm)" },
+  { v:"afternoon", l:"Afternoon (12pm–5pm)" },
+  { v:"evening", l:"Evening (5pm–9pm)" },
+  { v:"night", l:"Night (9pm–5am)" },
+];
+const DURATION_OPTS = [
+  { v:"any", l:"Any duration" },
+  { v:"360", l:"Under 6h" },
+  { v:"720", l:"Under 12h" },
+  { v:"1080", l:"Under 18h" },
+  { v:"1440", l:"Under 24h" },
+];
+const CABIN_FILTER_OPTS = [
+  { v:"any", l:"Any cabin" },
+  { v:"economy", l:"Economy" },
+  { v:"premium", l:"Premium Economy" },
+  { v:"business", l:"Business" },
+  { v:"first", l:"First" },
+];
+const PREMIUM_OPTS = [
+  { v:"any", l:"All tickets" },
+  { v:"premium", l:"Premium only (Business/First)" },
+  { v:"nonpremium", l:"Non-premium (Economy/Premium)" },
 ];
 const AIRLINES_39 = [
   ["A3","Aegean Airlines"],["EI","Aer Lingus"],["AC","Air Canada"],["EN","Air Dolomiti"],
@@ -867,7 +913,11 @@ const state = {
   date: "2026-09-16", returnDate: null, cabin: "business",
   pax: { adults: 1, children: 0, infants: 0 }, flex: 0, trip: "oneway",
   results: [], routes: [], streaming: false, sort: "best",
-  filters: { stops:"any", airline:"", ticket:"", program:"" },
+  filters: {
+    stops:"any", airline:"", ticket:"", program:"",
+    airports:"", cabinF:"any", alliance:"any", premium:"any",
+    depTime:"any", arrTime:"any", duration:"any", dates:"any"
+  },
   expanded: null, ppop: null, calendar: [], lastQuery: null, providers: [],
 };
 /* ---- result shape accessors (one-way AwardResult | round-trip pair) ---- */
@@ -1217,53 +1267,127 @@ function todayISO(){
   return t.toISOString().slice(0, 10);
 }
 function paxTotal(){ return Math.max(1, (state.pax.adults|0) + (state.pax.children|0)); }
+/* live data: v2 aggregation (providers/ + local_engine) is the source of truth — real external APIs when credentials are set, otherwise chart-accurate local engine. v1 is fallback. */
 async function runSearch(){
   closeTT(); closeDP(); closeDD();
   showResultsView();
   state.streaming = true; state.results = []; state.routes = []; state.expanded = null; state.ppop = null;
-  state.filters = { stops:"any", airline:"", ticket:"", program:"" };
+  state.filters = {
+    stops:"any", airline:"", ticket:"", program:"",
+    airports:"", cabinF:"any", alliance:"any", premium:"any",
+    depTime:"any", arrTime:"any", duration:"any", dates:"any"
+  };
   state.lastQuery = { origins:[...state.origins], destinations:[...state.destinations], date:state.date, cabin:state.cabin, trip:state.trip, returnDate:state.returnDate, flex:state.flex };
   renderResults(); renderFilterBar();
   if (state.flex > 0){ await flexSearch(); return; }
-  const qs = `origin=${state.origins.join(",")}&destination=${state.destinations.join(",")}&date=${state.date}&cabin=${state.cabin}&passengers=${paxTotal()}`
-    + (state.trip === "roundtrip" && state.returnDate ? `&return_date=${state.returnDate}` : "");
-  const url = `/api/v1/search/stream?${qs}${authQS()}`;
-  const es = new EventSource(url);
-  es.addEventListener("start", e => {
-    const d = JSON.parse(e.data);
-    state.providers = d.providers; state.routes = (d.query && d.query.routes) || [];
-  });
-  es.addEventListener("program", e => {
-    const d = JSON.parse(e.data);
-    if (d.results && d.results.length){
-      for (const r of d.results){
-        for (const leg of (legRet(r) ? [legOut(r), legRet(r)] : [r])){
-          AIRPORT_META[leg.route.origin] = AIRPORT_META[leg.route.origin] || { code:leg.route.origin, city:leg.route.origin };
-          AIRPORT_META[leg.route.destination] = AIRPORT_META[leg.route.destination] || { code:leg.route.destination, city:leg.route.destination };
+  const qsBase = `origin=${state.origins.join(",")}&destination=${state.destinations.join(",")}&date=${state.date}&cabin=${state.cabin}&passengers=${paxTotal()}&max_stops=1`;
+  const qsRT = (state.trip === "roundtrip" && state.returnDate) ? `&return_date=${state.returnDate}` : "";
+  // try v2 stream first (real providers + local engine)
+  const tryV2 = () => new Promise((resolve, reject) => {
+    const urlV2 = `/api/v2/search/stream?${qsBase}${authQS()}`;
+    let es;
+    try { es = new EventSource(urlV2); } catch (e){ reject(e); return; }
+    let gotData = false;
+    let startTimer = setTimeout(() => { /* if no start in 4s, fallback to v1 */ if (!gotData){ es.close(); reject(new Error("v2 timeout")); } }, 4000);
+    es.addEventListener("start", e => {
+      clearTimeout(startTimer);
+      gotData = true;
+      try {
+        const d = JSON.parse(e.data);
+        state.providers = d.providers || d.query?.providers || [];
+        state.routes = (d.query && d.query.routes) || [];
+      } catch {}
+    });
+    es.addEventListener("data", e => {
+      gotData = true;
+      try {
+        const d = JSON.parse(e.data);
+        if (d.results && d.results.length){
+          for (const r of d.results){
+            for (const leg of (legRet(r) ? [legOut(r), legRet(r)] : [r])){
+              AIRPORT_META[leg.route.origin] = AIRPORT_META[leg.route.origin] || { code:leg.route.origin, city:leg.route.origin };
+              AIRPORT_META[leg.route.destination] = AIRPORT_META[leg.route.destination] || { code:leg.route.destination, city:leg.route.destination };
+            }
+          }
+          state.results = state.results.concat(d.results);
+          sortResults(); renderResults(); renderFilterBar();
         }
+        if (d.providers) state.providers = d.providers;
+      } catch {}
+    });
+    es.addEventListener("complete", e => {
+      clearTimeout(startTimer);
+      try {
+        const d = JSON.parse(e.data);
+        state.streaming = false;
+        if (d.results && d.results.length) state.results = d.results;
+        if (d.providers) state.providers = d.providers;
+        sortResults(); renderResults(); renderFilterBar();
+        loadCalendar();
+      } catch { state.streaming = false; renderResults(); }
+      es.close(); resolve(true);
+    });
+    es.addEventListener("error", () => {
+      if (!gotData){
+        clearTimeout(startTimer);
+        es.close(); reject(new Error("v2 error"));
       }
-      state.results = state.results.concat(d.results);
-      sortResults(); renderResults();
-    }
+      // otherwise let it retry; complete will close
+    });
   });
-  es.addEventListener("error", () => { /* SSE retry; if closed see complete */ });
-  es.addEventListener("complete", e => {
-    const d = JSON.parse(e.data);
-    state.streaming = false;
-    if (d.results && d.results.length) state.results = d.results;
-    sortResults(); renderResults(); renderFilterBar();
-    loadCalendar();
-    es.close();
-  });
+
+  const tryV1 = () => {
+    const qs = `${qsBase}${qsRT}`;
+    const url = `/api/v1/search/stream?${qs}${authQS()}`;
+    const es = new EventSource(url);
+    es.addEventListener("start", e => {
+      try { const d = JSON.parse(e.data); state.providers = d.providers; state.routes = (d.query && d.query.routes) || []; } catch {}
+    });
+    es.addEventListener("program", e => {
+      try {
+        const d = JSON.parse(e.data);
+        if (d.results && d.results.length){
+          for (const r of d.results){
+            for (const leg of (legRet(r) ? [legOut(r), legRet(r)] : [r])){
+              AIRPORT_META[leg.route.origin] = AIRPORT_META[leg.route.origin] || { code:leg.route.origin, city:leg.route.origin };
+              AIRPORT_META[leg.route.destination] = AIRPORT_META[leg.route.destination] || { code:leg.route.destination, city:leg.route.destination };
+            }
+          }
+          state.results = state.results.concat(d.results);
+          sortResults(); renderResults();
+        }
+      } catch {}
+    });
+    es.addEventListener("complete", e => {
+      try {
+        const d = JSON.parse(e.data);
+        state.streaming = false;
+        if (d.results && d.results.length) state.results = d.results;
+        sortResults(); renderResults(); renderFilterBar();
+        loadCalendar();
+      } catch { state.streaming = false; }
+      es.close();
+    });
+    es.addEventListener("error", () => { /* retry until complete */ });
+  };
+
+  try { await tryV2(); }
+  catch { tryV1(); }
 }
-/* flexibility fan-out: one REST search per nearby date, merged + deduped */
+/* flexibility fan-out: one REST search per nearby date, merged + deduped — uses v2 then v1 */
 async function flexSearch(){
   const dates = flexDates();
-  const qsBase = `origin=${state.origins.join(",")}&destination=${state.destinations.join(",")}&cabin=${state.cabin}&passengers=${paxTotal()}`
-    + (state.trip === "roundtrip" && state.returnDate ? `&return_date=${state.returnDate}` : "");
+  const qsBaseV2 = `origin=${state.origins.join(",")}&destination=${state.destinations.join(",")}&cabin=${state.cabin}&passengers=${paxTotal()}&max_stops=1`;
+  const qsBaseV1 = qsBaseV2 + (state.trip === "roundtrip" && state.returnDate ? `&return_date=${state.returnDate}` : "");
   try {
-    const jobs = dates.map(d => api(`/api/v1/search?${qsBase}&date=${d}`).then(r => r.ok ? r.json() : null).catch(() => null));
-    const packs = await Promise.all(jobs);
+    // try v2 first for each date
+    const jobsV2 = dates.map(d => fetch(`/api/v2/search?${qsBaseV2}&date=${d}`).then(r => r.ok ? r.json() : null).catch(() => null));
+    let packs = await Promise.all(jobsV2);
+    // if all null, fallback to v1
+    if (packs.every(p => !p || !p.results)){
+      const jobsV1 = dates.map(d => api(`/api/v1/search?${qsBaseV1}&date=${d}`).then(r => r.ok ? r.json() : null).catch(() => null));
+      packs = await Promise.all(jobsV1);
+    }
     const seen = new Set(); let routes = [];
     for (const d of packs){
       if (!d || !d.results) continue;
@@ -1317,11 +1441,23 @@ function hideTPop(){ if (tpopEl){ tpopEl.remove(); tpopEl = null; } }
 
 /* ============================ filters (code 8 toolbar) ============================ */
 function uniqSorted(arr){ return [...new Set(arr.filter(Boolean))].sort(); }
-/* ---- filters: exactly four groups (Airlines / Stops / Tickets / Programs) ---- */
+function hourOfIso(iso){
+  const m = /T(\d{2}):(\d{2})/.exec(iso||"");
+  return m ? (+m[1] + (+m[2]/60)) : 12;
+}
+function timeBucket(h){
+  if (h >= 5 && h < 12) return "morning";
+  if (h >= 12 && h < 17) return "afternoon";
+  if (h >= 17 && h < 21) return "evening";
+  return "night";
+}
+
+/* ---- filters: full bar as image-1.png — Stops, Airlines, Tickets, Programs, Airports, Premium, Dates, Departure Time, Arrival Time, Duration, Cabin ---- */
 function filterDefs(){
   const rs = state.results;
   const both = (pred) => rs.filter(r => pred(legOut(r)) && pred(legRet(r) || legOut(r)));
   const legsOf = (r) => (legRet(r) ? [legOut(r), legRet(r)] : [r]);
+  const legList = () => { const out=[]; for (const r of rs) for (const leg of legsOf(r)) out.push(leg); return out; };
   return [
     { id:"stops", label:"Stops", only:false, opts(){
         return STOPS_OPTS.map(o => ({ v:o.v, l:o.l, n: o.v === "any" ? rs.length : both(x => x.route.stops <= +o.v).length }));
@@ -1341,6 +1477,58 @@ function filterDefs(){
         for (const r of rs) for (const leg of legsOf(r)) counts[leg.pricing.program_code] = (counts[leg.pricing.program_code]||0) + 1;
         return PROGRAMS_10.map(([c, n]) => ({ v:c, l:n, n:counts[c]||0 }));
       }, get:()=>state.filters.program, set:v=>state.filters.program=v },
+    { id:"airports", label:"Airports", only:true, opts(){
+        const counts = {};
+        for (const leg of legList()){
+          for (const a of [leg.route.origin, leg.route.destination].concat((leg.route.layovers||[]).map(l=>l.airport))) counts[a]=(counts[a]||0)+1;
+        }
+        const codes = Object.keys(counts).sort();
+        return codes.map(c => ({ v:c, l:`${c} — ${cityOf(c)}`, n:counts[c] }));
+      }, get:()=>state.filters.airports, set:v=>state.filters.airports=v },
+    { id:"premium", label:"Premium", only:false, opts(){
+        const counts = {};
+        for (const r of rs){
+          const prem = legsOf(r).some(l => ["business","first"].includes((l.route.segments&&l.route.segments[0]&&l.route.segments[0].cabin_class) || state.cabin)) || ["business","first"].includes(state.cabin);
+          const key = prem ? "premium" : "nonpremium";
+          counts[key]=(counts[key]||0)+1; counts["any"]=(counts["any"]||0)+1;
+        }
+        return PREMIUM_OPTS.map(o => ({ v:o.v, l:o.l, n:counts[o.v]||0 }));
+      }, get:()=>state.filters.premium, set:v=>state.filters.premium=v },
+    { id:"dates", label:"Dates", only:false, opts(){
+        const counts={};
+        for (const r of rs){
+          const d = legOut(r).route.departure_time.slice(0,10);
+          counts[d]=(counts[d]||0)+1;
+        }
+        const ds = Object.keys(counts).sort();
+        if (!ds.length) return [{ v:"any", l:"Any date", n:rs.length }];
+        return [{ v:"any", l:"Any date", n:rs.length }].concat(ds.map(d => ({ v:d, l:fmtDate(d+"T00:00"), n:counts[d] })));
+      }, get:()=>state.filters.dates, set:v=>state.filters.dates=v },
+    { id:"depTime", label:"Departure Time", only:false, opts(){
+        const counts={}; for (const r of rs){ const b=timeBucket(hourOfIso(legOut(r).route.departure_time)); counts[b]=(counts[b]||0)+1; }
+        return DEP_TIME_OPTS.map(o => ({ v:o.v, l:o.l, n:o.v==="any"?rs.length:(counts[o.v]||0) }));
+      }, get:()=>state.filters.depTime, set:v=>state.filters.depTime=v },
+    { id:"arrTime", label:"Arrival Time", only:false, opts(){
+        const counts={}; for (const r of rs){ const b=timeBucket(hourOfIso(legOut(r).route.arrival_time)); counts[b]=(counts[b]||0)+1; }
+        return ARR_TIME_OPTS.map(o => ({ v:o.v, l:o.l, n:o.v==="any"?rs.length:(counts[o.v]||0) }));
+      }, get:()=>state.filters.arrTime, set:v=>state.filters.arrTime=v },
+    { id:"duration", label:"Duration", only:false, opts(){
+        return DURATION_OPTS.map(o => ({ v:o.v, l:o.l, n:o.v==="any"?rs.length:rs.filter(rr=>rDurV(rr)<=+o.v).length }));
+      }, get:()=>state.filters.duration, set:v=>state.filters.duration=v },
+    { id:"cabinF", label:"Cabin", only:false, opts(){
+        const counts={}; for (const r of rs){ const c=(r.route&&r.route.segments&&r.route.segments[0]&&r.route.segments[0].cabin_class)||state.cabin; counts[c]=(counts[c]||0)+1; }
+        return CABIN_FILTER_OPTS.map(o => ({ v:o.v, l:o.l, n:o.v==="any"?rs.length:(counts[o.v]||0) }));
+      }, get:()=>state.filters.cabinF, set:v=>state.filters.cabinF=v },
+    { id:"alliance", label:"Alliance", only:false, opts(){
+        const counts={};
+        for (const r of rs){
+          for (const leg of legsOf(r)){
+            const al = CARRIER_ALLIANCE[leg.airline_code] || "Independent";
+            counts[al]=(counts[al]||0)+1;
+          }
+        }
+        return ALLIANCE_OPTS.map(o => ({ v:o.v, l:o.l, n:o.v==="any"?rs.length:(counts[o.v]||0) }));
+      }, get:()=>state.filters.alliance, set:v=>state.filters.alliance=v },
   ];
 }
 function renderFilterBar(){
@@ -1358,7 +1546,11 @@ function renderFilterBar(){
     e.stopPropagation();
     const id = btn.dataset.filter;
     if (id === "clear"){
-      state.filters = { stops:"any", airline:"", ticket:"", program:"" };
+      state.filters = {
+        stops:"any", airline:"", ticket:"", program:"",
+        airports:"", cabinF:"any", alliance:"any", premium:"any",
+        depTime:"any", arrTime:"any", duration:"any", dates:"any"
+      };
       renderFilterBar(); renderResults(); return;
     }
     const def = filterDefs().find(d => d.id === id); if (!def) return;
@@ -1397,12 +1589,45 @@ function openFilterDD(btn, def){
 function passesFilters(r){
   const f = state.filters;
   const OFF = offPrograms();
-  const legs = legRet(r) ? [legOut(r), legRet(r)] : [r];   // round-trip: filters apply to BOTH legs
+  const legs = legRet(r) ? [legOut(r), legRet(r)] : [r];
   if (OFF.size && legs.some(l => OFF.has(l.pricing.program_code))) return false;
   if (f.stops !== "any" && !legs.every(x => x.route.stops <= +f.stops)) return false;
   if (f.airline && !legs.every(x => x.airline_code === f.airline)) return false;
   if (f.ticket && !legs.every(x => ticketOfLeg(x) === f.ticket)) return false;
   if (f.program && !legs.every(x => x.pricing.program_code === f.program)) return false;
+  if (f.airports && !legs.some(x => {
+    const all = [x.route.origin, x.route.destination].concat((x.route.layovers||[]).map(l=>l.airport));
+    return all.includes(f.airports);
+  })) return false;
+  if (f.premium !== "any"){
+    const isPrem = legs.some(l => {
+      const c = (l.route.segments&&l.route.segments[0]&&l.route.segments[0].cabin_class) || state.cabin;
+      return ["business","first"].includes(c);
+    });
+    if (f.premium==="premium" && !isPrem) return false;
+    if (f.premium==="nonpremium" && isPrem) return false;
+  }
+  if (f.dates && f.dates !== "any"){
+    if (!legs.some(x => x.route.departure_time.slice(0,10)===f.dates)) return false;
+  }
+  if (f.depTime && f.depTime !== "any"){
+    if (!legs.every(x => timeBucket(hourOfIso(x.route.departure_time))===f.depTime)) return false;
+  }
+  if (f.arrTime && f.arrTime !== "any"){
+    if (!legs.every(x => timeBucket(hourOfIso(x.route.arrival_time))===f.arrTime)) return false;
+  }
+  if (f.duration && f.duration !== "any"){
+    if (rDurV(r) > +f.duration) return false;
+  }
+  if (f.cabinF && f.cabinF !== "any"){
+    if (!legs.every(x => {
+      const c = (x.route.segments&&x.route.segments[0]&&x.route.segments[0].cabin_class) || state.cabin;
+      return c===f.cabinF;
+    })) return false;
+  }
+  if (f.alliance && f.alliance !== "any"){
+    if (!legs.every(x => (CARRIER_ALLIANCE[x.airline_code] || "Independent") === f.alliance)) return false;
+  }
   return true;
 }
 function visibleResults(){ return state.results.filter(passesFilters); }
@@ -1474,12 +1699,14 @@ function timelineHTML(r, label){
   </div>`;
 }
 const MIXED_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4m0 4h.01"/></svg>`;
+const CLOSE_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18L18 6M6 6l12 12"/></svg>`;
 function cardHTML(r, expanded){
   const best = r.id === bestId();
   const tile = `<button type="button" class="tile ${best ? "best" : ""}" data-tile="${r.id}" title="Award cost: ${fmtMoney(rCostV(r))} — ${fmtPts(rPts(r))} pts + ${fmtMoney2(rFees(r))} taxes · click for the full itinerary">${fmtMoney(rCostV(r))}</button>`;
   const mixed = (isRT(r) && !r.pricing.same_program)
     ? `<div class="mixed-tag">${MIXED_SVG}<span>Mixed programs — two one-way awards</span></div>`
     : (r.mixed_cabin ? `<div class="mixed-tag">${MIXED_SVG}<span>Mixed class ticket</span></div>` : "");
+  const closeBtn = `<button type="button" class="card-close" data-close="${r.id}" aria-label="Collapse" title="Collapse" style="width:28px;height:28px;border-radius:8px;background:#1E212A;border:1px solid #2E3340;color:#9EA7B9;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color .15s,color .15s">${CLOSE_SVG}</button>`;
   if (isRT(r)){
     const grid = `
       <div class="rt-grid">
@@ -1497,7 +1724,10 @@ function cardHTML(r, expanded){
     return `<article class="fcard x" data-id="${r.id}">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
         ${mixed}
-        <div class="badges" style="position:static">${badgesHTML(r)}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="badges" style="position:static">${badgesHTML(r)}</div>
+          ${closeBtn}
+        </div>
       </div>
       ${grid}
       ${timelineHTML(r.outbound, "Outbound")}
@@ -1524,7 +1754,10 @@ function cardHTML(r, expanded){
   return `<article class="fcard x" data-id="${r.id}">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
       ${mixed}
-      <div class="badges" style="position:static">${badgesHTML(r)}</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="badges" style="position:static">${badgesHTML(r)}</div>
+        ${closeBtn}
+      </div>
     </div>
     <div class="card-main">${main}</div>
     ${timelineHTML(r)}
@@ -1764,15 +1997,21 @@ function itSegCard(leg, dir){
     <div class="it-tl">${rows}</div>
   </section>`;
 }
+const IT_CHIP_COLORS = {
+  AC_AEROPLAN:"#F97316", UA_MILEAGEPLUS:"#16A34A", TK_MILESSMILES:"#E11D2E", AF_FLYINGBLUE:"#1D4ED8",
+  DL_SKYMILES:"#DC2626", AA_AADVANTAGE:"#2563EB", AS_MILEAGEPLAN:"#0F766E", EY_GUEST:"#D97706",
+  QF_FREQUENTFLYER:"#B91C1C", TP_MILESGO:"#16A34A",
+};
 function itProgRow(code, name, costV, pts, tax){
-  const color = (PROGRAMS[code] && PROGRAMS[code].color) || "#E11D2E";
+  const color = IT_CHIP_COLORS[code] || (PROGRAMS[code] && PROGRAMS[code].color) || "#E11D2E";
+  // match image-4.png: Program/Cost/Points/Taxes/Link table with colored airline chips AC orange UA green, Flight link blue
   return `
     <tr>
       <td><span class="it-chip" style="background:${color}">${esc(PERSONAL_PROGRAM_SHORT(code))}</span></td>
       <td class="it-cost">${fmtMoney2(costV)}</td>
       <td class="it-pts">${fmtPts(pts)}</td>
       <td class="it-tax">${fmtMoney2(tax||0)}</td>
-      <td class="it-link-c"><a class="it-link" href="#" onclick="return false" title="Flight link opens on the operating airline's site">Flight link <span>↗</span></a></td>
+      <td class="it-link-c"><a class="it-link" href="#" onclick="return false" title="Flight link opens on the operating airline's site" style="color:#60A5FA">Flight link <span>↗</span></a></td>
     </tr>`;
 }
 function PERSONAL_PROGRAM_SHORT(code){ return PROGRAM_SHORT[code] || code; }
@@ -1904,7 +2143,6 @@ function itineraryHTML(r){
 <div class="it-banner">🌶️ Welcome to SpicyTool v1.0! SpicyTool Exclusive features are now live!<i></i></div>
 <header class="it-hdr"><div class="it-hdr-in">
   <div class="it-brand"><img alt="SpicyTool Logo" src="${LOGO_SRC}"><b><span class="wm-s">Spicy</span><em class="wm-t">Tool</em></b></div>
-  <span class="it-live"><i></i>v1.0 · Live Data</span>
   <div class="it-hdr-r">
     <span class="it-mp" title="Manage broker CPMs in the app">Modify programs <em>${brokerPrograms().length}</em></span>
     ${avatar}
@@ -1944,8 +2182,8 @@ function itineraryHTML(r){
   <p class="it-note">Cash = miles × your broker CPM + taxes · Retail is a modeled estimate · No bookings are made in this view.</p>
 </main>
 <footer><div class="it-f-in">
-  <div><b><span class="wm-s">Spicy</span><em class="wm-t">Tool</em> v1.0</b> • Premium Award Flight Analytics</div>
-  <p>Award prices modeled by the SpicyTool engine · taxes &amp; carrier fees may fluctuate.</p>
+  <div style="display:flex;align-items:center;gap:10px"><img alt="SpicyTool" src="${LOGO_SRC}" style="width:28px;height:28px;border-radius:8px;object-fit:contain"><b><span class="wm-s">Spicy</span><em class="wm-t">Tool</em> v1.0</b><span style="color:#475569">•</span><span style="color:#94A3B8">Premium Award Flight Analytics</span></div>
+  <div style="display:flex;align-items:center;gap:16px"><a href="#" onclick="return false" style="color:#94A3B8;text-decoration:none;font-weight:600;letter-spacing:.04em">DISCORD</a><span style="color:#334155">|</span><span>© 2026 SpicyTool Ltd. Award prices modeled by SpicyTool engine</span></div>
 </div></footer>
 </body>
 </html>`;
@@ -2106,7 +2344,7 @@ function init(){
     b.classList.add("active"); b.setAttribute("aria-selected","true");
     state.sort = b.dataset.sort; sortResults(); renderResults();
   }));
-  /* card interactions (delegated) */
+  /* card interactions (delegated) — fixed: clicking expanded card again minimizes back */
   $("results").addEventListener("click", e => {
     const tileBtn = e.target.closest("[data-tile]");
     if (tileBtn){ e.stopPropagation(); hideTPop(); const r = state.results.find(x => x.id === tileBtn.dataset.tile); if (r) openItinerary(r, false); return; }
@@ -2114,16 +2352,38 @@ function init(){
     if (dollar){
       e.stopPropagation();
       const id = dollar.dataset.ppop;
-      state.ppop = state.ppop === id ? null : id;
-      state.expanded = state.expanded === id ? state.expanded : id;
+      // toggle pricing popover + ensure card expanded
+      if (state.ppop === id && state.expanded === id){
+        state.ppop = null;
+        state.expanded = null;
+      } else {
+        state.ppop = id;
+        state.expanded = id;
+      }
       renderResults(); return;
     }
     const vi = e.target.closest("[data-vi]");
     if (vi){ e.stopPropagation(); const r = state.results.find(x => x.id === vi.dataset.vi); if (r) openItinerary(r, true); return; }
+    const closeBtn = e.target.closest("[data-close]");
+    if (closeBtn){
+      e.stopPropagation();
+      state.expanded = null;
+      state.ppop = null;
+      renderResults(); return;
+    }
     const card = e.target.closest(".fcard");
-    if (!card || card.classList.contains("x")) return;
+    if (!card) return;
+    // if clicking a button inside expanded card, don't collapse via card handler
+    if (card.classList.contains("x")){
+      if (e.target.closest("button")) return;
+      // clicking expanded card background collapses it
+      state.expanded = null;
+      state.ppop = null;
+      renderResults(); return;
+    }
+    // collapsed card: toggle expand
     state.expanded = state.expanded === card.dataset.id ? null : card.dataset.id;
-    state.ppop = null;
+    if (state.expanded !== card.dataset.id) state.ppop = null;
     renderResults();
   });
   $("results").addEventListener("mouseover", e => { const t = e.target.closest("[data-tile]"); if (t) showTPop(t.dataset.tile); });
