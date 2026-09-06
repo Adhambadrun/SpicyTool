@@ -1,13 +1,13 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.IsaiahDupree/flybasis-mcp",
-  "description": "LLM-ready web search + instant answers + URL-to-clean-text fetch for agents and RAG.",
-  "version": "1.0.0",
-  "websiteUrl": "https://flybasis-mcp.vercel.app",
+  "name": "io.github.Adhambadrun.SpicyTool/flybasis-mcp",
+  "description": "Keyless, self-contained MCP web toolkit: web search (DuckDuckGo Lite + Wikipedia fallback), keyless instant answers, and SSRF-guarded URL-to-clean-text fetch. No API keys required.",
+  "version": "2.0.0",
+  "websiteUrl": "https://github.com/Adhambadrun/SpicyTool/tree/main/flybasis-mcp",
   "repository": {
-    "url": "https://github.com/IsaiahDupree/flybasis-mcp",
+    "url": "https://github.com/Adhambadrun/SpicyTool",
     "source": "github",
-    "id": "1318902039"
+    "id": "1358521979"
   },
   "remotes": [
     {

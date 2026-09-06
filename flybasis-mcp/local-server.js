@@ -61,5 +61,5 @@ server.listen(PORT, () => {
   console.log(`flybasis-mcp local dev server listening on http://localhost:${PORT}`);
   console.log(`  MCP endpoint:    http://localhost:${PORT}/mcp`);
   console.log(`  Health endpoint: http://localhost:${PORT}/health`);
-  console.log(`  Upstream:        ${process.env.FLYBASIS_MCP_API_BASE_URL || 'https://agentsearch-api.vercel.app'}`);
+  console.log(`  Mode:            keyless (DuckDuckGo Lite + Wikipedia, self-hosted fetch)`);
 });

@@ -12,13 +12,17 @@ echo ">> installing requirements"
 .venv/bin/pip install --quiet --upgrade pip
 .venv/bin/pip install --quiet -r backend/requirements.txt
 
-# Load .env if present (does not override the environment)
-if [ -f .env ]; then
-  set -a
-  # shellcheck disable=SC1091
-  source .env
-  set +a
-fi
+# Load .env if present (does not override the environment).
+# Root .env is the primary location; backend/.env is accepted too so the
+# documented "put FLYBASIS_API_KEY in backend/.env" path always works.
+for envfile in .env backend/.env; do
+  if [ -f "$envfile" ]; then
+    set -a
+    # shellcheck disable=SC1091
+    source "$envfile"
+    set +a
+  fi
+done
 
 echo ">> SpicyTool listening on http://0.0.0.0:8000"
 cd backend
