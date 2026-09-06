@@ -245,8 +245,17 @@ def normalize_payload(raw: object, q: SearchQuery) -> list[AwardResult]:
     awd = data.get("awd") if isinstance(data, dict) else None
     if not isinstance(awd, list) or not awd:
         return []
+    # The docs: "it returns an array of arrays of flights, if round trip it
+    # returns two arrays of flights and one array of flights if one way."
+    # Accept BOTH spellings: nested [[outbound…], [return…]] (the documented
+    # sample and what the mock serves) and a flat [flight, …] list for a
+    # one-way reply. Never silently drop a whole payload over a shape change.
+    if awd and all(isinstance(group, list) for group in awd):
+        groups = awd[:2]
+    else:
+        groups = [awd]  # flat one-way list
     results: list[AwardResult] = []
-    for group in awd[:2]:  # outbound list, return list
+    for group in groups:  # outbound list, return list
         if not isinstance(group, list):
             continue
         for flight in group:
@@ -257,6 +266,26 @@ def normalize_payload(raw: object, q: SearchQuery) -> list[AwardResult]:
             except (KeyError, TypeError, ValueError):
                 continue
     return results
+
+
+def merge_frames(frames: list[object]) -> dict:
+    """Merge ``data`` frames into one payload of the documented shape.
+
+    Every frame is either ``{"data": {"awd": [[outbound…], [return…]]}}`` or --
+    per the docs' one-way wording -- ``{"data": {"awd": [flight, …]}}``. The
+    merged payload is always the nested form the rest of the app expects.
+    """
+    merged: dict = {"data": {"awd": [[], []]}}
+    for frame in frames:
+        inner = frame.get("data", frame) if isinstance(frame, dict) else frame
+        awd = inner.get("awd") if isinstance(inner, dict) else None
+        if not isinstance(awd, list):
+            continue
+        groups = awd[:2] if awd and all(isinstance(g, list) for g in awd) else [awd]
+        for idx, group in enumerate(groups):
+            if isinstance(group, list):
+                merged["data"]["awd"][idx].extend(group)
+    return merged
 
 
 class Flybasis(BaseProvider):
@@ -395,16 +424,9 @@ class Flybasis(BaseProvider):
             raise ProviderError(
                 "Flybasis returned no data for this search (no availability)."
             )
-        # Concatenate every data frame: award lists per direction.
-        merged: dict = {"data": {"awd": [[], []]}}
-        for frame in frames:
-            inner = frame.get("data", frame) if isinstance(frame, dict) else frame
-            awd = inner.get("awd") if isinstance(inner, dict) else None
-            if isinstance(awd, list):
-                for idx, group in enumerate(awd[:2]):
-                    if isinstance(group, list):
-                        merged["data"]["awd"][idx].extend(group)
-        return merged
+        # Concatenate every data frame (see merge_frames): award lists per
+        # direction, nested or flat one-way form.
+        return merge_frames(frames)
 
     def _search_payload(self, q: SearchQuery) -> dict:
         """Build the upstream ``search`` emit body from a v1/v2 SearchQuery."""

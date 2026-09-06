@@ -17,10 +17,11 @@ from providers.flybasis import Flybasis
 from providers.local_engine import SpicyToolEngine
 from providers.pointspath import PointsPath
 from providers.pointsyeah import PointsYeah
+from providers.seats_aero import SeatsAero
 from services import dedupe as dedupe_service
 
 # Every adapter the app knows how to talk to, in display order.
-_ALL_PROVIDERS = (AwardTool, PointsYeah, PointsPath, Flybasis, SpicyToolEngine)
+_ALL_PROVIDERS = (AwardTool, PointsYeah, PointsPath, Flybasis, SeatsAero, SpicyToolEngine)
 
 # SpicyTool relays the Flybasis search engine and nothing else: every itinerary
 # shown to a user is Flybasis output. The other adapters stay in the tree (and

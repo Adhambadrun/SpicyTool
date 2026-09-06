@@ -29,6 +29,31 @@ Contact Flybasis to obtain an API token for the WebSocket feed
 
 - Partner/API inquiry: https://flybasis.com (site), or the docs repo
   https://github.com/flybasis/searchapi.docs (auth section).
+
+**Verified contact channels (checked 2026-09-06 — use these, not the site form):**
+
+- `support@flybasis.com` — published on Flybasis' Terms of Service page.
+- `asad@flybasis.com` — GitHub profile email of the maintainer who owns the API
+  docs repo (`github.com/asadukashif`, company `flybasis.com`; he authored the
+  docs commits). Best route for WebSocket API access specifically.
+- `https://github.com/flybasis` — official org (only the docs repo is public).
+
+**What a thorough online search found (and did NOT find):** no public or demo
+token anywhere; no sandbox; no signup/self-serve portal; no RapidAPI listing;
+and GitHub code search shows **zero** third-party integrations of
+`enterprise-api.flybasis.com` — the only public hit is Flybasis' own docs.
+The docs' `YOUR_AUTH_TOKEN` is a placeholder, not a key: it is genuinely
+issued by Flybasis to partners.
+
+**Access request already filed on their behalf (2026-09-06):**
+https://github.com/flybasis/searchapi.docs/issues/1 — a public API-access
+request on the official docs repo asking how to obtain a token, whether a
+sandbox exists, and pricing. Check that thread for a reply before doing
+anything else. (The old `flybasis.com/agency-request` page that advertised
+"utilize our API" for agency accounts now returns 404; the archived copy
+shows it was a travel-agency consolidation application — agency identity and
+volume, not a generic developer signup.)
+
 - The token is what you pass as `auth={"token": "<KEY>"}` when connecting.
 
 The key must be **issued to you directly by Flybasis**. I cannot generate it,
@@ -53,6 +78,12 @@ FLYBASIS_API_KEY = <paste>
 # also SPICYTOOL_PROVIDERS=Flybasis (default) and SPICYTOOL_MODELED_ENGINE=0 (default)
 ```
 
+CI (GitHub Actions → Settings → Secrets and variables → Actions):
+`FLYBASIS_API_KEY` — the installed `.github/workflows/live-check.yml` then runs
+the same live verifier against production on every push and weekly
+(`python tools/verify_flybasis_socket.py --live`). Until the secret exists the
+step is skipped honestly, never faked.
+
 Verify (no auth needed for v2):
 
 ```bash
@@ -64,6 +95,33 @@ The moment Flybasis returns real frames you will see itineraries. If the socket
 errors, the response now carries the **exact** ProviderError
 (`providers[0].error`), e.g. `Flybasis connection failed: <reason>` or
 `Flybasis error event: <message>` — sent as given by the server.
+
+### Alternative live source you can get TODAY — Seats.aero
+
+Flybasis is not the only way to get real award availability. The repo now
+ships a full adapter for the **Seats.aero partner API**
+(`backend/providers/seats_aero.py`): cached award availability across ~20
+mileage programs with points, seats, cabins, airlines and flight-level detail
+(OpenAPI: https://developers.seats.aero).
+
+```bash
+# 1. Seats.aero Pro account -> settings -> API tab -> generate API key
+#    (up to 1,000 calls/day; non-commercial unless you have their written
+#     agreement; eligibility is at their sole discretion)
+# 2. Point SpicyTool at it (never commit the key):
+printf 'SEATS_AERO_API_KEY=<your key>\n' >> .env
+SPICYTOOL_PROVIDERS=SeatsAero ./run.sh
+# 3. Verify:  curl http://localhost:8000/api/v2/search?origin=JFK&destination=LHR&date=2026-10-05&cabin=business
+#    EXPECT: providers[] includes SeatsAero with ok == true and count > 0
+```
+
+Why this matters: it is a **legitimate, documented, self-serve** developer
+feed — no invitation, no middleware-hidden token. The one input it also
+requires is a key from *your own* Seats.aero account (identity + paid Pro
+tier, so it cannot be conjured by an agent). AwardSecrets
+(https://awardsecrets.com) is another dev-oriented option ($0.02/search,
+onboarding by email) but returns seat facts **without points pricing**, so it
+does not fill SpicyTool's award-pricing cards.
 
 ### Prove the socket works BEFORE you have a key
 

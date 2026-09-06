@@ -68,9 +68,17 @@ caches per query hash.
   (`SEATSFEED_API_KEY=…`). Adapters never hardcode credentials and never
   forge headers — bearer/API-key schemes only, with a single honest
   self-identifying User-Agent.
-- **Authorized commercial option**: [Seats.aero](https://seats.aero) offers a
-  licensed **Pro API** for award availability — a natural fit for this
-  adapter pattern once you hold a Pro key.
+- **Live option without Flybasis access**: the repo ships
+  `providers/seats_aero.py` — a full adapter for the [Seats.aero partner
+  API](https://developers.seats.aero) (cached award availability, ~20 mileage
+  programs; `SEATS_AERO_API_KEY` from the API tab of your Seats.aero Pro
+  account, `Partner-Authorization: Bearer`, up to 1,000 calls/day,
+  non-commercial unless you have written agreement). Enable with
+  `SPICYTOOL_PROVIDERS=SeatsAero` (or `all`). It is **not** in the default
+  relay: the production default stays Flybasis, so nothing is silently mixed.
+- **Authorized commercial option**: [Seats.aero](https://seats.aero) also
+  offers licensed **Pro API** access for award availability — a natural fit
+  for this adapter pattern once you hold a key.
 - **Non-HTTP transports**: the pattern is not limited to REST. The `Flybasis`
   adapter (`providers/flybasis.py`) implements the same contract over a
   Socket.IO **WebSocket** stream documented in `Flybasis-index.md` (at the

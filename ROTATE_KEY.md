@@ -64,7 +64,7 @@ is the whole point — it makes the exposure in git history harmless.
 AGENTSEARCH_API_KEY=<new key> ./run_live_check.sh
 ```
 
-Or push and let the CI workflow run it (see `ci/live-check.workflow.yml`).
+Or push and let the CI workflow run it (see `.github/workflows/live-check.yml`).
 
 ---
 

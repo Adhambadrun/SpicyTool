@@ -114,6 +114,8 @@ The explanation and valid values for each parameter are provided below.
 
 Sample data from the event can be previewed [here](https://flybasis.github.io/searchapi.docs/static/response.json). It returns an array of arrays of flights, if round trip, it returns two arrays of flights and one array of flights if one way.
 
+> **Shape note:** the attached sample nests the arrays (`{"awd": [[outbound…], [return…]]}`), while the one-way wording implies a single (flat) array of flights. SpicyTool accepts **both** spellings — `normalize_payload` and the socket frame merger (`merge_frames`) treat a flat `awd` as a one-way list and never drop a payload over a shape change.
+
 **Sample Flight Object (Single)**
 
 **`Flight` Object**

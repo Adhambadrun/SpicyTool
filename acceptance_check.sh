@@ -11,8 +11,8 @@ if [ "$(curl -s localhost:8000/api/v1/health | $PY -c 'import json,sys;print(jso
   echo "acceptance_check.sh needs the server started with SPICYTOOL_MODELED_ENGINE=1 (modeled engine is off by default)."; exit 2
 fi
 NPROV=$(curl -s localhost:8000/api/v2/providers | $PY -c 'import json,sys;print(len(json.load(sys.stdin)["providers"]))')
-if [ "$NPROV" != "5" ]; then
-  echo "acceptance_check.sh sweeps all 5 providers; this server relays $NPROV.";
+if [ "$NPROV" != "6" ]; then
+  echo "acceptance_check.sh sweeps all 6 providers; this server relays $NPROV.";
   echo "Restart it with SPICYTOOL_PROVIDERS=all SPICYTOOL_MODELED_ENGINE=1 (production relays Flybasis only)."; exit 2
 fi
 # In-process session token (shares the server's signing secret; no API backdoor).
@@ -93,9 +93,9 @@ import json, urllib.request
 d = json.load(urllib.request.urlopen('http://localhost:8000/api/v2/providers'))
 p = {x['provider']: x for x in d['providers']}
 assert p['SpicyToolEngine']['enabled'] is True
-for name in ('AwardTool', 'PointsPath', 'PointsYeah', 'Flybasis'):
+for name in ('AwardTool', 'PointsPath', 'PointsYeah', 'Flybasis', 'SeatsAero'):
     assert p[name]['enabled'] is False and p[name]['disabled_reason']
-print("SpicyToolEngine on; 4 gated with reasons")
+print("SpicyToolEngine on; 5 gated with reasons")
 EOF
 [ $? -eq 0 ] && ok "gating correct" || bad "gating"
 
@@ -104,7 +104,7 @@ $PY - <<'EOF'
 import json
 d = json.load(open('/tmp/v2.json'))
 sts = {p['provider']: p for p in d['providers']}
-assert all(sts[n]['ok'] is False and 'env' in (sts[n]['error'] or '').lower() or 'check' in (sts[n]['error'] or '').lower() or 'set the' in (sts[n]['error'] or '').lower() for n in ('AwardTool','PointsPath','PointsYeah','Flybasis'))
+assert all(sts[n]['ok'] is False and 'env' in (sts[n]['error'] or '').lower() or 'check' in (sts[n]['error'] or '').lower() or 'set the' in (sts[n]['error'] or '').lower() for n in ('AwardTool','PointsPath','PointsYeah','Flybasis','SeatsAero'))
 assert d['count'] > 0, "request itself failed"
 print("4x ok:false + actionable reason; aggregate still returned", d['count'], "results")
 EOF
@@ -114,7 +114,7 @@ echo "== 9. SSE start -> data per provider -> complete =="
 ev=$(timeout 10 curl -sN 'localhost:8000/api/v2/search/stream?origin=LAX&destination=NRT&date=2026-12-01&cabin=business' | grep -a '^event:' | sed 's/event: //;s/\r//' | tr '\n' ' ' | sed 's/ *$//')
 echo "  events: $ev"
 case "$ev" in
-  "start data data data data data complete") ok "v2 SSE sequence" ;;
+  "start data data data data data data complete") ok "v2 SSE sequence" ;;
   *) bad "v2 SSE sequence: $ev" ;;
 esac
 
@@ -310,7 +310,7 @@ print("default relay = %s; other adapters unreachable; notice ok" % names)
 EOF
 ) && (cd backend && SPICYTOOL_PROVIDERS=all ../.venv/bin/python -c "
 from services import aggregator
-assert len(aggregator.registry()) == 5, [p.name for p in aggregator.registry()]
+assert len(aggregator.registry()) == 6, [p.name for p in aggregator.registry()]
 print('SPICYTOOL_PROVIDERS=all ->', [p.name for p in aggregator.registry()])
 ")
 [ $? -eq 0 ] && ok "Flybasis-only relay default + override" || bad "Flybasis-only relay"
@@ -382,15 +382,15 @@ else
   echo "  SKIP (node not available)"
 fi
 
-echo "== 19d. no-provider empty state explains itself (jsdom) =="
-# The state a user sees whenever FLYBASIS_API_KEY is unset: it must name the
-# reason (the API `notice`, never dropped) and the exact variable to set, and
-# must not do so only when a credential really is the problem.
+echo "== 19d. no-result/error empty state stays minimal (jsdom) =="
+# A search with no results or an error (no credential, timeout, any failure)
+# must render ONLY "Something went wrong" — no verbose notice, no credential
+# remedy, no hint — while a genuinely-empty live search keeps its advice.
 if command -v node >/dev/null 2>&1; then
   ( cd frontend/test && [ -d node_modules/jsdom ] || npm install --silent >/dev/null 2>&1
     node no-provider-empty.mjs )
   rc=$?
-  if   [ $rc -eq 0 ];  then ok "no-provider empty state gives reason + exact remedy"
+  if   [ $rc -eq 0 ];  then ok "no-result/error empty state says just 'Something went wrong'"
   elif [ $rc -eq 77 ]; then echo "  SKIP (jsdom not installed — cd frontend/test && npm install)"
   else bad "no-provider empty state (see output above)"; fi
 else
