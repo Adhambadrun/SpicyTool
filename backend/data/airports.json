@@ -1,0 +1,758 @@
+{
+ "JFK": {
+  "name": "John F. Kennedy International",
+  "city": "New York",
+  "country": "US",
+  "region": "North America",
+  "lat": 40.6413,
+  "lon": -73.7781,
+  "tz": -5.0
+ },
+ "EWR": {
+  "name": "Newark Liberty International",
+  "city": "Newark",
+  "country": "US",
+  "region": "North America",
+  "lat": 40.6895,
+  "lon": -74.1745,
+  "tz": -5.0
+ },
+ "LGA": {
+  "name": "LaGuardia",
+  "city": "New York",
+  "country": "US",
+  "region": "North America",
+  "lat": 40.7769,
+  "lon": -73.874,
+  "tz": -5.0
+ },
+ "BOS": {
+  "name": "Logan International",
+  "city": "Boston",
+  "country": "US",
+  "region": "North America",
+  "lat": 42.3656,
+  "lon": -71.0096,
+  "tz": -5.0
+ },
+ "IAD": {
+  "name": "Washington Dulles International",
+  "city": "Washington",
+  "country": "US",
+  "region": "North America",
+  "lat": 38.9531,
+  "lon": -77.4565,
+  "tz": -5.0
+ },
+ "ORD": {
+  "name": "O'Hare International",
+  "city": "Chicago",
+  "country": "US",
+  "region": "North America",
+  "lat": 41.9742,
+  "lon": -87.9073,
+  "tz": -6.0
+ },
+ "ATL": {
+  "name": "Hartsfield-Jackson International",
+  "city": "Atlanta",
+  "country": "US",
+  "region": "North America",
+  "lat": 33.6407,
+  "lon": -84.4277,
+  "tz": -5.0
+ },
+ "MIA": {
+  "name": "Miami International",
+  "city": "Miami",
+  "country": "US",
+  "region": "North America",
+  "lat": 25.7959,
+  "lon": -80.287,
+  "tz": -5.0
+ },
+ "DFW": {
+  "name": "Dallas/Fort Worth International",
+  "city": "Dallas",
+  "country": "US",
+  "region": "North America",
+  "lat": 32.8998,
+  "lon": -97.0403,
+  "tz": -6.0
+ },
+ "IAH": {
+  "name": "George Bush Intercontinental",
+  "city": "Houston",
+  "country": "US",
+  "region": "North America",
+  "lat": 29.9902,
+  "lon": -95.3368,
+  "tz": -6.0
+ },
+ "DEN": {
+  "name": "Denver International",
+  "city": "Denver",
+  "country": "US",
+  "region": "North America",
+  "lat": 39.8561,
+  "lon": -104.6737,
+  "tz": -7.0
+ },
+ "SEA": {
+  "name": "Seattle-Tacoma International",
+  "city": "Seattle",
+  "country": "US",
+  "region": "North America",
+  "lat": 47.4502,
+  "lon": -122.3088,
+  "tz": -8.0
+ },
+ "SFO": {
+  "name": "San Francisco International",
+  "city": "San Francisco",
+  "country": "US",
+  "region": "North America",
+  "lat": 37.6213,
+  "lon": -122.379,
+  "tz": -8.0
+ },
+ "LAX": {
+  "name": "Los Angeles International",
+  "city": "Los Angeles",
+  "country": "US",
+  "region": "North America",
+  "lat": 33.9416,
+  "lon": -118.4085,
+  "tz": -8.0
+ },
+ "YYZ": {
+  "name": "Toronto Pearson International",
+  "city": "Toronto",
+  "country": "CA",
+  "region": "North America",
+  "lat": 43.6777,
+  "lon": -79.6248,
+  "tz": -5.0
+ },
+ "YUL": {
+  "name": "Montréal-Trudeau International",
+  "city": "Montreal",
+  "country": "CA",
+  "region": "North America",
+  "lat": 45.4706,
+  "lon": -73.7408,
+  "tz": -5.0
+ },
+ "YVR": {
+  "name": "Vancouver International",
+  "city": "Vancouver",
+  "country": "CA",
+  "region": "North America",
+  "lat": 49.1967,
+  "lon": -123.1815,
+  "tz": -8.0
+ },
+ "MEX": {
+  "name": "Benito Juárez International",
+  "city": "Mexico City",
+  "country": "MX",
+  "region": "North America",
+  "lat": 19.4363,
+  "lon": -99.0721,
+  "tz": -6.0
+ },
+ "BOG": {
+  "name": "El Dorado International",
+  "city": "Bogotá",
+  "country": "CO",
+  "region": "South America",
+  "lat": 4.7016,
+  "lon": -74.1469,
+  "tz": -5.0
+ },
+ "GRU": {
+  "name": "São Paulo/Guarulhos International",
+  "city": "São Paulo",
+  "country": "BR",
+  "region": "South America",
+  "lat": -23.4356,
+  "lon": -46.4731,
+  "tz": -3.0
+ },
+ "EZE": {
+  "name": "Ministro Pistarini International",
+  "city": "Buenos Aires",
+  "country": "AR",
+  "region": "South America",
+  "lat": -34.8222,
+  "lon": -58.5358,
+  "tz": -3.0
+ },
+ "SCL": {
+  "name": "Arturo Merino Benítez International",
+  "city": "Santiago",
+  "country": "CL",
+  "region": "South America",
+  "lat": -33.393,
+  "lon": -70.7858,
+  "tz": -4.0
+ },
+ "LIM": {
+  "name": "Jorge Chávez International",
+  "city": "Lima",
+  "country": "PE",
+  "region": "South America",
+  "lat": -12.0219,
+  "lon": -77.1143,
+  "tz": -5.0
+ },
+ "LHR": {
+  "name": "Heathrow",
+  "city": "London",
+  "country": "GB",
+  "region": "Europe",
+  "lat": 51.47,
+  "lon": -0.4543,
+  "tz": 0.0
+ },
+ "LGW": {
+  "name": "Gatwick",
+  "city": "London",
+  "country": "GB",
+  "region": "Europe",
+  "lat": 51.1537,
+  "lon": -0.1821,
+  "tz": 0.0
+ },
+ "CDG": {
+  "name": "Charles de Gaulle",
+  "city": "Paris",
+  "country": "FR",
+  "region": "Europe",
+  "lat": 49.0097,
+  "lon": 2.5479,
+  "tz": 1.0
+ },
+ "AMS": {
+  "name": "Schiphol",
+  "city": "Amsterdam",
+  "country": "NL",
+  "region": "Europe",
+  "lat": 52.3105,
+  "lon": 4.7683,
+  "tz": 1.0
+ },
+ "FRA": {
+  "name": "Frankfurt am Main",
+  "city": "Frankfurt",
+  "country": "DE",
+  "region": "Europe",
+  "lat": 50.0379,
+  "lon": 8.5622,
+  "tz": 1.0
+ },
+ "MUC": {
+  "name": "Munich",
+  "city": "Munich",
+  "country": "DE",
+  "region": "Europe",
+  "lat": 48.3537,
+  "lon": 11.7861,
+  "tz": 1.0
+ },
+ "ZRH": {
+  "name": "Zurich",
+  "city": "Zurich",
+  "country": "CH",
+  "region": "Europe",
+  "lat": 47.4647,
+  "lon": 8.5492,
+  "tz": 1.0
+ },
+ "VIE": {
+  "name": "Vienna International",
+  "city": "Vienna",
+  "country": "AT",
+  "region": "Europe",
+  "lat": 48.1103,
+  "lon": 16.5697,
+  "tz": 1.0
+ },
+ "MAD": {
+  "name": "Adolfo Suárez Barajas",
+  "city": "Madrid",
+  "country": "ES",
+  "region": "Europe",
+  "lat": 40.4983,
+  "lon": -3.5676,
+  "tz": 1.0
+ },
+ "BCN": {
+  "name": "El Prat",
+  "city": "Barcelona",
+  "country": "ES",
+  "region": "Europe",
+  "lat": 41.2974,
+  "lon": 2.0833,
+  "tz": 1.0
+ },
+ "FCO": {
+  "name": "Fiumicino",
+  "city": "Rome",
+  "country": "IT",
+  "region": "Europe",
+  "lat": 41.8003,
+  "lon": 12.2389,
+  "tz": 1.0
+ },
+ "MXP": {
+  "name": "Malpensa",
+  "city": "Milan",
+  "country": "IT",
+  "region": "Europe",
+  "lat": 45.6306,
+  "lon": 8.7281,
+  "tz": 1.0
+ },
+ "LIS": {
+  "name": "Humberto Delgado",
+  "city": "Lisbon",
+  "country": "PT",
+  "region": "Europe",
+  "lat": 38.7742,
+  "lon": -9.1342,
+  "tz": 0.0
+ },
+ "CPH": {
+  "name": "Copenhagen",
+  "city": "Copenhagen",
+  "country": "DK",
+  "region": "Europe",
+  "lat": 55.618,
+  "lon": 12.656,
+  "tz": 1.0
+ },
+ "ARN": {
+  "name": "Arlanda",
+  "city": "Stockholm",
+  "country": "SE",
+  "region": "Europe",
+  "lat": 59.6519,
+  "lon": 17.9186,
+  "tz": 1.0
+ },
+ "OSL": {
+  "name": "Oslo Gardermoen",
+  "city": "Oslo",
+  "country": "NO",
+  "region": "Europe",
+  "lat": 60.1976,
+  "lon": 11.1004,
+  "tz": 1.0
+ },
+ "HEL": {
+  "name": "Helsinki-Vantaa",
+  "city": "Helsinki",
+  "country": "FI",
+  "region": "Europe",
+  "lat": 60.3172,
+  "lon": 24.9633,
+  "tz": 2.0
+ },
+ "IST": {
+  "name": "Istanbul Airport",
+  "city": "Istanbul",
+  "country": "TR",
+  "region": "Europe",
+  "lat": 41.2753,
+  "lon": 28.7519,
+  "tz": 3.0
+ },
+ "ATH": {
+  "name": "Eleftherios Venizelos",
+  "city": "Athens",
+  "country": "GR",
+  "region": "Europe",
+  "lat": 37.9364,
+  "lon": 23.9445,
+  "tz": 2.0
+ },
+ "DUB": {
+  "name": "Dublin",
+  "city": "Dublin",
+  "country": "IE",
+  "region": "Europe",
+  "lat": 53.4213,
+  "lon": -6.2701,
+  "tz": 0.0
+ },
+ "CAI": {
+  "name": "Cairo International",
+  "city": "Cairo",
+  "country": "EG",
+  "region": "Africa",
+  "lat": 30.1219,
+  "lon": 31.4056,
+  "tz": 2.0
+ },
+ "JNB": {
+  "name": "O.R. Tambo International",
+  "city": "Johannesburg",
+  "country": "ZA",
+  "region": "Africa",
+  "lat": -26.1367,
+  "lon": 28.2411,
+  "tz": 2.0
+ },
+ "CPT": {
+  "name": "Cape Town International",
+  "city": "Cape Town",
+  "country": "ZA",
+  "region": "Africa",
+  "lat": -33.9715,
+  "lon": 18.6021,
+  "tz": 2.0
+ },
+ "NBO": {
+  "name": "Jomo Kenyatta International",
+  "city": "Nairobi",
+  "country": "KE",
+  "region": "Africa",
+  "lat": -1.3192,
+  "lon": 36.9278,
+  "tz": 3.0
+ },
+ "ADD": {
+  "name": "Bole International",
+  "city": "Addis Ababa",
+  "country": "ET",
+  "region": "Africa",
+  "lat": 8.9779,
+  "lon": 38.7993,
+  "tz": 3.0
+ },
+ "CMN": {
+  "name": "Mohammed V International",
+  "city": "Casablanca",
+  "country": "MA",
+  "region": "Africa",
+  "lat": 33.3675,
+  "lon": -7.59,
+  "tz": 1.0
+ },
+ "LOS": {
+  "name": "Murtala Muhammed International",
+  "city": "Lagos",
+  "country": "NG",
+  "region": "Africa",
+  "lat": 6.5774,
+  "lon": 3.3212,
+  "tz": 1.0
+ },
+ "DXB": {
+  "name": "Dubai International",
+  "city": "Dubai",
+  "country": "AE",
+  "region": "Middle East",
+  "lat": 25.2532,
+  "lon": 55.3657,
+  "tz": 4.0
+ },
+ "AUH": {
+  "name": "Zayed International",
+  "city": "Abu Dhabi",
+  "country": "AE",
+  "region": "Middle East",
+  "lat": 24.433,
+  "lon": 54.6511,
+  "tz": 4.0
+ },
+ "DOH": {
+  "name": "Hamad International",
+  "city": "Doha",
+  "country": "QA",
+  "region": "Middle East",
+  "lat": 25.2731,
+  "lon": 51.6081,
+  "tz": 3.0
+ },
+ "TLV": {
+  "name": "Ben Gurion",
+  "city": "Tel Aviv",
+  "country": "IL",
+  "region": "Middle East",
+  "lat": 32.0114,
+  "lon": 34.8867,
+  "tz": 2.0
+ },
+ "RUH": {
+  "name": "King Khalid International",
+  "city": "Riyadh",
+  "country": "SA",
+  "region": "Middle East",
+  "lat": 24.9576,
+  "lon": 46.6988,
+  "tz": 3.0
+ },
+ "AMM": {
+  "name": "Queen Alia International",
+  "city": "Amman",
+  "country": "JO",
+  "region": "Middle East",
+  "lat": 31.7226,
+  "lon": 35.9932,
+  "tz": 3.0
+ },
+ "DEL": {
+  "name": "Indira Gandhi International",
+  "city": "Delhi",
+  "country": "IN",
+  "region": "South Asia",
+  "lat": 28.5562,
+  "lon": 77.1,
+  "tz": 5.5
+ },
+ "BOM": {
+  "name": "Chhatrapati Shivaji Maharaj International",
+  "city": "Mumbai",
+  "country": "IN",
+  "region": "South Asia",
+  "lat": 19.0896,
+  "lon": 72.8656,
+  "tz": 5.5
+ },
+ "BLR": {
+  "name": "Kempegowda International",
+  "city": "Bengaluru",
+  "country": "IN",
+  "region": "South Asia",
+  "lat": 13.1986,
+  "lon": 77.7066,
+  "tz": 5.5
+ },
+ "MLE": {
+  "name": "Velana International",
+  "city": "Malé",
+  "country": "MV",
+  "region": "South Asia",
+  "lat": 4.1918,
+  "lon": 73.5291,
+  "tz": 5.0
+ },
+ "BKK": {
+  "name": "Suvarnabhumi",
+  "city": "Bangkok",
+  "country": "TH",
+  "region": "Southeast Asia",
+  "lat": 13.69,
+  "lon": 100.7501,
+  "tz": 7.0
+ },
+ "SIN": {
+  "name": "Changi",
+  "city": "Singapore",
+  "country": "SG",
+  "region": "Southeast Asia",
+  "lat": 1.3644,
+  "lon": 103.9915,
+  "tz": 8.0
+ },
+ "KUL": {
+  "name": "Kuala Lumpur International",
+  "city": "Kuala Lumpur",
+  "country": "MY",
+  "region": "Southeast Asia",
+  "lat": 2.7456,
+  "lon": 101.7099,
+  "tz": 8.0
+ },
+ "CGK": {
+  "name": "Soekarno-Hatta International",
+  "city": "Jakarta",
+  "country": "ID",
+  "region": "Southeast Asia",
+  "lat": -6.1256,
+  "lon": 106.6558,
+  "tz": 7.0
+ },
+ "MNL": {
+  "name": "Ninoy Aquino International",
+  "city": "Manila",
+  "country": "PH",
+  "region": "Southeast Asia",
+  "lat": 14.5086,
+  "lon": 121.0198,
+  "tz": 8.0
+ },
+ "SGN": {
+  "name": "Tan Son Nhat International",
+  "city": "Ho Chi Minh City",
+  "country": "VN",
+  "region": "Southeast Asia",
+  "lat": 10.8188,
+  "lon": 106.6519,
+  "tz": 7.0
+ },
+ "HKG": {
+  "name": "Hong Kong International",
+  "city": "Hong Kong",
+  "country": "HK",
+  "region": "East Asia",
+  "lat": 22.308,
+  "lon": 113.9185,
+  "tz": 8.0
+ },
+ "NRT": {
+  "name": "Narita International",
+  "city": "Tokyo",
+  "country": "JP",
+  "region": "East Asia",
+  "lat": 35.772,
+  "lon": 140.3929,
+  "tz": 9.0
+ },
+ "HND": {
+  "name": "Haneda",
+  "city": "Tokyo",
+  "country": "JP",
+  "region": "East Asia",
+  "lat": 35.5494,
+  "lon": 139.7798,
+  "tz": 9.0
+ },
+ "ICN": {
+  "name": "Incheon International",
+  "city": "Seoul",
+  "country": "KR",
+  "region": "East Asia",
+  "lat": 37.4602,
+  "lon": 126.4407,
+  "tz": 9.0
+ },
+ "PVG": {
+  "name": "Pudong International",
+  "city": "Shanghai",
+  "country": "CN",
+  "region": "East Asia",
+  "lat": 31.1443,
+  "lon": 121.8083,
+  "tz": 8.0
+ },
+ "PEK": {
+  "name": "Capital International",
+  "city": "Beijing",
+  "country": "CN",
+  "region": "East Asia",
+  "lat": 40.0799,
+  "lon": 116.6031,
+  "tz": 8.0
+ },
+ "TPE": {
+  "name": "Taoyuan International",
+  "city": "Taipei",
+  "country": "TW",
+  "region": "East Asia",
+  "lat": 25.0777,
+  "lon": 121.2328,
+  "tz": 8.0
+ },
+ "SYD": {
+  "name": "Kingsford Smith",
+  "city": "Sydney",
+  "country": "AU",
+  "region": "Oceania",
+  "lat": -33.9399,
+  "lon": 151.1753,
+  "tz": 10.0
+ },
+ "MEL": {
+  "name": "Tullamarine",
+  "city": "Melbourne",
+  "country": "AU",
+  "region": "Oceania",
+  "lat": -37.669,
+  "lon": 144.841,
+  "tz": 10.0
+ },
+ "BNE": {
+  "name": "Brisbane",
+  "city": "Brisbane",
+  "country": "AU",
+  "region": "Oceania",
+  "lat": -27.3842,
+  "lon": 153.1175,
+  "tz": 10.0
+ },
+ "AKL": {
+  "name": "Auckland",
+  "city": "Auckland",
+  "country": "NZ",
+  "region": "Oceania",
+  "lat": -37.0082,
+  "lon": 174.785,
+  "tz": 12.0
+ },
+ "HNL": {
+  "name": "Daniel K. Inouye International",
+  "city": "Honolulu",
+  "country": "US",
+  "region": "Oceania",
+  "lat": 21.3245,
+  "lon": -157.9251,
+  "tz": -10.0
+ },
+ "BEG": {
+  "name": "Belgrade Nikola Tesla Airport",
+  "city": "Belgrade",
+  "country": "RS",
+  "region": "Europe",
+  "lat": 44.8184,
+  "lon": 20.3091,
+  "tz": 1.0
+ },
+ "ZAG": {
+  "name": "Franjo Tuđman Airport Zagreb",
+  "city": "Zagreb",
+  "country": "HR",
+  "region": "Europe",
+  "lat": 45.7429,
+  "lon": 16.0688,
+  "tz": 1.0
+ },
+ "DUS": {
+  "name": "Düsseldorf Airport",
+  "city": "Düsseldorf",
+  "country": "DE",
+  "region": "Europe",
+  "lat": 51.2895,
+  "lon": 6.7668,
+  "tz": 1.0
+ },
+ "KEF": {
+  "name": "Keflavík International Airport",
+  "city": "Reykjavík",
+  "country": "IS",
+  "region": "Europe",
+  "lat": 63.985,
+  "lon": -22.6056,
+  "tz": 0.0
+ },
+ "WAW": {
+  "name": "Warsaw Chopin Airport",
+  "city": "Warsaw",
+  "country": "PL",
+  "region": "Europe",
+  "lat": 52.1657,
+  "lon": 20.9671,
+  "tz": 1.0
+ },
+ "BRU": {
+  "name": "Brussels Airport",
+  "city": "Brussels",
+  "country": "BE",
+  "region": "Europe",
+  "lat": 50.9014,
+  "lon": 4.4844,
+  "tz": 1.0
+ }
+}

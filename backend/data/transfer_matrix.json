@@ -1,0 +1,214 @@
+{
+  "credit_cards": {
+    "AMEX": {
+      "name": "Amex Membership Rewards",
+      "short": "Amex MR",
+      "color": "#006FCF"
+    },
+    "CHASE": {
+      "name": "Chase Ultimate Rewards",
+      "short": "Chase UR",
+      "color": "#117ACA"
+    },
+    "CAPONE": {
+      "name": "Capital One Miles",
+      "short": "Cap One",
+      "color": "#D22E35"
+    },
+    "CITI": {
+      "name": "Citi ThankYou Points",
+      "short": "Citi TYP",
+      "color": "#003B70"
+    },
+    "BILT": {
+      "name": "Bilt Rewards",
+      "short": "Bilt",
+      "color": "#00A0DF"
+    },
+    "MARRIOTT": {
+      "name": "Marriott Bonvoy",
+      "short": "Bonvoy",
+      "color": "#A61C31"
+    }
+  },
+  "airline_programs": {
+    "AC_AEROPLAN": {
+      "name": "Air Canada Aeroplan",
+      "alliance": "Star Alliance",
+      "color": "#D31145",
+      "partners": {
+        "AMEX": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "CHASE": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "CAPONE": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "CITI": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "MARRIOTT": {
+          "ratio": 0.3333,
+          "instant": false
+        }
+      }
+    },
+    "UA_MILEAGEPLUS": {
+      "name": "United MileagePlus",
+      "alliance": "Star Alliance",
+      "color": "#0033A0",
+      "partners": {
+        "MARRIOTT": {
+          "ratio": 0.3333,
+          "instant": false
+        }
+      }
+    },
+    "TK_MILESSMILES": {
+      "name": "Turkish Miles&Smiles",
+      "alliance": "Star Alliance",
+      "color": "#C70A0C",
+      "partners": {
+        "CAPONE": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "CITI": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "MARRIOTT": {
+          "ratio": 0.3333,
+          "instant": false
+        }
+      }
+    },
+    "AF_FLYINGBLUE": {
+      "name": "Air France/KLM Flying Blue",
+      "alliance": "SkyTeam",
+      "color": "#002157",
+      "partners": {
+        "AMEX": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "CHASE": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "CAPONE": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "CITI": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "BILT": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "MARRIOTT": {
+          "ratio": 0.3333,
+          "instant": false
+        }
+      }
+    },
+    "DL_SKYMILES": {
+      "name": "Delta SkyMiles",
+      "alliance": "SkyTeam",
+      "color": "#C8102E",
+      "partners": {
+        "AMEX": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "MARRIOTT": {
+          "ratio": 0.3333,
+          "instant": false
+        }
+      }
+    },
+    "AA_AADVANTAGE": {
+      "name": "American AAdvantage",
+      "alliance": "Oneworld",
+      "color": "#0078D2",
+      "partners": {
+        "BILT": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "MARRIOTT": {
+          "ratio": 0.3333,
+          "instant": false
+        }
+      }
+    },
+    "AS_MILEAGEPLAN": {
+      "name": "Alaska Mileage Plan",
+      "alliance": "Oneworld",
+      "color": "#0B2949",
+      "partners": {
+        "MARRIOTT": {
+          "ratio": 0.3333,
+          "instant": false
+        }
+      }
+    },
+    "EY_GUEST": {
+      "name": "Etihad Guest",
+      "alliance": "Independent",
+      "color": "#BD8B13",
+      "partners": {
+        "CAPONE": {
+          "instant": true,
+          "ratio": 1.0
+        },
+        "CITI": {
+          "instant": true,
+          "ratio": 1.0
+        },
+        "MARRIOTT": {
+          "instant": false,
+          "ratio": 0.3333
+        }
+      }
+    },
+    "QF_FREQUENTFLYER": {
+      "name": "Qantas Frequent Flyer",
+      "alliance": "Oneworld",
+      "color": "#E40000",
+      "partners": {
+        "AMEX": {
+          "instant": true,
+          "ratio": 1.0
+        },
+        "MARRIOTT": {
+          "instant": false,
+          "ratio": 0.3333
+        }
+      }
+    },
+    "TP_MILESGO": {
+      "name": "TAP Miles&Go",
+      "alliance": "Star Alliance",
+      "color": "#00A04E",
+      "partners": {
+        "CITI": {
+          "instant": true,
+          "ratio": 1.0
+        },
+        "MARRIOTT": {
+          "instant": false,
+          "ratio": 0.3333
+        }
+      }
+    }
+  }
+}
