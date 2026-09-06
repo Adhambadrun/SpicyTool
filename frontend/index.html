@@ -2069,7 +2069,14 @@ function renderResults(){
   if (!vis.length){
     host.innerHTML = "";
     const empty = $("empty"); empty.hidden = false; syncItineraryStep();
-    const q = state.lastQuery || {};
+    /* Fall back to the live form state: renderResults() also runs before the first
+       search has populated state.lastQuery, and an empty `q` would otherwise render
+       a sentence with no date and no cabin ("...on this route for  in this cabin"). */
+    const q = {
+      date: state.date, returnDate: state.returnDate, cabin: state.cabin,
+      trip: state.trip, flex: state.flex, retFlex: state.retFlex,
+      ...(state.lastQuery || {}),
+    };
     const h3 = empty.querySelector("h3");
     const failed = state.providers.filter(p => p && p.ok === false && p.error && !/disabled/i.test(p.error));
     if (state.results.length){
@@ -2088,7 +2095,7 @@ function renderResults(){
       h3.textContent = "No award availability";
       $("empty-msg").textContent = q.trip === "roundtrip"
         ? `${state.liveProviders.join(", ") || "Live providers"} found no award space for ${shortDate(q.date)} → ${shortDate(q.returnDate)} on this route and cabin. Try other dates, airports or cabin.`
-        : `${state.liveProviders.join(", ") || "Live providers"} found no award space on this route for ${shortDate(q.date)} in ${CABIN_LABEL[q.cabin] || q.cabin || "this cabin"}. Try nearby dates (± days in the calendar) or other airports.`;
+        : `${state.liveProviders.join(", ") || "Live providers"} found no award space on this route for ${shortDate(q.date)} in ${CABIN_LABEL[q.cabin] || q.cabin || "this cabin"}. Try nearby dates (the ±1 / ±2 day chips in the date picker) or other airports.`;
     }
     return;
   }
