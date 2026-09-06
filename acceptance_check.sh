@@ -20,8 +20,13 @@ TOKEN=$(cd backend && ../.venv/bin/python -c "from core.auth import issue_token;
 ok()   { echo -e "\033[92mPASS\033[0m  $1"; pass=$((pass+1)); }
 bad()  { echo -e "\033[91mFAIL\033[0m  $1"; fail=$((fail+1)); }
 
-echo "== 1. tests_integration.py: 33/33 =="
-if (cd backend && ../.venv/bin/python tests_integration.py | grep -q "All 33 assertions passed"); then ok "33/33 assertions"; else bad "integration tests"; fi
+echo "== 1. tests_integration.py (all assertions) =="
+# Count-agnostic: the suite grows, so match its own summary line rather than a
+# hardcoded number that silently rots every time an assertion is added.
+if (cd backend && ../.venv/bin/python tests_integration.py | grep -qE "^.*All [0-9]+ assertions passed"); then
+  n=$(cd backend && ../.venv/bin/python tests_integration.py | grep -oE "All [0-9]+ assertions" | grep -oE "[0-9]+")
+  ok "$n/$n assertions"
+else bad "integration tests"; fi
 
 echo "== 2. /api/v1/health =="
 h=$(curl -s localhost:8000/api/v1/health)
