@@ -89,7 +89,7 @@ button{font-family:inherit}
 .live-pill i{width:6px;height:6px;border-radius:9999px;background:#34D399}
 
 /* search card — code 7: bg-[#141416] border-[#232429] rounded-2xl p-6 sm:p-7 shadow-2xl */
-.search-card{background:var(--s-card);border:1px solid var(--s-card-border);border-radius:16px;padding:24px;box-shadow:var(--shadow-2xl);margin-bottom:32px;position:relative}
+.search-card{display:flex;flex-direction:column;background:var(--s-card);border:1px solid var(--s-card-border);border-radius:16px;padding:24px;box-shadow:var(--shadow-2xl);margin-bottom:32px;position:relative}
 @media(min-width:640px){.search-card{padding:28px}}
 .cabin-row{display:flex;align-items:center;gap:24px;margin-bottom:20px;font-size:12px;font-weight:500;color:#A1A1AA;position:relative;z-index:20}
 .cabin-btn{display:inline-flex;align-items:center;gap:4px;color:inherit;background:none;border:none;cursor:pointer;font-size:inherit;font-weight:inherit;padding:0}
@@ -118,11 +118,11 @@ button{font-family:inherit}
 .date-val{font-size:14px;font-weight:500;color:#fff;display:flex;align-items:center;gap:8px;flex:1;min-width:0}
 
 /* advanced toggles — code 7/12: pt-4 border-t-[#1F1F24] text-xs */
-/* search CTA — code 7: px-10 py-3 bg-brand-red rounded-full text-sm font-semibold shadow-lg */
+/* search CTA — Search sits on the RIGHT-HAND side of the card (image-1 style); full-width pill on mobile */
 .cta{width:100%;padding:12px 40px;background:var(--brand);color:#fff;border:none;border-radius:9999px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 10px 15px -3px rgba(225,29,46,.3);transition:background .15s,transform .1s;align-self:flex-end;margin-top:20px}
 .cta:hover{background:var(--brand-hover)}
 .cta:active{transform:scale(.98)}
-@media(min-width:640px){.cta{width:auto;align-self:center}}
+@media(min-width:640px){.cta{width:auto;align-self:flex-end}}
 .cta:disabled{opacity:.5;cursor:wait}
 
 /* promo card — code 12: .promo-card-glow border-[#232328] rounded-2xl p-7 */
@@ -300,9 +300,6 @@ a.mp-btn{text-decoration:none}
 .fcard.x .badges{position:static;justify-content:flex-end;margin-bottom:12px}
 @media(max-width:639px){.badges{position:static;justify-content:flex-end;margin-bottom:12px;flex-wrap:wrap}}
 .badge-save{font-size:12px;font-weight:600;padding:4px 10px;border-radius:9999px;background:var(--green);color:var(--green-text);border:1px solid var(--green-border);white-space:nowrap}
-.badge-neutral{font-size:12px;font-weight:600;padding:4px 10px;border-radius:9999px;background:var(--neutral);color:var(--neutral-text);border:1px solid var(--neutral-border);white-space:nowrap}
-.btn-dollar{width:24px;height:24px;border-radius:9999px;background:var(--neutral);border:1px solid var(--neutral-border);color:var(--neutral-text);font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:color .15s;flex-shrink:0}
-.btn-dollar:hover{color:#fff}
 /* card main row — code 8: flex items-center gap-6 pt-2 sm:pt-0 */
 .card-main{display:flex;flex-wrap:wrap;align-items:center;gap:24px;padding-top:8px}
 @media(min-width:640px){.card-main{padding-top:0;flex-wrap:nowrap}}
@@ -552,7 +549,6 @@ a.brand:hover .wordmark{opacity:.9}
 .it-vi:hover{background:#C31624;color:#fff}
 .it-ghost{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:8px;background:#181A20;border:1px solid #262A35;color:#D1D1D6;font-weight:600;font-size:14px;cursor:pointer;text-decoration:none;transition:background .15s,color .15s}
 .it-ghost:hover{background:#20242D;color:#fff}
-.it-note{font-size:12px;color:#64748B;margin:0 4px 24px}
 .it-empty{width:100%;background:#141416;border:1px dashed #2A2E3B;border-radius:12px;padding:40px 24px;text-align:center}
 .it-empty h3{font-size:18px;font-weight:600;color:#fff;margin-bottom:8px}
 .it-empty p{font-size:13px;color:#94A3B8;margin-bottom:20px}
@@ -753,7 +749,7 @@ a.brand:hover .wordmark{opacity:.9}
     <div id="it-body"></div>
   </main>
 
-  <footer class="footer">© 2026 SpicyTool. Award prices modeled by the SpicyTool engine — always confirm on the airline's own site before booking.</footer>
+  <footer class="footer">© 2026 SpicyTool.  | always confirm on the airline's own site before booking.</footer>
 </div>
 
 <!-- ================= LOGIN VIEW (code 3, v1.1 — owner PIN login) ================= -->
@@ -904,7 +900,7 @@ const AIRLINE_REAL = {
   "VL": `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24,12c0-6.648-5.352-12-12-12C5.376,0,0,5.352,0,12c0,6.624,5.376,12,12,12C18.648,24,24,18.624,24,12z M23.136,12c0,6.12-4.992,11.136-11.136,11.136C5.88,23.136,0.864,18.121,0.864,12C0.864,5.856,5.88,0.864,12,0.864 C18.144,0.864,23.136,5.856,23.136,12z M16.248,11.28c-0.264,0-0.6,0-1.032,0.024l0.312-0.528h0.504c1.8,0,3.144,0.096,4.368,0.312 l0.552-0.528c-1.368-0.24-3.024-0.384-4.704-0.384H15.84l0.264-0.504h0.456c1.752,0,3.336,0.144,4.872,0.432l0.576-0.552 c-1.728-0.336-3.576-0.503-5.568-0.503c-0.849,0.003-1.698,0.043-2.544,0.12c-0.96,2.063-2.496,3.264-4.224,3.24 C9,12.384,8.159,12.097,7.08,11.52l-1.008-0.576l0.312-0.288l2.328,1.008l0.504-0.384L4.512,9.144l-0.72,0.552L2.112,9l0.024,0.696 c2.256,1.032,3.192,1.608,5.568,3.312c3.096,2.208,5.856,3.408,9.696,4.176l1.008-0.96h-0.24c-2.544,0-4.824-0.84-6.144-2.256 c1.104-0.672,2.471-0.983,4.368-0.983c0.504,0,1.224,0.047,1.896,0.119l0.576-0.552c-0.9-0.11-1.805-0.166-2.712-0.168 c-0.609-0.001-1.217,0.023-1.824,0.072l0.432-0.528c0.511-0.03,1.024-0.046,1.536-0.048c1.272,0,2.112,0.048,3.072,0.192 l0.552-0.528C18.912,11.377,17.52,11.28,16.248,11.28z"/></svg>`,
   "VS": `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 3.559c-3.102 0-3.836.489-5.06 1.877L0 15.232c7.143-.326 9.348 6.858 16.572 4.858L24 3.559H14zm-2.477 1.586a.608.608 0 0 1 .395.128c.204.164.164.409.164.409-.04.367-.408.611-.408.611-.327.286-.776 1.102-.776 1.102-.49.775-1.06 2.286-1.55 3.796-.653 2.286-1.063 4.408-1.104 4.612-.04.204-.122.449-.326.449-.286 0-.326-.367-.326-.408 0-.041-.367-4.49-.367-4.49s-.042-.204-.082-.204c0 0-.08-.04-.163.164l-.408.897c-.163.408-.449.246-.449.246-.245-.122-.082-.408-.082-.408l.898-2.246c.205-.49.53-.45.53-.45.285.041.287.327.287.45.04.122.326 3.43.326 3.43.04.367.082.244.082.244C8.858 9.517 10.94 5.6 10.94 5.6c.197-.34.408-.445.584-.455zm4.793 2.793c.126-.01.174.07.174.07.123.204-.164.449-.164.449-.245.286-.449.082-.449.082-.204-.163.123-.45.123-.45.138-.106.241-.146.316-.152zm2.178.394c.024 0 .037.002.037.002.368 0 .326.49.326.49l-.123 1.346c-.081.571.368.37.368.37 0-.042.122-.084.49-.247.326-.122.49-.04.572.082.082.122.04.245-.041.367-.082.163-.449.286-.734.367-.204.041-.37.123-.37.123-.49.123-1.06.368-1.06.368a28.677 28.677 0 0 0-3.55 1.795c-.042.163-.042.285-.042.367 0 0-.162 2.204-.203 2.531 0 0-.002.41.04.654.04.245.205.775-.122.979a.394.394 0 0 1-.572-.082c0-.041-.123-.163-.041-.776 0 0 .164-1.592.205-2.082l.082-1.142c-2.694 1.673-4.164 3.183-4.164 3.183-.163.164-.53.45-.776.123-.244-.326.409-.816.409-.816 1.428-1.225 3.102-2.285 4.572-3.143l.039-.367s.042-.122-.08-.04c0 0-.49.286-.858.122 0 0-.287-.123-.287-.572 0 0 .001-1.388.573-1.959 0 0 .325-.326.652-.326.204 0 .165.286-.08.49-.245.245-.286.529-.367.856 0 0-.206.939.12.898 0 0 .328.001.45-.57 0 0 .203-1.308.244-1.471 0-.163.043-.53.37-.53 0 0 .325 0 .284.245 0 0-.244 1.591-.367 2.734a34.2 34.2 0 0 1 3.592-1.795c.082-.04.041-.04.041-.04-.245-.082-.123-.614-.123-.614l.123-1.102c0-.285-.326-.123-.326-.123-.245.164-.408.45-.408.45-.123.204-.205 1.142-.205 1.142-.041.49-.327.572-.327.572-.326.123-.367-.082-.367-.082-.04-.122.041-.57.041-.57l.162-1.185c.041-.531.409-.612.409-.612.081-.04.203-.04.326 0 .122.041.205 0 .287 0 .122 0 .285-.164.285-.164.245-.214.421-.244.494-.246zm-2.486.897c.222.01.115.373.115.412-.04.04-.246 1.591-.246 1.591-.04.409-.408.49-.408.49-.327.082-.244-.245-.244-.245l.04-.327.286-1.51c.04-.326.408-.408.408-.408a.262.262 0 0 1 .049-.003zm-5.237.53c.083-.008.164.019.21.126 0 0 .08.163-.206.408 0 0-.327.327-.49.041 0 0-.121-.204.205-.45 0 0 .144-.11.281-.124zm1.57.829c.144.017.19.154.19.154.123.286-.328.49-.328.49-.408.245-.447.776-.447.776l-.082.734c-.041.53-.408.612-.408.612-.49.163-.286-.694-.286-.694.041-.204.163-1.224.163-1.224.04-.613.408-.612.367-.653.04 0 .326-.04.326-.04s.124-.042.328-.124a.343.343 0 0 1 .178-.031zm-2 .68c.1.001.292.057.231.455l-.246 1.345-.082.49s-.04.245-.244.368c0 0-.49.244-.45-.123l.247-1.96s.08-.488.488-.57c0 0 .024-.006.057-.005z"/></svg>`,
 };
-AIRLINE_REAL["VL"] = AIRLINE_REAL["LH"]; /* Lufthansa City Airlines — same Lufthansa crane */ /* Lufthansa City Airlines — same Lufthansa crane */
+  AIRLINE_REAL["VL"] = AIRLINE_REAL["LH"]; /* Lufthansa — same crane for the City subsidiary */
 
 
 const AIRLINE_LOGOS = {
@@ -1016,7 +1012,7 @@ const AIRLINES_39 = [
   ["MS","Egyptair"],["EK","Emirates"],["ET","Ethiopian Airlines"],["EY","Etihad"],
   ["EW","Eurowings"],["AY","Finnair"],["FZ","flyDubai"],["IB","Iberia"],["FI","Icelandair"],
   ["AZ","ITA Airways"],["B6","Jetblue Airways"],["KL","KLM Royal Dutch Airlines"],
-  ["LO","LOT - Polish Airlines"],["LH","Lufthansa"],["VL","Lufthansa City"],
+  ["LO","LOT - Polish Airlines"],["LH","Lufthansa"],["VL","Lufthansa"],
   ["AT","Royal Air Maroc"],["RJ","Royal Jordanian"],["SK","SAS"],["LX","Swiss"],
   ["TP","TAP Portugal"],["TK","Turkish Airlines"],["UA","United Airlines"],["VS","Virgin Atlantic"],
 ];
@@ -1044,7 +1040,7 @@ const CARRIER_NAMES = {
   "4Y":"Discover Airlines","MS":"Egyptair","EK":"Emirates","ET":"Ethiopian Airlines","EY":"Etihad Airways",
   "EW":"Eurowings","AY":"Finnair","FZ":"flyDubai","IB":"Iberia","FI":"Icelandair","AZ":"ITA Airways",
   "B6":"JetBlue Airways","KL":"KLM Royal Dutch Airlines","LO":"LOT Polish Airlines","LH":"Lufthansa",
-  "VL":"Lufthansa City","AT":"Royal Air Maroc","RJ":"Royal Jordanian","SK":"SAS","LX":"Swiss International Air Lines",
+  "VL":"Lufthansa","AT":"Royal Air Maroc","RJ":"Royal Jordanian","SK":"SAS","LX":"Swiss International Air Lines",
   "TP":"TAP Air Portugal","TK":"Turkish Airlines","UA":"United Airlines","VS":"Virgin Atlantic",
 };
 /* Official airline sites — the itinerary's "Flight link" points at the real operating carrier. */
@@ -1920,20 +1916,9 @@ const PLANE_SVG = `<svg width="16" height="12" viewBox="0 0 24 18" fill="current
 function badgesHTML(r){
   const save = savings(r);
   const chip = ticketChip(ticketOf(r));
-  if (isRT(r)){
-    const same = r.pricing.same_program;
-    const so = PROGRAM_SHORT[r.pricing.outbound_program_code] || "AWD";
-    const sr = PROGRAM_SHORT[r.pricing.return_program_code] || "AWD";
-    const tags = same
-      ? `<span class="badge-neutral" title="${esc(r.pricing.outbound_program)} — both legs">${so}</span>`
-      : `<span class="badge-neutral" title="Outbound: ${esc(r.pricing.outbound_program)}">${so}</span><span class="badge-neutral" title="Return: ${esc(r.pricing.return_program)}">${sr}</span>`;
-    return `${chip}<span class="badge-save" title="Modeled retail estimate vs combined award cost">${fmtMoney(save)} Off Retail</span>${tags}
-      <button type="button" class="btn-dollar" data-ppop="${r.id}" aria-label="Price breakdown" title="Price breakdown">$</button>`;
-  }
-  const short = PROGRAM_SHORT[r.pricing.program_code] || "AWD";
-  return `${chip}<span class="badge-save" title="Modeled retail estimate vs award cost">${fmtMoney(save)} Off Retail</span>
-    <span class="badge-neutral" title="${esc(r.pricing.program_name)}">${short}</span>
-    <button type="button" class="btn-dollar" data-ppop="${r.id}" aria-label="Price breakdown" title="Price breakdown">$</button>`;
+  /* image-3 style: only the ticket tag + savings badge — no program/airline code chip,
+     no $ button and (on expanded options) no X; the price tile itself opens the itinerary */
+  return `${chip}<span class="badge-save" title="Modeled retail estimate vs award cost">${fmtMoney(save)} Off Retail</span>`;
 }
 function legRowHTML(r){
   const stops = (r.route.layovers||[]).map(l => l.airport).join(", ");
@@ -1982,14 +1967,12 @@ function timelineHTML(r, label){
   </div>`;
 }
 const MIXED_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4m0 4h.01"/></svg>`;
-const CLOSE_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18L18 6M6 6l12 12"/></svg>`;
 function cardHTML(r, expanded){
   const best = r.id === bestId();
   const tile = `<button type="button" class="tile ${best ? "best" : ""}" data-tile="${r.id}" title="Award cost: ${fmtMoney(rCostV(r))} — ${fmtPts(rPts(r))} pts + ${fmtMoney2(rFees(r))} taxes · click to open the full itinerary in a new tab">${fmtMoney(rCostV(r))}</button>`;
   const mixed = (isRT(r) && !r.pricing.same_program)
     ? `<div class="mixed-tag">${MIXED_SVG}<span>Mixed programs — two one-way awards</span></div>`
     : (r.mixed_cabin ? `<div class="mixed-tag">${MIXED_SVG}<span>Mixed class ticket</span></div>` : "");
-  const closeBtn = `<button type="button" class="card-close" data-close="${r.id}" aria-label="Collapse" title="Collapse" style="width:28px;height:28px;border-radius:8px;background:#1E212A;border:1px solid #2E3340;color:#9EA7B9;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color .15s,color .15s">${CLOSE_SVG}</button>`;
   if (isRT(r)){
     const grid = `
       <div class="rt-grid">
@@ -2007,10 +1990,7 @@ function cardHTML(r, expanded){
     return `<article class="fcard x" data-id="${r.id}">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
         ${mixed}
-        <div style="display:flex;align-items:center;gap:8px">
-          <div class="badges" style="position:static">${badgesHTML(r)}</div>
-          ${closeBtn}
-        </div>
+        <div class="badges" style="position:static;margin-bottom:0">${badgesHTML(r)}</div>
       </div>
       ${grid}
       ${timelineHTML(r.outbound, "Outbound")}
@@ -2037,10 +2017,7 @@ function cardHTML(r, expanded){
   return `<article class="fcard x" data-id="${r.id}">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
       ${mixed}
-      <div style="display:flex;align-items:center;gap:8px">
-        <div class="badges" style="position:static">${badgesHTML(r)}</div>
-        ${closeBtn}
-      </div>
+      <div class="badges" style="position:static;margin-bottom:0">${badgesHTML(r)}</div>
     </div>
     <div class="card-main">${main}</div>
     ${timelineHTML(r)}
@@ -2505,7 +2482,7 @@ function renderItinerary(r){
       <a class="it-vi" href="${esc(itineraryURL(r.id))}" target="_blank" rel="noopener" title="Open this itinerary in its own tab — a real link, never a blank page">Get VI* ${ARROW_SVG}</a>
     </div>
   </section>
-  <p class="it-note">Cash = miles × your broker CPM (default ${DEFAULT_CPM}¢ per program, editable in Modify programs) + taxes &amp; fees. Retail and seat availability are modeled, not live — always confirm on the airline's own site before booking.</p>`;
+`;
   $("it-back-flights").addEventListener("click", () => showResultsView());
 }
 
@@ -2694,27 +2671,6 @@ function init(){
   $("results").addEventListener("click", e => {
     const tileBtn = e.target.closest("[data-tile]");
     if (tileBtn){ e.stopPropagation(); hideTPop(); const r = state.results.find(x => x.id === tileBtn.dataset.tile); if (r) openItinerary(r, true); return; }
-    const dollar = e.target.closest("[data-ppop]");
-    if (dollar){
-      e.stopPropagation();
-      const id = dollar.dataset.ppop;
-      // toggle pricing popover + ensure card expanded
-      if (state.ppop === id && state.expanded === id){
-        state.ppop = null;
-        state.expanded = null;
-      } else {
-        state.ppop = id;
-        state.expanded = id;
-      }
-      renderResults(); return;
-    }
-    const closeBtn = e.target.closest("[data-close]");
-    if (closeBtn){
-      e.stopPropagation();
-      state.expanded = null;
-      state.ppop = null;
-      renderResults(); return;
-    }
     const card = e.target.closest(".fcard");
     if (!card) return;
     // if clicking a button inside expanded card, don't collapse via card handler

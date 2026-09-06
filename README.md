@@ -145,8 +145,9 @@ The UI is a pixel-faithful implementation of the repository's Stitch mockups
 **Cost model (disclosed in-UI):** tile cash price = miles × your broker CPM
 (per program, default 1.4¢ — see *Modify programs*) + taxes & fees; "Retail"
 is the engine's modeled estimate (miles × cabin rate); savings/discount
-compare the two. Both figures are labeled as modeled in the price popover and
-the itinerary page.
+compare the two. Retail is labeled as a modeled estimate in the itinerary's
+Retail/Cost/Discount summary, and the itinerary footer reminds travellers to
+always confirm on the airline's own site before booking.
 
 ## What you get
 
