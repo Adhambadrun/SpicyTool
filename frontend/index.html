@@ -124,9 +124,8 @@ button{font-family:inherit}
 .adv-opt.on{color:#fff}
 .adv-dot{width:22px;height:22px;border-radius:9999px;border:2px solid #4A4A52;background:transparent;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,border-color .15s}
 .adv-dot svg{width:12px;height:12px;opacity:0;transition:opacity .15s}
-.adv-opt.on .adv-dot{background:#22C55E;border-color:#22C55E;color:#fff}
+.adv-opt.on .adv-dot{background:var(--brand);border-color:var(--brand);color:#fff}   /* both toggles: brand red when checked */
 .adv-opt.on .adv-dot svg{opacity:1}
-.adv-opt.on.hc-super .adv-dot{background:var(--brand);border-color:var(--brand)}
 /* search CTA — Search sits on the RIGHT-HAND side of the card (image-1 style); full-width pill on mobile */
 .cta{width:100%;padding:12px 40px;background:var(--brand);color:#fff;border:none;border-radius:9999px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 10px 15px -3px rgba(225,29,46,.3);transition:background .15s,transform .1s;align-self:flex-end;margin-top:20px}
 .cta:hover{background:var(--brand-hover)}
@@ -135,8 +134,7 @@ button{font-family:inherit}
 .cta:disabled{opacity:.5;cursor:wait}
 
 /* promo card — code 12: .promo-card-glow border-[#232328] rounded-2xl p-7 */
-.promo{margin-top:24px;width:100%;border:1px solid #232328;border-radius:16px;padding:28px;position:relative;overflow:hidden;background:radial-gradient(circle at 85% 100%,rgba(225,29,46,.12) 0%,transparent 65%),#141417}
-@media(min-width:768px){.promo{width:60%}}
+.promo{margin-top:24px;width:100%;border:1px solid #232328;border-radius:16px;padding:28px;position:relative;overflow:hidden;background:radial-gradient(circle at 85% 100%,rgba(225,29,46,.12) 0%,transparent 65%),#141417}   /* same width as the search card */
 .promo h2{font-size:24px;line-height:1.2;font-weight:700;color:#fff;margin-bottom:24px;max-width:384px;position:relative;z-index:1}
 @media(min-width:768px){.promo h2{font-size:30px}}
 .promo-cta{padding:10px 24px;border-radius:9999px;background:var(--brand);color:#fff;font-size:14px;font-weight:600;border:none;cursor:pointer;box-shadow:0 10px 15px -3px rgba(225,29,46,.25);position:relative;z-index:1;transition:background .15s}
