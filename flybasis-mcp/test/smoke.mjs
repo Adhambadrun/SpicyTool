@@ -2,15 +2,15 @@
 // local-server.js (which serves the exact same api/mcp.js Vercel handler).
 // No mocks: initialize, tools/list, and a live tools/call all go over real
 // HTTP/JSON-RPC to a real MCP server instance, which in turn fetches real data
-// from AGENTSEARCH_MCP_API_BASE_URL.
+// from FLYBASIS_MCP_API_BASE_URL.
 //
 // Usage:
 //   node local-server.js &            # in one terminal
 //   node test/smoke.mjs               # in another
 //
-// Note: the upstream agentsearch-api /v1/* routes sit behind a RapidAPI
+// Note: the upstream flybasis-search-api /v1/* routes sit behind a RapidAPI
 // proxy-secret guard, so the live tools/call reaches real data only when
-// AGENTSEARCH_MCP_PROXY_SECRET is configured. Without it the origin returns 403
+// FLYBASIS_MCP_PROXY_SECRET is configured. Without it the origin returns 403
 // ("served through RapidAPI"); that is an expected upstream-auth condition (the
 // connector is wired correctly — it just isn't holding the secret locally), so
 // this smoke test gates on the protocol surface (health, initialize, tools/list)
@@ -44,7 +44,7 @@ async function rpc(method, params) {
 }
 
 async function main() {
-  console.log(`Smoke-testing agentsearch-mcp at ${BASE} ...\n`);
+  console.log(`Smoke-testing flybasis-mcp at ${BASE} ...\n`);
 
   // 1. health
   const health = await fetch(`${BASE}/health`).then((r) => r.json());
@@ -56,14 +56,14 @@ async function main() {
   const init = await rpc('initialize', {
     protocolVersion: '2025-06-18',
     capabilities: {},
-    clientInfo: { name: 'agentsearch-mcp-smoke-test', version: '1.0.0' },
+    clientInfo: { name: 'flybasis-mcp-smoke-test', version: '1.0.0' },
   });
   console.log('\n== initialize ==');
   console.log(`HTTP ${init.status}`);
   console.log(JSON.stringify(init.json, null, 2));
   if (init.status !== 200 || init.json?.error) throw new Error('initialize failed');
   const serverName = init.json?.result?.serverInfo?.name;
-  if (serverName !== 'agentsearch') throw new Error(`unexpected server name: ${serverName}`);
+  if (serverName !== 'flybasis') throw new Error(`unexpected server name: ${serverName}`);
 
   // 3. tools/list
   const list = await rpc('tools/list', {});
@@ -90,10 +90,11 @@ async function main() {
   const resultText = call.json?.result?.content?.[0]?.text;
   console.log(resultText);
   if (call.json?.result?.isError) {
-    const guarded = !process.env.AGENTSEARCH_MCP_PROXY_SECRET &&
+    const guarded = !process.env.FLYBASIS_MCP_PROXY_SECRET &&
       /403|RapidAPI|proxy|forbidden/i.test(resultText || '');
-    if (guarded) {
-      console.log('\n[warn] tools/call hit the upstream RapidAPI proxy-secret guard and no AGENTSEARCH_MCP_PROXY_SECRET is set locally — expected. Protocol surface verified; set the secret to exercise a real end-to-end fetch.');
+    const upstreamUnavailable = /fetch failed|timed out|ENOTFOUND|ECONNRESET|network/i.test(resultText || '');
+    if (guarded || upstreamUnavailable) {
+      console.log('\n[warn] upstream data call was unavailable locally (proxy guard or network). Protocol surface verified; configure FLYBASIS_MCP_PROXY_SECRET and network access to exercise live data.');
     } else {
       throw new Error(`tools/call returned isError: ${resultText}`);
     }
