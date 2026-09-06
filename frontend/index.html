@@ -363,10 +363,6 @@ a.mp-btn{text-decoration:none}
 .pp-row{display:grid;grid-template-columns:repeat(4,1fr);align-items:center;padding:6px 0;font-weight:500;color:#fff;font-size:12px}
 .pp-airline{width:28px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
 .pp-taxes{color:#9FA9BA}
-.pp-cta-row{padding-top:12px;margin-top:12px;border-top:1px solid #252936;display:flex;justify-content:flex-end}
-.pp-cta{padding:8px 20px;border-radius:9999px;background:var(--brand);color:#fff;font-size:12px;font-weight:600;border:none;cursor:pointer;box-shadow:0 10px 15px -3px rgba(127,29,29,.3);transition:background .15s,transform .1s;font-family:inherit}
-.pp-cta:hover{background:var(--brand-hover)}
-.pp-cta:active{transform:scale(.95)}
 .pp-note{font-size:11px;color:#838C9E;margin-top:8px}
 /* skeletons + empty */
 .sk-card{background:var(--r-card);border:1px solid var(--r-border);border-radius:12px;padding:20px;display:flex;gap:24px;align-items:center;flex-wrap:wrap}
@@ -498,14 +494,8 @@ a.brand:hover .wordmark{opacity:.9}
 .it-open-tab{display:inline-flex;align-items:center;gap:6px}
 @media(max-width:820px){.it-open-tab{display:none}}
 
-/* ============== ITINERARY VIEW (code 13) — rendered IN the app: logo header + search bar + dates calendar ============== */
+/* ============== ITINERARY VIEW (code 13) — rendered IN the app: logo header, NO search bar (home-only) ============== */
 .it-main{max-width:1152px}
-.it-search{width:100%;margin:0 auto 28px}
-.it-search-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap}
-.it-search-h h2{font-size:14px;font-weight:600;color:#E2E8F0}
-.it-search-note{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#94A3B8;font-weight:600}
-#view-itinerary .search-card{margin-bottom:0}
-#view-itinerary .cta{margin-top:16px}
 .it-sum{display:flex;flex-direction:column;justify-content:space-between;gap:8px;margin-bottom:12px;padding:0 4px;font-size:14px}
 @media(min-width:640px){.it-sum{flex-direction:row;align-items:center}}
 .it-sum-t{font-size:16px;font-weight:500;color:#E2E8F0}
@@ -715,7 +705,7 @@ a.brand:hover .wordmark{opacity:.9}
   </main>
 </div>
 
-<!-- ================= ITINERARY VIEW (code 13) — in-app: app logo, search bar + dates calendar, never a blank tab ================= -->
+<!-- ================= ITINERARY VIEW (code 13) — in-app: app logo + full itinerary, never a blank tab ================= -->
 <div id="view-itinerary" hidden>
   <header class="lg-banner app-banner" data-purpose="announcement-banner">
     <p>Welcome to SpicyTool v1.0! SpicyTool Exclusive features are now live!</p>
@@ -758,16 +748,6 @@ a.brand:hover .wordmark{opacity:.9}
           <span>Itinerary</span>
         </div>
       </div>
-    </section>
-
-    <!-- the app's real search bar: same node as the home page, so airport chips, the dates
-         calendar, cabin/passengers/flexibility and Search all work here unchanged -->
-    <section class="it-search" aria-label="Search bar">
-      <div class="it-search-h">
-        <h2>Search</h2>
-        <span class="it-search-note">Airports · dates calendar · cabin · passengers</span>
-      </div>
-      <div id="it-search-slot"></div>
     </section>
 
     <div id="it-body"></div>
@@ -2005,7 +1985,7 @@ const MIXED_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 const CLOSE_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18L18 6M6 6l12 12"/></svg>`;
 function cardHTML(r, expanded){
   const best = r.id === bestId();
-  const tile = `<button type="button" class="tile ${best ? "best" : ""}" data-tile="${r.id}" title="Award cost: ${fmtMoney(rCostV(r))} — ${fmtPts(rPts(r))} pts + ${fmtMoney2(rFees(r))} taxes · click for the full itinerary">${fmtMoney(rCostV(r))}</button>`;
+  const tile = `<button type="button" class="tile ${best ? "best" : ""}" data-tile="${r.id}" title="Award cost: ${fmtMoney(rCostV(r))} — ${fmtPts(rPts(r))} pts + ${fmtMoney2(rFees(r))} taxes · click to open the full itinerary in a new tab">${fmtMoney(rCostV(r))}</button>`;
   const mixed = (isRT(r) && !r.pricing.same_program)
     ? `<div class="mixed-tag">${MIXED_SVG}<span>Mixed programs — two one-way awards</span></div>`
     : (r.mixed_cabin ? `<div class="mixed-tag">${MIXED_SVG}<span>Mixed class ticket</span></div>` : "");
@@ -2103,7 +2083,6 @@ function ppopHTML(r){
   return `<div class="ppop" data-ppop-for="${r.id}">
     ${head}
     ${rows}
-    <div class="pp-cta-row"><button type="button" class="pp-cta" data-vi="${r.id}">Get VI*</button></div>
     <div class="pp-note">Cash = miles × your broker CPM (default ${DEFAULT_CPM}¢ — set per program in Modify programs) + taxes · retail is a modeled estimate.${note ? " " + note : ""}</div>
   </div>`;
 }
@@ -2158,8 +2137,8 @@ function setHash(h){
   else history.replaceState(null, "", location.pathname + location.search);
 }
 function hideViews(){ for (const v of ["view-search","view-results","view-itinerary"]) $(v).hidden = true; }
-/* the search card (airport chips + dates calendar + cabin/passengers) is ONE node, moved into whichever
-   view is on screen — so the itinerary tab has the app's real search bar, fully wired */
+/* the search card (airport chips + dates calendar + cabin/passengers) is ONE node that always lives in the
+   home screen's #search-slot — the only place the search bar appears */
 function moveSearchCard(slotId){
   const card = $("search-card"), slot = $(slotId);
   if (card && slot && card.parentElement !== slot) slot.appendChild(card);
@@ -2190,7 +2169,6 @@ function showItineraryView(r){
   state.itineraryId = cur ? cur.id : null;
   hideViews(); $("view-itinerary").hidden = false;
   document.body.classList.add("in-results");
-  moveSearchCard("it-search-slot");
   renderItinerary(cur);
   setHash(cur ? "itinerary/" + encodeURIComponent(cur.id) : "itinerary");
   window.scrollTo(0,0);
@@ -2346,10 +2324,11 @@ function saveMP(){
 }
 
 /* ============================ itinerary (code 13) — a real view of the app, never a blank tab ============================
-   The itinerary renders INSIDE the app: same announcement banner, same logo header (a link to "/"), the same
-   search bar with the dates calendar, then the leg timeline and the Award Redemptions matrix. "Open in new
-   tab" / "Get VI*" point at a real URL (#itinerary/<id>) that restores the search from storage — so a new tab
-   shows the itinerary instead of a blank page, even when pop-ups are sandboxed or blocked. */
+   The itinerary renders INSIDE the app: same announcement banner, same logo header, the leg timeline and the
+   Award Redemptions matrix. The search bar lives only on the home screen. Clicking a price opens the
+   itinerary in its own tab via a real URL (#itinerary/<id>) that restores the search from storage — so a new
+   tab shows the itinerary instead of a blank page, even when pop-ups are sandboxed or blocked. Rendering an
+   itinerary never calls a protected API, so a new/incognito tab is never asked to sign in. */
 const IT_STORE_KEY = "st_last_search";
 function itineraryURL(id){
   const base = location.pathname + location.search;
@@ -2407,14 +2386,16 @@ function restoreSearch(){
   sortResults(); renderResults(); renderFilterBar();
   return true;
 }
-/* one entry point for both the fare tile (in-app) and Get VI* (also tries a new tab with a real link) */
-function openItinerary(r, popup){
+/* one entry point for the itinerary: a price tile always opens its own tab via a real link (mode true);
+   the results stepper step opens the view in this tab (mode false). No extra button is involved. */
+function openItinerary(r, newTab){
   if (!r){ toastRed("Pick a flight first — there is no itinerary to open yet."); return; }
   state.itineraryId = r.id;
   persistSearch();
-  if (popup){
+  if (newTab){
     const w = window.open(itineraryURL(r.id), "_blank");
-    if (!w) toast("Pop-ups are blocked — the itinerary is open in this tab instead.");
+    if (!w){ toast("Pop-up blocked — the itinerary is open in this tab instead."); showItineraryView(r); }
+    return;
   }
   showItineraryView(r);
 }
@@ -2477,7 +2458,7 @@ function renderItinerary(r){
     document.title = "SpicyTool — Itinerary";
     body.innerHTML = `<div class="it-empty">
       <h3>No itinerary selected</h3>
-      <p>Pick a fare tile on the flights list — its legs, layovers and award redemptions open right here, with the search bar and dates calendar above.</p>
+      <p>Pick a price tile on the flights list — its legs, layovers and award redemptions open right here. Searching happens on the home screen.</p>
       <button type="button" class="it-ghost" id="it-empty-back">← ${state.results.length ? "Back to flights" : "Start a search"}</button>
     </div>`;
     $("it-empty-back").addEventListener("click", () => { state.results.length ? showResultsView() : showSearchView(); });
@@ -2540,15 +2521,18 @@ async function loadPrograms(){
   } catch { /* colors fall back to brand red */ }
 }
 async function authGate(){
-  /* login first: a valid session token unlocks the app, anything else stays on the OTP login */
+  /* sign-in is only required to RUN a search (the protected APIs demand a session). Opening the app,
+     the results or an itinerary deep link (#itinerary/<id>) must never bounce to the login view, so an
+     itinerary in a new tab is never asked to log in. A stored session is still validated when present. */
   const u = AUTH.user;
-  if (!u || !u.token){ showLoginView(); return; }
-  try {
-    const res = await fetch("/api/v1/auth/session?token=" + encodeURIComponent(u.token));
-    const d = await res.json();
-    if (!d || !d.valid){ AUTH.user = null; syncAvatar(); showLoginView(); }
-    else leaveLogin();
-  } catch { leaveLogin(); }   /* offline: keep the tab session optimistically */
+  if (u && u.token){
+    try {
+      const res = await fetch("/api/v1/auth/session?token=" + encodeURIComponent(u.token));
+      const d = await res.json();
+      if (!d || !d.valid){ AUTH.user = null; syncAvatar(); }
+    } catch { /* offline: keep the tab session optimistically */ }
+  }
+  leaveLogin();
 }
 function init(){
   document.querySelectorAll("[data-logo]").forEach(img => { img.src = LOGO_SRC; });
@@ -2673,8 +2657,8 @@ function init(){
   $("btn-search").addEventListener("click", startSearch);
   document.addEventListener("keydown", e => {
     if (e.key !== "Enter" || e.target.matches("input")) return;
-    /* Enter runs the search from the search screen and from the itinerary's search bar */
-    if (!$("view-search").hidden || !$("view-itinerary").hidden) startSearch();
+    /* Enter runs the search from the home search screen only (the itinerary has no search bar) */
+    if (!$("view-search").hidden) startSearch();
   });
   /* broad search promo — code 12 CTA (feature is mockup-only for now) */
   $("btn-broad").addEventListener("click", () => {
@@ -2699,7 +2683,6 @@ function init(){
   window.addEventListener("hashchange", () => {
     const h = (location.hash || "").replace(/^#/, "");
     if (h === lastSetHash) return;
-    if (!AUTH.user || !AUTH.user.token){ showLoginView(); return; }
     if (!applyHash()) showSearchView();
   });
   document.querySelectorAll(".stab").forEach(b => b.addEventListener("click", () => {
@@ -2710,7 +2693,7 @@ function init(){
   /* card interactions (delegated) — fixed: clicking expanded card again minimizes back */
   $("results").addEventListener("click", e => {
     const tileBtn = e.target.closest("[data-tile]");
-    if (tileBtn){ e.stopPropagation(); hideTPop(); const r = state.results.find(x => x.id === tileBtn.dataset.tile); if (r) openItinerary(r, false); return; }
+    if (tileBtn){ e.stopPropagation(); hideTPop(); const r = state.results.find(x => x.id === tileBtn.dataset.tile); if (r) openItinerary(r, true); return; }
     const dollar = e.target.closest("[data-ppop]");
     if (dollar){
       e.stopPropagation();
@@ -2725,8 +2708,6 @@ function init(){
       }
       renderResults(); return;
     }
-    const vi = e.target.closest("[data-vi]");
-    if (vi){ e.stopPropagation(); const r = state.results.find(x => x.id === vi.dataset.vi); if (r) openItinerary(r, true); return; }
     const closeBtn = e.target.closest("[data-close]");
     if (closeBtn){
       e.stopPropagation();

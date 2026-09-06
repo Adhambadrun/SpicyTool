@@ -127,8 +127,9 @@ grep -q 'gstatic.com/flights/airline_logos/70px' /tmp/index_served.html \
   && grep -q 'pics.avs.io/200/200' /tmp/index_served.html \
   && ok "real airline logos (2 artwork sources + offline brand tile)" || bad "airline logo sources"
 grep -q 'id="view-itinerary"' /tmp/index_served.html \
-  && grep -q 'id="it-search-slot"' /tmp/index_served.html \
-  && ok "itinerary is an in-app view carrying the search bar + dates calendar" || bad "no in-app itinerary"
+  && ! grep -q 'id="it-search-slot"' /tmp/index_served.html \
+  && grep -q 'id="search-slot"' /tmp/index_served.html \
+  && ok "itinerary is an in-app view with NO search bar (search lives on the home screen)" || bad "itinerary / search-bar placement"
 grep -q '#itinerary/' /tmp/index_served.html && ok "itinerary has a real shareable link (#itinerary/<id>)" || bad "no itinerary link"
 grep -q 'document.write' /tmp/index_served.html && bad "itinerary still uses document.write (blank-tab risk)" || ok "no document.write blank tabs"
 

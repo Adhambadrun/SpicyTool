@@ -71,8 +71,10 @@ The UI is a pixel-faithful implementation of the repository's Stitch mockups
 - **Results screen** follows `code 8.html` ("Choose your flights"):
   `#0D0E11` canvas, sticky header, 3-step stepper, filter-chip toolbar,
   Best/Fastest/Cheapest sort tabs, flight cards with the `w-24 h-11` fare
-  tile, "$X Off Retail" savings badge, dashed timeline expansion and the
-  `w-80` price-breakdown popover with the red **Get VI\*** CTA.
+  tile, "$X Off Retail" savings badge and the dashed timeline expansion.
+  Clicking a fare (price) tile **opens the itinerary automatically in its
+  own new tab** — there is no button involved (the old **Get VI\*** CTA was
+  removed at the owner's request).
 - **Login screen** follows `code 3.html` (dark variant, matching the app's
   dark-only runtime) with the v1.1 PIN redesign: `#111215` page, red
   announcement banner ("Welcome to SpicyTool v1.0! SpicyTool Exclusive
@@ -92,11 +94,14 @@ The UI is a pixel-faithful implementation of the repository's Stitch mockups
   HTML). In all three app headers the logo + wordmark are one real
   `<a href="/">`, i.e. the same link as the app itself, and clicking it
   always returns to the search screen.
-- **Live sign-in session** — the app opens on the PIN login; a verified
-  session (sessionStorage token, dies with the tab) unlocks the app, swaps
+- **Live sign-in session** — the app itself never opens on the login screen:
+  browsing, results and itinerary views (including `#itinerary/<id>` in a
+  fresh tab) are public. Signing in (sessionStorage token, dies with the tab)
+  is only required to **run a search** — the search APIs return `401` without
+  a session, which drops the user to the PIN login; a verified session swaps
   the avatar to the `code 5` gradient-ring initials and offers Sign out
-  (which clears the session server-acknowledged and returns to login). A
-  `401` anywhere drops the user back to the login view. A **Support** button
+  (which clears the session server-acknowledged and returns to the app). A
+  **Support** button
   in both headers opens a blank compose to `adhambadraan@gmail.com`
   (`mailto:`).
 - **Broker CPM pricing + "Modify programs" (code 15)** — the home-page
@@ -111,25 +116,25 @@ The UI is a pixel-faithful implementation of the repository's Stitch mockups
   (broker-only rows carry no engine results yet). The "Ticket via
   SpicyTool.com" option was removed at the owner's request — brokers is the
   only mode; the "Try Broad Search" promo CTA remains mockup-only.
-- **Itinerary (code 13) — an in-app view, never a blank tab.** Clicking a
-  fare tile (or the price popover's **Get VI\***, or the stepper's
-  *Itinerary* step) renders the itinerary **inside the app**: announcement
-  banner, the same logo header (`<a href="/">`), the stepper, then the
-  Retail/Cost/Discount summary, the per-leg segment timeline with layover
+- **Itinerary (code 13) — an in-app view, never a blank tab, and no search
+  bar.** Clicking a **price tile opens the itinerary in its own new tab**
+  automatically — there is no button to press. The itinerary renders
+  announcement banner, the same logo header (`<a href="/">`), the stepper,
+  the Retail/Cost/Discount summary, the per-leg segment timeline with layover
   notices and the Award Redemptions matrix — generated same-origin from that
-  result's data, no backend round-trip. The view also carries **the app's real
-  search bar**: the same `#search-card` node (airport chips, swap, the dates
-  **calendar**, cabin/passengers/flexibility, Search) is moved into the
-  itinerary, so a new search can be run without going back. It is never
-  blank — with no selection it shows a "No itinerary selected" card with a
-  way back.
+  result's data, no backend round-trip. The search bar appears **only on the
+  home screen**; the itinerary view has none. With no selection it shows a
+  "No itinerary selected" card with a way back.
 - **Itinerary links (`#results`, `#itinerary/<id>`)** — every view has a real
-  URL. *Itinerary in new tab* and *Get VI\** are plain links to
-  `/#itinerary/<id>`; the last search (query + up to 80 results) is persisted
-  to `sessionStorage`/`localStorage`, so a new tab, a refresh or a shared
-  link restores the search bar and renders that exact itinerary instead of a
-  blank page (pop-up blockers can no longer swallow it). The matrix's
-  **Flight link** is a real link to the operating airline's own site
+  URL. *Itinerary in new tab* is a plain link to `/#itinerary/<id>`; the last
+  search (query + up to 80 results) is persisted to
+  `sessionStorage`/`localStorage`, so a new tab, a refresh or a shared link
+  renders that exact itinerary instead of a blank page (pop-up blockers can
+  no longer swallow it). **Sign-in is never required for an itinerary tab** —
+  the itinerary renders purely from the persisted results and makes no
+  protected API call, so a fresh or incognito tab shows the flight instead of
+  a login wall (signing in is only needed to *run a new search*). The
+  matrix's **Flight link** is a real link to the operating airline's own site
   (`swiss.com`, `lufthansa.com`, …), and legs read "Operated by Swiss
   International Air Lines" rather than "Operated by LX".
 - Hovering a fare tile shows the booking program(s) with points + taxes.
