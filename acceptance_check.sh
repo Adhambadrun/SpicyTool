@@ -116,9 +116,21 @@ echo "== 12. redis-absence resilience (memory backend) =="
 b=$(curl -s localhost:8000/api/v2/cache/stats | $PY -c 'import json,sys;print(json.load(sys.stdin)["backend"])')
 [ "$b" = "memory" ] && ok "no Redis present -> memory fallback, service healthy" || bad "backend=$b"
 
-echo "== 13. frontend served same-origin =="
+echo "== 13. frontend served same-origin (logo link, real airline logos, in-app itinerary) =="
 c=$(curl -s -o /dev/null -w '%{http_code}' localhost:8000/)
 [ "$c" = "200" ] && ok "GET / -> 200 index.html" || bad "status $c"
+curl -s localhost:8000/ > /tmp/index_served.html
+n=$(grep -c '<a class="brand"' /tmp/index_served.html)
+[ "$n" = "3" ] && ok "logo+wordmark is one <a href=\"/\"> in all 3 headers" || bad "brand links: $n"
+grep -q 'id="app-favicon"' /tmp/index_served.html && ok "tab icon and logo share one asset (LOGO_SRC)" || bad "no favicon link"
+grep -q 'gstatic.com/flights/airline_logos/70px' /tmp/index_served.html \
+  && grep -q 'pics.avs.io/200/200' /tmp/index_served.html \
+  && ok "real airline logos (2 artwork sources + offline brand tile)" || bad "airline logo sources"
+grep -q 'id="view-itinerary"' /tmp/index_served.html \
+  && grep -q 'id="it-search-slot"' /tmp/index_served.html \
+  && ok "itinerary is an in-app view carrying the search bar + dates calendar" || bad "no in-app itinerary"
+grep -q '#itinerary/' /tmp/index_served.html && ok "itinerary has a real shareable link (#itinerary/<id>)" || bad "no itinerary link"
+grep -q 'document.write' /tmp/index_served.html && bad "itinerary still uses document.write (blank-tab risk)" || ok "no document.write blank tabs"
 
 echo "== 14. multi-airport search (up to 3 per side) =="
 TOKEN=$TOKEN $PY - <<'EOF'
@@ -217,7 +229,9 @@ s, d = call('/api/v1/auth/login', 'POST', {'email': 'someone@gmail.com', 'pin': 
 assert s == 403, (s, d)
 s, d = call('/api/v1/auth/login', 'POST', {'email': 'adhambadraan@gmail.com', 'pin': '141220'})
 assert s == 200 and d['ok'] is True and d['token'].startswith('v1.'), (s, d)
-assert d['expires_in'] == 12 * 3600, d
+# TTL is owned by backend/core/auth.py (SESSION_TTL_HOURS) - read it so this check can't drift
+ttl_h = int(open('backend/core/auth.py').read().split('SESSION_TTL_HOURS = ')[1].split()[0])
+assert d['expires_in'] == ttl_h * 3600, (d['expires_in'], ttl_h)
 s, d = call('/api/v1/auth/session?token=' + d['token'])
 assert d['valid'] is True and d['email'] == 'adhambadraan@gmail.com', d
 s, d = call('/api/v1/auth/session?token=' + TOKEN)
