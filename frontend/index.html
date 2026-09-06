@@ -2143,17 +2143,15 @@ function renderResults(){
     if (state.results.length){
       h3.textContent = "No award flights found";
       $("empty-msg").textContent = "No flights match the current filters — relax a filter or Clear All.";
-    } else if (state.searchFailed){
-      h3.textContent = "Search service unreachable";
-      $("empty-msg").textContent = "Could not reach the search service. Check that the backend is running and try again.";
-    } else if (!state.live){
+      $("empty-msg").hidden = false;
+    } else if (state.searchFailed || !state.live || failed.length){
+      /* Search is not working — show one honest message and nothing else. */
       h3.textContent = "No live award provider connected";
-      $("empty-msg").textContent = state.notice || "SpicyTool relays the Flybasis search engine only. Add a FLYBASIS_API_KEY on the server to search real availability. Sample data is never shown.";
-    } else if (failed.length){
-      h3.textContent = "Live providers returned errors";
-      $("empty-msg").textContent = failed.map(p => `${p.provider}: ${p.error}`).join(" · ");
+      $("empty-msg").textContent = "";
+      $("empty-msg").hidden = true;
     } else {
       h3.textContent = "No award availability";
+      $("empty-msg").hidden = false;
       $("empty-msg").textContent = q.trip === "roundtrip"
         ? `${state.liveProviders.join(", ") || "Live providers"} found no award space for ${shortDate(q.date)} → ${shortDate(q.returnDate)} on this route and cabin. Try other dates, airports or cabin.`
         : `${state.liveProviders.join(", ") || "Live providers"} found no award space on this route for ${shortDate(q.date)} in ${CABIN_LABEL[q.cabin] || q.cabin || "this cabin"}. Try nearby dates (the ±1 / ±2 day chips in the date picker) or other airports.`;
