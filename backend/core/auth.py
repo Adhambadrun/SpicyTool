@@ -48,22 +48,41 @@ PIN_LOCKOUT_SECONDS = 60     # lockout duration
 SESSION_TTL_HOURS = 12       # session token lifetime
 
 _SECRET_FILE = Path(__file__).resolve().parent.parent / "data" / ".auth_secret"
+_RUNTIME_SECRET: bytes | None = None  # in-memory fallback (read-only filesystems)
 
 
 def _secret() -> bytes:
-    """Per-install signing secret (env override, else generated once on disk)."""
+    """Per-install signing secret.
+
+    Order: AUTH_SECRET env var -> backend/data/.auth_secret (generated once)
+    -> in-memory secret for this process. The last case covers read-only
+    filesystems such as serverless platforms (Vercel); set AUTH_SECRET there
+    so sessions survive cold starts and are valid across instances.
+    """
+    global _RUNTIME_SECRET
     env = os.getenv("AUTH_SECRET")
     if env:
         return env.encode()
-    if _SECRET_FILE.exists():
-        return _SECRET_FILE.read_bytes().strip()
-    _SECRET_FILE.parent.mkdir(parents=True, exist_ok=True)
-    key = secrets.token_hex(32).encode()
-    _SECRET_FILE.write_bytes(key)
+    if _RUNTIME_SECRET is not None:
+        return _RUNTIME_SECRET
     try:
-        os.chmod(_SECRET_FILE, 0o600)
+        if _SECRET_FILE.exists():
+            _RUNTIME_SECRET = _SECRET_FILE.read_bytes().strip()
+            return _RUNTIME_SECRET
     except OSError:
         pass
+    key = secrets.token_hex(32).encode()
+    try:
+        _SECRET_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _SECRET_FILE.write_bytes(key)
+        try:
+            os.chmod(_SECRET_FILE, 0o600)
+        except OSError:
+            pass
+    except OSError:
+        # Read-only filesystem: keep the key in memory for this process.
+        pass
+    _RUNTIME_SECRET = key
     return key
 
 
