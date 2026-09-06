@@ -1,26 +1,25 @@
-# AgentSearch LIVE verification — runs on a GitHub Actions runner, which has
+# SpicyTool LIVE verification — runs on a GitHub Actions runner, which has
 # full outbound internet access.
 #
-# ── INSTALL (one time, ~60 seconds) ───────────────────────────────────────────
-# This file cannot be committed to .github/workflows/ by the agent: GitHub
-# refuses pushes from an App without the `workflows` permission. So:
+# ── INSTALLED ────────────────────────────────────────────────────────────────
+# This workflow now lives at .github/workflows/live-check.yml and runs on every
+# push, weekly (Monday), and on manual dispatch (Actions tab → Run workflow).
 #
-#   1. Add the key as an encrypted secret (NEVER commit it — this repo is public):
-#        Settings → Secrets and variables → Actions → New repository secret
-#        Name:  AGENTSEARCH_API_KEY
-#        Value: <your RapidAPI key>
+# Live gates are credential-gated and NEVER fabricate availability: a step is
+# skipped (not faked, not failed-to-green) while its secret is absent. Add the
+# secrets as encrypted repository secrets (this repo is public — never commit
+# key material):
 #
-#   2. Move this file into place and push:
-#        mkdir -p .github/workflows
-#        git mv ci/live-check.workflow.yml .github/workflows/live-check.yml
-#        git commit -m "Add AgentSearch live check" && git push
+#   Settings → Secrets and variables → Actions → New repository secret
+#   Name:  FLYBASIS_API_KEY      (token issued to you by Flybasis for the
+#                                 award socket — the one provider that produces
+#                                 results; see FLYBASIS_GO_LIVE.md)
+#   Name:  AGENTSEARCH_API_KEY   (OPTIONAL — RapidAPI key for the web-context
+#                                 backend only; never an award feed)
 #
-#   3. Run it:  Actions tab → "AgentSearch live check" → Run workflow
-#      (it also runs automatically on every push)
-#
-# The job fails loudly if the key is rejected, out of quota, or the schema
+# A live gate fails loudly if the key is rejected, out of quota, or the schema
 # drifts — so it doubles as an ongoing contract test against the real API.
-name: AgentSearch live check
+name: SpicyTool live check
 
 on:
   workflow_dispatch:
@@ -34,6 +33,11 @@ jobs:
   live-check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Job-level so the step `if:` conditions can see them (and so the secrets
+    # are masked for every step). Empty while the repo secret is unset.
+    env:
+      FLYBASIS_API_KEY: ${{ secrets.FLYBASIS_API_KEY }}
+      AGENTSEARCH_API_KEY: ${{ secrets.AGENTSEARCH_API_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -58,7 +62,7 @@ jobs:
       # The one provider production actually relays. Its socket handshake had
       # no test at all, so a broken connect/search/error path used to ship as
       # an empty results list with nothing to explain it.
-      - name: Flybasis award-socket contract test
+      - name: Flybasis award-socket contract test (local mock)
         working-directory: backend
         run: python tools/verify_flybasis_socket.py
 
@@ -71,12 +75,21 @@ jobs:
           node no-provider-empty.mjs
           node booking-window.mjs
 
-      # The live gate. Skips (does not fail) when the secret is absent, so the
-      # workflow stays useful on forks and before the secret is configured.
-      - name: Raw upstream call
+      # ─── LIVE gates ────────────────────────────────────────────────────────
+      # Each skips (does not fail, does not fake) when its secret is absent, so
+      # the workflow stays useful on forks and before credentials exist. The
+      # moment a real key is added to the repo secret, the gate runs for real.
+
+      # The award-feed contract test against production. This is THE live gate:
+      # it proves a Flybasis-issued key actually connects and returns frames.
+      - name: Flybasis live socket (real upstream)
+        if: ${{ env.FLYBASIS_API_KEY != '' }}
+        working-directory: backend
+        run: python tools/verify_flybasis_socket.py --live
+
+      # Optional web-context backend (NOT an award feed).
+      - name: Raw AgentSearch upstream call (web context)
         if: ${{ env.AGENTSEARCH_API_KEY != '' }}
-        env:
-          AGENTSEARCH_API_KEY: ${{ secrets.AGENTSEARCH_API_KEY }}
         run: |
           echo "::group::GET /v1/search"
           code=$(curl -sS -o /tmp/live.json -w '%{http_code}' --max-time 30 \
@@ -91,16 +104,15 @@ jobs:
           echo "::endgroup::"
           test "$code" = "200"
 
-      - name: LIVE assertions through the real app code
+      - name: LIVE assertions through the real app code (web context)
         if: ${{ env.AGENTSEARCH_API_KEY != '' }}
         working-directory: backend
-        env:
-          AGENTSEARCH_API_KEY: ${{ secrets.AGENTSEARCH_API_KEY }}
         run: python tools/verify_agentsearch.py --live
 
-      - name: Note when the live gate was skipped
-        if: ${{ env.AGENTSEARCH_API_KEY == '' }}
+      - name: Note when live gates were skipped
+        if: ${{ env.FLYBASIS_API_KEY == '' && env.AGENTSEARCH_API_KEY == '' }}
         run: |
-          echo "::warning::AGENTSEARCH_API_KEY secret is not set — the live" \
-               "checks were skipped. Add it under Settings → Secrets and" \
-               "variables → Actions to enable them."
+          echo "::warning::No live credential set — live checks were skipped" \
+               "(never faked). Add FLYBASIS_API_KEY (required for award" \
+               "results) and optionally AGENTSEARCH_API_KEY under Settings →" \
+               "Secrets and variables → Actions to enable them."
