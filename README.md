@@ -35,6 +35,24 @@ docker compose up --build
 cd backend && python3 tests_integration.py   # 16 assertions, offline
 ```
 
+### Vercel
+
+The repo deploys to Vercel with zero extra setup: the root `app.py`
+re-exports the FastAPI app from `backend/main.py`, the root
+`requirements.txt` mirrors `backend/requirements.txt`, and `vercel.json`
+sets the FastAPI preset (60 s function timeout, mockup/screenshot files
+excluded from the bundle). Import the repo in Vercel and deploy — `/`,
+`/api/v1/*` and `/api/v2/*` are all served by one function.
+
+Recommended environment variables (Project → Settings → Environment
+Variables):
+
+- `AUTH_SECRET` — any long random string. Without it each serverless
+  instance signs sessions with its own in-memory key, so a session may be
+  rejected after a cold start.
+- `LOGIN_PIN`, `ALLOWED_LOGIN_EMAILS` — optional overrides.
+- `REDIS_URL` — optional; without it the cache runs in memory per instance.
+
 ---
 
 ## Frontend — 1:1 mockup implementation

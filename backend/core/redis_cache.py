@@ -84,6 +84,13 @@ class AwardCache:
         self._memory = _MemoryFallback()
 
     async def connect(self) -> None:
+        # Serverless (Vercel) has no Redis sidecar: unless the operator set an
+        # explicit REDIS_URL, skip the connection attempt so cold starts don't
+        # burn a full connect timeout against localhost.
+        if os.environ.get("VERCEL") and not os.environ.get("REDIS_URL"):
+            self._redis = None
+            self.backend = "memory"
+            return
         try:
             import redis.asyncio as aioredis
 
