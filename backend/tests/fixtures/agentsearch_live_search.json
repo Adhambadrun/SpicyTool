@@ -1,0 +1,17 @@
+{
+  "meta": {"cached": false, "stale": false, "as_of": "2026-09-06T09:44:41.522Z", "source": "web-search", "provider": "brave", "took_ms": 692},
+  "query": "spicytool.vercel.app",
+  "count": 10,
+  "results": [
+    {"position": 1, "title": "spice for sauce", "url": "https://spice-beryl.vercel.app/", "snippet": "spice for sauce", "source": "brave", "domain": "spice-beryl.vercel.app", "published": null},
+    {"position": 2, "title": "Agentic Infrastructure - Vercel", "url": "https://vercel.com/", "snippet": "To ship apps and agents...", "source": "brave", "domain": "vercel.com", "published": "2026-08-24T23:23:06"},
+    {"position": 3, "title": "Spicytool", "url": "https://app.spicytool.net/", "snippet": "We cannot provide a description for this page right now", "source": "brave", "domain": "app.spicytool.net", "published": null},
+    {"position": 4, "title": "Vercel", "url": "https://spicy-game.vercel.app/", "snippet": "Loading", "source": "brave", "domain": "spicy-game.vercel.app", "published": null},
+    {"position": 5, "title": "SpicyTool - Apps on Google Play", "url": "https://play.google.com/store/apps/details?id=com.spicytool.app&hl=en", "snippet": "SpicyTool: the tool that does the heavy lifting for you.", "source": "brave", "domain": "play.google.com", "published": "2026-05-31T00:00:00"},
+    {"position": 6, "title": "Seasoning Mix", "url": "https://seasoningmix.vercel.app/", "snippet": "The place for over 10,000 popular recipes", "source": "brave", "domain": "seasoningmix.vercel.app", "published": null},
+    {"position": 7, "title": "Spicy Diffusion (by LAIA) - Vercel", "url": "https://spicy-diffusion.vercel.app/", "snippet": "Spicy Diffusion (by LAIA)", "source": "brave", "domain": "spicy-diffusion.vercel.app", "published": null},
+    {"position": 8, "title": "SpicyTool 2026 Pricing, Features, Reviews & Alternatives | GetApp", "url": "https://www.getapp.com/marketing-software/a/spicytool/", "snippet": "Spicytool is a cloud-based platform...", "source": "brave", "domain": "getapp.com", "published": null},
+    {"position": 9, "title": "Create personalized web apps with Vercel", "url": "https://vercel.com/solutions/web-apps", "snippet": "Leverage Vercel Secure Compute...", "source": "brave", "domain": "vercel.com", "published": null},
+    {"position": 10, "title": "Spicytool: All-in-one platform for SMBs", "url": "https://www.toolify.ai/tool/spicytool", "snippet": "Spicytool is an all-in-one platform...", "source": "brave", "domain": "toolify.ai", "published": "2026-04-06T23:30:43"}
+  ]
+}

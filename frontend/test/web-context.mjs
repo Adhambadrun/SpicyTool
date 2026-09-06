@@ -91,6 +91,33 @@ const AGENTSEARCH_PAYLOAD = {
   },
 };
 
+
+// A REAL captured production row set (2026-09-06, provider=brave). Verifies the
+// renderer against actual upstream output — including an ampersand in a title
+// and a query-string URL, both of which must be escaped, not mangled.
+const LIVE_CAPTURE = {
+  kind: 'web_context', is_award_data: false, source: 'agentsearch',
+  endpoint: 'https://agentsearch.p.rapidapi.com/v1/search', tool: 'web_search',
+  disclaimer: 'Web context from the AgentSearch web-search API (RapidAPI). NOT award availability.',
+  ok: true, error: null,
+  data: {
+    query: 'spicytool.vercel.app',
+    results: [
+      { position: 1, title: 'spice for sauce', url: 'https://spice-beryl.vercel.app/',
+        snippet: 'spice for sauce', source: 'brave', domain: 'spice-beryl.vercel.app', published: null },
+      { position: 5, title: 'SpicyTool - Apps on Google Play',
+        url: 'https://play.google.com/store/apps/details?id=com.spicytool.app&hl=en',
+        snippet: 'SpicyTool: the tool that does the heavy lifting for you.',
+        source: 'brave', domain: 'play.google.com', published: '2026-05-31T00:00:00' },
+      { position: 8, title: 'SpicyTool 2026 Pricing, Features, Reviews & Alternatives | GetApp',
+        url: 'https://www.getapp.com/marketing-software/a/spicytool/',
+        snippet: 'Spicytool is a cloud-based platform.', source: 'brave',
+        domain: 'getapp.com', published: null },
+    ],
+    meta: { provider: 'brave', count: 3, took_ms: 692, cached: false, stale: false },
+  },
+};
+
 setTimeout(() => {
   const render = (payload) => w.wcHTML(payload);
 
@@ -133,6 +160,21 @@ setTimeout(() => {
   check('empty results say so',
     render({ ...AGENTSEARCH_PAYLOAD, data: { results: [] } })
       .includes('No web results'));
+
+
+  // --- 4. a REAL production payload renders correctly ---------------------
+  const liveHtml = render(LIVE_CAPTURE);
+  check('live: renders all three captured rows',
+    liveHtml.includes('spice for sauce')
+    && liveHtml.includes('SpicyTool - Apps on Google Play')
+    && liveHtml.includes('GetApp'));
+  check('live: ampersand in a title is HTML-escaped',
+    liveHtml.includes('Reviews &amp; Alternatives'),
+    liveHtml.includes('Reviews &amp; Alternatives') ? 'escaped' : 'NOT ESCAPED');
+  check('live: query-string URL kept intact and escaped',
+    liveHtml.includes('id=com.spicytool.app&amp;hl=en'));
+  check('live: no raw unescaped ampersand leaked into markup',
+    !/&(?!(amp|lt|gt|quot|#3[49]);)/.test(liveHtml));
 
   check('no JS errors while rendering', errors.length === 0, errors.join(' | '));
 

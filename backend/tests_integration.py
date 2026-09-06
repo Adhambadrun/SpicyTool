@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SpicyTool integration tests — 33 assertions, no live network calls.
+"""SpicyTool integration tests — 34 assertions, no live network calls.
 
 Uses httpx.MockTransport for the HTTP-layer tests; everything else exercises
 the real normalization, enrichment and dedupe code paths directly.
@@ -869,8 +869,66 @@ def test_as_base_url_override():
         os.environ.pop("AGENTSEARCH_BASE_URL", None)
 
 
+# A REAL captured response from agentsearch.p.rapidapi.com (2026-09-06,
+# provider=brave, query="spicytool.vercel.app"). Trimmed to the rows that
+# exercise distinct shapes; field values are verbatim. This is the contract
+# test against production output, not a hand-written guess.
+_AGENTSEARCH_LIVE_CAPTURE = {
+    "meta": {
+        "cached": False, "stale": False, "as_of": "2026-09-06T09:44:41.522Z",
+        "source": "web-search", "provider": "brave", "took_ms": 692,
+    },
+    "query": "spicytool.vercel.app",
+    "count": 4,
+    "results": [
+        {"position": 1, "title": "spice for sauce",
+         "url": "https://spice-beryl.vercel.app/", "snippet": "spice for sauce",
+         "source": "brave", "domain": "spice-beryl.vercel.app", "published": None},
+        {"position": 2, "title": "Agentic Infrastructure - Vercel",
+         "url": "https://vercel.com/", "snippet": "To ship apps and agents",
+         "source": "brave", "domain": "vercel.com",
+         "published": "2026-08-24T23:23:06"},
+        {"position": 5, "title": "SpicyTool - Apps on Google Play",
+         "url": "https://play.google.com/store/apps/details?id=com.spicytool.app&hl=en",
+         "snippet": "SpicyTool: the tool that does the heavy lifting for you.",
+         "source": "brave", "domain": "play.google.com",
+         "published": "2026-05-31T00:00:00"},
+        {"position": 8,
+         "title": "SpicyTool 2026 Pricing, Features, Reviews & Alternatives | GetApp",
+         "url": "https://www.getapp.com/marketing-software/a/spicytool/",
+         "snippet": "Spicytool is a cloud-based platform that helps marketers.",
+         "source": "brave", "domain": "getapp.com", "published": None},
+    ],
+}
+
+
+def test_as_real_captured_response():
+    """34. A REAL production response normalizes with zero loss."""
+    raw = _AGENTSEARCH_LIVE_CAPTURE
+    out = agentsearch.normalize_search(raw, "spicytool.vercel.app", took_ms=999)
+    assert len(out["results"]) == len(raw["results"]), "rows were dropped"
+    assert out["query"] == "spicytool.vercel.app"
+    m = out["meta"]
+    # Upstream provenance must win over our locally-measured values.
+    assert m["took_ms"] == 692, m["took_ms"]
+    assert m["provider"] == "brave" and m["as_of"] == "2026-09-06T09:44:41.522Z"
+    assert m["cached"] is False and m["stale"] is False
+    # published passes through (null and non-null both).
+    assert [r["published"] for r in out["results"]] == [
+        None, "2026-08-24T23:23:06", "2026-05-31T00:00:00", None,
+    ]
+    # Non-sequential upstream positions are preserved, not renumbered.
+    assert [r["position"] for r in out["results"]] == [1, 2, 5, 8]
+    # A URL carrying a query string survives intact (& not mangled).
+    assert "id=com.spicytool.app&hl=en" in out["results"][2]["url"]
+    # An & in a title is preserved for the renderer to escape.
+    assert "&" in out["results"][3]["title"]
+    # Every row keeps a usable url + title.
+    assert all(r["url"] and r["title"] for r in out["results"])
+
+
 def main() -> int:
-    print(f"\n{DIM}SpicyTool integration tests — 33 assertions, offline{RESET}\n")
+    print(f"\n{DIM}SpicyTool integration tests — 34 assertions, offline{RESET}\n")
     tests = [
         test_retry,
         test_timeout_isolation,
@@ -905,6 +963,7 @@ def main() -> int:
         test_as_answer_falls_back_to_serp,
         test_as_engine_rebuilt_per_event_loop,
         test_as_base_url_override,
+        test_as_real_captured_response,
     ]
     for i, fn in enumerate(tests, start=1):
         check(i, fn.__doc__.splitlines()[0].strip() if fn.__doc__ else fn.__name__, fn)
