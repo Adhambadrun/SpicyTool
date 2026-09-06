@@ -76,8 +76,12 @@ The UI is a pixel-faithful implementation of the repository's Stitch mockups
   flight"): `#0D0E10` canvas, `#141416` search card, 52px inputs with
   `#2C2E35` IATA chips, round red Search CTA, calendar popover, promo card.
   v1.0 wiring: the calendar's month navigation no longer closes the popover
-  (the old toggle-on-bubble bug), the Passengers control is a three-row
-  stepper panel (Adults/Children/Infants), and a Flexibility control
+  (the old toggle-on-bubble bug). Opening or clearing the round-trip calendar
+  selects **Departure first**, with the active field highlighted; picking a
+  departure then advances to Return. Date controls work with the keyboard
+  without reopening the picker or accidentally searching, and December's
+  second grid correctly selects January of the next year. The Passengers
+  control is a three-row stepper panel (Adults/Children/Infants), and a Flexibility control
   (±0–3 days) fans out real searches per nearby date.
 - **Results screen** follows `code 8.html` ("Choose your flights"):
   `#0D0E11` canvas, sticky header, 3-step stepper, filter-chip toolbar,

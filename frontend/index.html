@@ -164,7 +164,8 @@ button{font-family:inherit}
 .dp-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .dp-row{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#202025;border:1px solid #2D2D35;border-radius:12px;padding:8px 12px;min-height:38px;cursor:pointer}
 .dp-row.arm{border-color:#4B4E59}
-.dp-val{display:flex;align-items:center;gap:8px;color:#F5F5F7;font-size:12px;font-weight:500;min-width:0}
+.dp-val{display:flex;align-items:center;gap:8px;color:#F5F5F7;font-size:12px;font-weight:500;min-width:0;flex:1;background:none;border:0;padding:0;font-family:inherit;text-align:left;cursor:pointer}
+.dp-val:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:4px}
 .dp-val svg{width:16px;height:16px;color:#8E8E93;flex-shrink:0}
 .dp-x{background:none;border:none;color:#8E8E93;font-size:15px;line-height:1;cursor:pointer;padding:2px}
 .dp-x:hover{color:#fff}
@@ -1370,15 +1371,23 @@ function openDP(){
   if (state.returnDate && !isBookable(state.returnDate)) state.returnDate = null;
   const sel = new Date(state.date + "T12:00:00");
   dpMonth = clampMonth(new Date(sel.getFullYear(), sel.getMonth(), 1));
-  dpArm = state.trip === "roundtrip" ? "ret" : "dep";
+  dpArm = "dep";  /* opening the date field always edits Departure first */
   dpSnapshot = { date: state.date, returnDate: state.returnDate, flex: state.flex, retFlex: state.retFlex };
   const el = document.createElement("div");
   el.className = "dp"; el.id = "dp";
   $("f-date").appendChild(el);
   drawDP();
-  el.addEventListener("mousedown", e => e.preventDefault());
+  /* Let native buttons receive focus. Keys inside the picker must not reach
+     the outer date-field opener or the page's Enter-to-search shortcut. */
+  el.addEventListener("mousedown", e => e.stopPropagation());
+  el.addEventListener("keydown", e => e.stopPropagation());
 }
-function closeDP(){ const el = $("dp"); if (el) el.remove(); }
+function closeDP(){
+  const el = $("dp"); if (!el) return;
+  const hadFocus = el.contains(document.activeElement);
+  el.remove();
+  if (hadFocus) $("f-date").focus({ preventScroll:true });
+}
 function shortDate(iso){ const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso||""); return m ? `${MONTHS[+m[2]-1]} ${+m[3]}` : (iso || ""); }
 function shiftISO(iso, days){
   const d = new Date(iso + "T12:00:00");
@@ -1407,8 +1416,12 @@ function clampMonth(first){
   return first;
 }
 function dpGridCells(y, m){
+  /* The second grid can be m=12 beside December: normalize both year and
+     month before building ISO date IDs, never emit YYYY-13-DD. */
+  const month = new Date(y, m, 1);
+  y = month.getFullYear(); m = month.getMonth();
   /* one month grid: day-of-week header, dimmed edge days, today ring, brand-red selection — attached style */
-  const first = new Date(y, m, 1).getDay();
+  const first = month.getDay();
   const dim = new Date(y, m + 1, 0).getDate();
   const prevDim = new Date(y, m, 0).getDate();
   const today = new Date(); today.setHours(12,0,0,0);
@@ -1440,6 +1453,10 @@ function dpGridCells(y, m){
 }
 function drawDP(){
   const el = $("dp"); if (!el) return;
+  /* Re-rendering must not drop keyboard focus back to the page. */
+  const focused = el.contains(document.activeElement) ? document.activeElement : null;
+  const focusKey = focused && ["data-date","data-arm","data-nav","data-flex","data-ret","data-clear","data-dp"].find(a => focused.hasAttribute(a));
+  const focusValue = focusKey ? focused.getAttribute(focusKey) : null;
   const rt = state.trip === "roundtrip";
   const sel = state.date, ret = state.returnDate;
   const y = dpMonth.getFullYear(), m = dpMonth.getMonth();
@@ -1466,9 +1483,9 @@ function drawDP(){
       </div>` : "";
   const depCol = `
     <div>
-      <span class="dp-label ${dpArm === "dep" ? "" : ""}" data-arm="dep">Departure</span>
-      <div class="dp-row" data-arm="dep">
-        <span class="dp-val">${CAL_ICON}<span>${fmtDayLong(sel)}</span></span>
+      <span class="dp-label" data-arm="dep">Departure</span>
+      <div class="dp-row ${dpArm === "dep" ? "arm" : ""}" data-arm="dep">
+        <button type="button" class="dp-val" data-arm="dep" aria-label="Select departure date" aria-pressed="${dpArm === "dep"}">${CAL_ICON}<span>${fmtDayLong(sel)}</span></button>
         <button type="button" class="dp-x" data-clear="dep" aria-label="Clear departure">×</button>
       </div>
       ${depChips}
@@ -1476,8 +1493,8 @@ function drawDP(){
   const retCol = rt ? `
     <div>
       <span class="dp-label" data-arm="ret">Return</span>
-      <div class="dp-row" data-arm="ret">
-        <span class="dp-val">${CAL_ICON}<span>${ret ? fmtDayLong(ret) : "Return"}</span></span>
+      <div class="dp-row ${dpArm === "ret" ? "arm" : ""}" data-arm="ret">
+        <button type="button" class="dp-val" data-arm="ret" aria-label="Select return date" aria-pressed="${dpArm === "ret"}">${CAL_ICON}<span>${ret ? fmtDayLong(ret) : "Return"}</span></button>
         <button type="button" class="dp-x" data-clear="ret" aria-label="Clear return">×</button>
       </div>
       ${retChips}
@@ -1518,6 +1535,7 @@ function drawDP(){
   }));
   el.querySelectorAll("[data-arm]").forEach(b => b.addEventListener("click", e => {
     e.stopPropagation(); dpArm = b.dataset.arm === "ret" ? "ret" : "dep"; drawDP();
+    el.querySelector(`button[data-arm="${dpArm}"]`).focus({ preventScroll:true });
   }));
   el.querySelectorAll("[data-flex]").forEach(b => b.addEventListener("click", e => {
     e.stopPropagation();
@@ -1534,8 +1552,10 @@ function drawDP(){
   }));
   el.querySelectorAll("[data-clear]").forEach(b => b.addEventListener("click", e => {
     e.stopPropagation();
-    if (b.dataset.clear === "dep"){ state.date = todayISO(); state.returnDate = null; state.retFlex = 0; dpArm = "ret"; }
-    else { state.returnDate = null; state.retFlex = 0; dpArm = "ret"; }
+    if (b.dataset.clear === "dep"){
+      state.date = todayISO(); state.returnDate = null; state.retFlex = 0;
+      dpArm = "dep"; dpMonth = monthOf(state.date);
+    } else { state.returnDate = null; state.retFlex = 0; dpArm = "ret"; }
     syncDate(); drawDP();
   }));
   el.querySelectorAll("[data-nav]").forEach(b => b.addEventListener("click", e => {
@@ -1555,6 +1575,11 @@ function drawDP(){
     }
     closeDP();
   }));
+  if (focusKey){
+    const replacement = [...el.querySelectorAll(`button[${focusKey}]`)].find(b => b.getAttribute(focusKey) === focusValue);
+    const target = replacement && !replacement.disabled ? replacement : el.querySelector(`button[data-arm="${dpArm}"]`);
+    if (target) target.focus({ preventScroll:true });
+  }
 }
 function syncPaxLabel(){
   const n = paxTotal(), inf = state.pax.infants;
@@ -2767,7 +2792,12 @@ function init(){
     if (el){ if (!el.contains(e.target)) closeDP(); }   /* clicks inside the calendar (month nav, arms) keep it open */
     else openDP();
   });
-  $("f-date").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); openDP(); } });
+  $("f-date").addEventListener("keydown", e => {
+    if (e.target !== e.currentTarget || (e.key !== "Enter" && e.key !== " ")) return;
+    e.preventDefault(); e.stopPropagation();
+    if ($("dp")) closeDP();
+    else { openDP(); $("dp").querySelector('button[data-arm="dep"]').focus({ preventScroll:true }); }
+  });
   /* cabin / pax dropdowns */
   $("cabin-btn").addEventListener("click", e => {
     e.stopPropagation();
