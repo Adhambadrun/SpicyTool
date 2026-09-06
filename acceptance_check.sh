@@ -302,6 +302,46 @@ print('SPICYTOOL_PROVIDERS=all ->', [p.name for p in aggregator.registry()])
 ")
 [ $? -eq 0 ] && ok "Flybasis-only relay default + override" || bad "Flybasis-only relay"
 
+echo "== 19. web context is labelled non-award and never touches results =="
+# The connector may be unreachable from the test host; what must hold either way
+# is the labelling, the input validation, and that search results are untouched.
+curl -s 'localhost:8000/api/v2/search?origin=JFK&destination=LHR&date=2026-09-17&cabin=business' > /tmp/wc_before.json
+$PY - <<'EOF'
+import json, urllib.error, urllib.request
+
+def get(path, want=200):
+    url = "http://localhost:8000" + path
+    try:
+        with urllib.request.urlopen(url) as r:
+            return r.status, json.load(r)
+    except urllib.error.HTTPError as e:
+        return e.code, json.load(e)
+
+# bad input is rejected, not silently served
+s, _ = get("/api/v2/context?tool=bogus");            assert s == 400, f"bad tool -> {s}"
+s, _ = get("/api/v2/context?tool=fetch_url");        assert s == 400, f"fetch_url w/o url -> {s}"
+
+# every payload is labelled non-award, whatever the connector did
+for path in ("/api/v2/context?origin=JFK&destination=LHR&program=AC_AEROPLAN&cabin=business",
+             "/api/v2/context?tool=instant_answer&q=Aeroplan"):
+    s, d = get(path)
+    assert s == 200, f"{path} -> {s}"
+    assert d["kind"] == "web_context", d.get("kind")
+    assert d["is_award_data"] is False, "is_award_data must be False"
+    assert d["source"] == "flybasis-mcp"
+    assert "NOT award" in d["disclaimer"], d.get("disclaimer")
+    print(f"  {d['tool']:15} ok={str(d['ok']):5} kind={d['kind']} is_award_data={d['is_award_data']}")
+
+# web context must never feed the results list
+b = json.load(open("/tmp/wc_before.json"))
+get("/api/v2/context?origin=JFK&destination=LHR&program=AC_AEROPLAN")
+s, a = get("/api/v2/search?origin=JFK&destination=LHR&date=2026-09-17&cabin=business")
+assert a["count"] == b["count"], f"result count moved {b['count']} -> {a['count']}"
+assert [r["id"] for r in a["results"]] == [r["id"] for r in b["results"]], "result ids changed"
+print(f"  search unaffected: {a['count']} results, identical ids")
+EOF
+[ $? -eq 0 ] && ok "web context labelled non-award, results untouched" || bad "web context"
+
 echo
 echo "=============================="
 echo -e "ACCEPTANCE: \033[92m$pass passed\033[0m, \033[91m$fail failed\033[0m"
