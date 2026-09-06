@@ -63,10 +63,10 @@ The UI is a pixel-faithful implementation of the repository's Stitch mockups
   Code** → 6-digit OTP input with **Verify & Sign In**, resend link (60-s
   cooldown) and "use a different email". No theme toggle (dark-only runtime),
   no demo path: every sign-in goes through the real Resend OTP flow.
-- **Real logo** — the SpicyTool mark was extracted from the mockup render
-  (`screen 8.png` header, 32 CSS px) and inlined as a transparent PNG data
-  URI: 32px in both app headers and the login card, 28px in the login nav
-  (`w-7`), replacing the placeholder flame SVG.
+- **Real logo** — the SpicyTool mark (`logo.png` in the repo root, uploaded
+  by the owner) is cropped to the artwork, rendered at 144px and inlined as
+  an optimized PNG data URI: 72px in the login hero, 32px in both app
+  headers.
 - **Live sign-in session** — the app opens on the OTP login; a verified
   session (sessionStorage token, dies with the tab) unlocks the app, swaps
   the avatar to the `code 5` gradient-ring initials and offers Sign out
