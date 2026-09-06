@@ -75,14 +75,17 @@ The UI is a pixel-faithful implementation of the repository's Stitch mockups
   in both headers opens a blank compose to `adhambadraan@gmail.com`
   (`mailto:`).
 - **Broker CPM pricing + "Modify programs" (code 15)** — the home-page
-  "Modify programs" pill opens the dark brokers dialog: per-program
-  **cost-per-mile** inputs (¢/mile, default **1.4**), program checkboxes,
-  Deselect all / Save as default. **Cash price = miles × the program's CPM +
-  taxes & fees** (round-trips price each leg with its own program's CPM).
-  CPMs and program selections persist in `localStorage`; deselected programs
-  are excluded from results. The "Ticket via SpicyTool.com" option is
-  mockup-only (red "coming soon" toast), as is the "Try Broad Search" promo
-  CTA.
+  "Modify programs" pill opens the dark brokers dialog listing the owner's
+  **29 broker programs** (the 10 engine-searched programs plus 19 broker-only
+  rows, in the owner's order and wording — Aeromexico Club Premier through
+  JAL Mileage Bank): per-program **cost-per-mile** inputs (¢/mile, default
+  **1.4**), program checkboxes, Deselect all / Save as default. **Cash price
+  = miles × the program's CPM + taxes & fees** (round-trips price each leg
+  with its own program's CPM). CPMs and program selections persist in
+  `localStorage`; deselected engine programs are excluded from results
+  (broker-only rows carry no engine results yet). The "Ticket via
+  SpicyTool.com" option was removed at the owner's request — brokers is the
+  only mode; the "Try Broad Search" promo CTA remains mockup-only.
 - **Itinerary page (code 13)** — clicking a fare tile opens a full itinerary
   page in a new tab (and the price popover's **Get VI\*** opens the same page
   as a pop-up window): announcement bar, live header, stepper,
@@ -142,15 +145,13 @@ the itinerary page.
   different loyalty programs** — pairs are ranked by total points and marked
   `same_program`, with per-leg rows in the price breakdown. Filters apply to
   both legs (e.g. Nonstop = nonstop both ways).
-- **Airline logos — all 39 carriers covered.** 16 carriers render their
-  official brand glyph (inline SVG, simple-icons CC0, brand-color tiles,
-  luminance-aware contrast); 14 more render vector marks in their own brand
-  colors on white tiles (soaring-symbols collection — incl. Aegean, Aer
-  Lingus, Air Dolomiti, Air Europa, Air Serbia, Eurowings, Icelandair, LOT,
-  Royal Air Maroc, JetBlue); the last 9 (Egyptair, Austrian, Royal Jordanian,
-  Condor, Croatia, Discover, flyDubai, ITA, Lufthansa City) use official
-  raster wordmarks (Daisycon airline-logo feed) on white tiles. Unknown
-  future codes still fall back to monogram tiles.
+- **Airline logos — all 39 carriers, zero placeholders.** Every carrier
+  renders its official IATA-style wordmark as an inlined PNG data URI on a
+  white tile — one consistent size/format (fitted to 96×20, displayed at
+  16 px): the urbullet `iata-airelines-logos` set (flattened, trimmed),
+  with the Avianca and Virgin Atlantic wordmarks sourced from
+  seeklogo/freebiesupply (the feed served LifeMiles green and a gray variant
+  for those two). Unknown future codes still fall back to monogram tiles.
 - Deterministic first-party engine: the same query always returns the same
   results; different dates differ.
 - **Carrier network (39)** — Aegean, Aer Lingus, Air Canada, Air Dolomiti,
