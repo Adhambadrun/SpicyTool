@@ -1,0 +1,18 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.IsaiahDupree/agentsearch-mcp",
+  "description": "LLM-ready web search + instant answers + URL-to-clean-text fetch for agents and RAG.",
+  "version": "1.0.0",
+  "websiteUrl": "https://agentsearch-mcp.vercel.app",
+  "repository": {
+    "url": "https://github.com/IsaiahDupree/agentsearch-mcp",
+    "source": "github",
+    "id": "1318902039"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://agentsearch-mcp.vercel.app/mcp"
+    }
+  ]
+}

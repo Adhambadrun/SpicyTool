@@ -1,10 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "fastapi",
+  "rewrites": [
+    { "source": "/mcp", "destination": "/api/mcp" },
+    { "source": "/health", "destination": "/api/health" }
+  ],
   "functions": {
-    "app.py": {
-      "maxDuration": 60,
-      "excludeFiles": "{screen*.png,code*.html,logo.png,*.md,acceptance_check.sh,run.sh,docker-compose.yml,backend/tests_integration.py,backend/Dockerfile}"
-    }
+    "api/mcp.js": { "maxDuration": 30 },
+    "api/health.js": { "maxDuration": 10 }
   }
 }
