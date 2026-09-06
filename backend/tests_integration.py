@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SpicyTool integration tests — 34 assertions, no live network calls.
+"""SpicyTool integration tests — 35 assertions, no live network calls.
 
 Uses httpx.MockTransport for the HTTP-layer tests; everything else exercises
 the real normalization, enrichment and dedupe code paths directly.
@@ -927,8 +927,26 @@ def test_as_real_captured_response():
     assert all(r["url"] and r["title"] for r in out["results"])
 
 
+def test_provider_cache_key_distinguishes_round_trip() -> None:
+    """35. A round trip never shares a cache slot with its own outbound leg."""
+    from providers.base import SearchQuery
+
+    one_way = SearchQuery(origin="JFK", destination="LHR", date="2026-10-05",
+                          cabin="business", passengers=1, max_stops=1)
+    round_trip = SearchQuery(origin="JFK", destination="LHR", date="2026-10-05",
+                             cabin="business", passengers=1, max_stops=1)
+    round_trip.return_date = "2026-10-12"  # type: ignore[attr-defined]
+
+    assert one_way.hash() != round_trip.hash(), "round trip collides with the one-way key"
+    # One-way keys must stay byte-identical to the pre-fix form, or the fix
+    # itself invalidates every warm cache entry in production.
+    assert one_way.hash() == "JFK:LHR:2026-10-05:business:max_stops=1&passengers=1", one_way.hash()
+    assert "return_date=2026-10-12" in round_trip.hash(), round_trip.hash()
+    return "one-way key byte-identical; round trip keyed apart"
+
+
 def main() -> int:
-    print(f"\n{DIM}SpicyTool integration tests — 34 assertions, offline{RESET}\n")
+    print(f"\n{DIM}SpicyTool integration tests — 35 assertions, offline{RESET}\n")
     tests = [
         test_retry,
         test_timeout_isolation,
@@ -964,6 +982,7 @@ def main() -> int:
         test_as_engine_rebuilt_per_event_loop,
         test_as_base_url_override,
         test_as_real_captured_response,
+        test_provider_cache_key_distinguishes_round_trip,
     ]
     for i, fn in enumerate(tests, start=1):
         check(i, fn.__doc__.splitlines()[0].strip() if fn.__doc__ else fn.__name__, fn)

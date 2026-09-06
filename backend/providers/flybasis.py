@@ -21,6 +21,7 @@ Design notes
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 from datetime import datetime
 
@@ -40,6 +41,18 @@ from .base import BaseProvider, SearchQuery
 # https://enterprise-api.flybasis.com/sockets/v1/stream-flights
 BASE_URL = "https://enterprise-api.flybasis.com"
 SOCKETIO_PATH = "/sockets/v1/stream-flights"
+
+# Operator override, mirroring AGENTSEARCH_BASE_URL: point the award socket at a
+# different Flybasis host (staging / partner endpoint) or at a local mock, so the
+# connect -> search -> data -> normalize round trip can be exercised end-to-end
+# without a live credential. See backend/tools/verify_flybasis_socket.py.
+BASE_URL_ENV = "FLYBASIS_BASE_URL"
+
+
+def endpoint() -> str:
+    """Upstream origin for the award socket. FLYBASIS_BASE_URL wins."""
+    return (os.environ.get(BASE_URL_ENV) or "").strip().rstrip("/") or BASE_URL
+
 
 # Flybasis "programs" list (IATA-ish codes in the docs) -> canonical engine code.
 _PROGRAM_MAP = {
@@ -248,9 +261,14 @@ def normalize_payload(raw: object, q: SearchQuery) -> list[AwardResult]:
 
 class Flybasis(BaseProvider):
     name = "Flybasis"
-    base_url = BASE_URL
     env_key = "FLYBASIS_API_KEY"
     timeout = 6.0
+
+    @property
+    def base_url(self) -> str:
+        # Read per call, not frozen at import: the disabled_reason shown to the
+        # operator and the socket actually dialled must name the same host.
+        return endpoint()
 
     def _auth_headers_for(self, key: str) -> dict[str, str]:
         # The credential goes in the Socket.IO auth payload, not HTTP headers.
@@ -328,7 +346,7 @@ class Flybasis(BaseProvider):
         try:
             await asyncio.wait_for(
                 client.connect(
-                    BASE_URL,
+                    self.base_url,
                     auth={"token": token},
                     retry=False,
                     socketio_path=SOCKETIO_PATH,

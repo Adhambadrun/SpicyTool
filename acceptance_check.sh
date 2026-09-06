@@ -28,6 +28,14 @@ if (cd backend && ../.venv/bin/python tests_integration.py | grep -qE "^.*All [0
   ok "$n/$n assertions"
 else bad "integration tests"; fi
 
+echo "== 1b. Flybasis award-socket contract (real websocket, local mock) =="
+# Production relays exactly one provider, and its socket path was untested:
+# a broken connect/search/error round trip showed up as a silent empty list.
+if (cd backend && ../.venv/bin/python tools/verify_flybasis_socket.py | grep -qE "^.*All [0-9]+ checks passed"); then
+  n=$(cd backend && ../.venv/bin/python tools/verify_flybasis_socket.py | grep -oE "All [0-9]+ checks" | grep -oE "[0-9]+")
+  ok "$n/$n flybasis socket checks"
+else bad "flybasis socket contract (run: backend/tools/verify_flybasis_socket.py)"; fi
+
 echo "== 2. /api/v1/health =="
 h=$(curl -s localhost:8000/api/v1/health)
 [ "$(echo $h | $PY -c 'import json,sys;d=json.load(sys.stdin);print(d["airports"]==84 and d["programs"]==10)')" = "True" ] && ok "84 airports, 10 programs" || bad "$h"
@@ -370,6 +378,21 @@ if command -v node >/dev/null 2>&1; then
   if   [ $rc -eq 0 ];  then ok "stale search streams are cut off; newest search owns the results"
   elif [ $rc -eq 77 ]; then echo "  SKIP (jsdom not installed — cd frontend/test && npm install)"
   else bad "search stream race (see output above)"; fi
+else
+  echo "  SKIP (node not available)"
+fi
+
+echo "== 19d. no-provider empty state explains itself (jsdom) =="
+# The state a user sees whenever FLYBASIS_API_KEY is unset: it must name the
+# reason (the API `notice`, never dropped) and the exact variable to set, and
+# must not do so only when a credential really is the problem.
+if command -v node >/dev/null 2>&1; then
+  ( cd frontend/test && [ -d node_modules/jsdom ] || npm install --silent >/dev/null 2>&1
+    node no-provider-empty.mjs )
+  rc=$?
+  if   [ $rc -eq 0 ];  then ok "no-provider empty state gives reason + exact remedy"
+  elif [ $rc -eq 77 ]; then echo "  SKIP (jsdom not installed — cd frontend/test && npm install)"
+  else bad "no-provider empty state (see output above)"; fi
 else
   echo "  SKIP (node not available)"
 fi

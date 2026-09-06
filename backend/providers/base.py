@@ -29,13 +29,24 @@ class SearchQuery:
     def hash(self) -> str:
         from core.redis_cache import query_hash
 
+        extra: dict[str, object] = {
+            "passengers": self.passengers,
+            "max_stops": self.max_stops,
+        }
+        # A round trip is NOT the same question as its outbound leg, so it must
+        # not share a cache slot with one: without this, a one-way search on
+        # date X poisons a later round-trip search on X (the caller gets back
+        # outbound-only availability and no way to tell). Omitted when absent
+        # so every one-way key stays byte-identical to before.
+        return_date = getattr(self, "return_date", None)
+        if return_date:
+            extra["return_date"] = return_date
         return query_hash(
             self.origin,
             self.destination,
             self.date,
             self.cabin,
-            passengers=self.passengers,
-            max_stops=self.max_stops,
+            **extra,
         )
 
 

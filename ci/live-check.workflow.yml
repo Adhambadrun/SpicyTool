@@ -55,12 +55,20 @@ jobs:
         working-directory: backend
         run: python tools/verify_agentsearch.py
 
+      # The one provider production actually relays. Its socket handshake had
+      # no test at all, so a broken connect/search/error path used to ship as
+      # an empty results list with nothing to explain it.
+      - name: Flybasis award-socket contract test
+        working-directory: backend
+        run: python tools/verify_flybasis_socket.py
+
       - name: Frontend jsdom regression tests
         working-directory: frontend/test
         run: |
           npm install --silent
           node web-context.mjs
           node search-stream-race.mjs
+          node no-provider-empty.mjs
           node booking-window.mjs
 
       # The live gate. Skips (does not fail) when the secret is absent, so the
