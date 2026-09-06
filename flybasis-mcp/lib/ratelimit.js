@@ -1,15 +1,12 @@
 // lib/ratelimit.js — a soft, best-effort per-IP cap on tools/call requests.
 //
-// FlyBasis MCP is deliberately unauthenticated (see api/mcp.js / README), but
-// its upstream (flybasis-search-api.vercel.app) is a metered product sold on
-// RapidAPI/Apify. This connector authenticates to that upstream with the same
-// RapidAPI proxy-secret the paid listing uses (FLYBASIS_MCP_PROXY_SECRET), so
-// a free/no-auth MCP tier needs its own usage cap or it becomes an unmetered
-// bypass of the paid listing. This is a lightweight discovery/growth tier, not
-// the metered product — heavy users should go through RapidAPI/Apify. Enforcement
-// is in-memory per serverless instance (resets on cold start, not shared across
-// instances), which is an intentional, disclosed tradeoff for a soft usage-shaping
-// limit, not a hard security boundary.
+// flybasis-mcp is deliberately unauthenticated (see api/mcp.js / README), so
+// this is the only lever that stops an accidental loop from hammering the
+// keyless upstreams (DuckDuckGo Lite, DuckDuckGo Instant Answer, Wikipedia,
+// optional Brave/Serper, and any URL a caller asks fetch_url to read).
+// Enforcement is in-memory per serverless instance (resets on cold start, not
+// shared across instances), which is an intentional, disclosed tradeoff for a
+// soft usage-shaping limit, not a hard security boundary.
 
 const WINDOW_MS = 60 * 60_000; // 1 hour
 const MAX_PER_WINDOW = Number(process.env.FLYBASIS_MCP_RATE_LIMIT || process.env.AGENTSEARCH_MCP_RATE_LIMIT || 30);

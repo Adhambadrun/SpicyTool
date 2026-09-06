@@ -1,16 +1,21 @@
-// api/mcp.js — the MCP endpoint. FlyBasis Search's data (web SERP results, DuckDuckGo
-// instant answers, cleaned URL text/markdown) is fully public and carries no
-// per-user state, so this connector deliberately has NO auth, NO sessions, NO
-// Supabase, NO billing, NO demo-vs-real split: every caller gets the same real,
-// live data. See README.md for the full rationale.
+// api/mcp.js — the MCP endpoint (stateless streamable-HTTP).
 //
-// Stateless streamable-HTTP MCP server, one instance per request (no session
-// affinity needed since there is no per-session state to keep).
+// This connector is self-contained and KEYLESS: web search, instant answers and
+// URL-to-text fetching are implemented inside this repo (lib/tools.js) against
+// public, keyless sources (DuckDuckGo + Wikipedia) with an optional
+// operator-supplied Brave/Serper key. No RapidAPI, no proxy secret, no external
+// upstream deployment is required. See README.md.
+//
+// No MCP-caller auth, no sessions, no Supabase: every caller gets the same
+// live web data. A per-IP soft rate limit (lib/ratelimit.js) protects the
+// connector from accidental bursts.
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { registerTools } from '../lib/tools.js';
 import { clientIp, checkAndConsume } from '../lib/ratelimit.js';
+
+export const VERSION = '2.0.0';
 
 export default async function handler(req, res) {
   // Streamable-HTTP stateless servers only accept POST; GET/SSE-resume and
@@ -30,8 +35,8 @@ export default async function handler(req, res) {
     });
   }
 
-  // Only tools/call actually reaches the metered upstream (initialize/tools/list
-  // are free protocol handshake) — see lib/ratelimit.js for why this exists.
+  // tools/call is the only expensive operation (it hits search/fetch upstreams);
+  // initialize/tools/list are free protocol handshakes.
   if (req.body?.method === 'tools/call') {
     const { allowed, limit } = checkAndConsume(clientIp(req));
     if (!allowed) {
@@ -42,14 +47,14 @@ export default async function handler(req, res) {
           isError: true,
           content: [{
             type: 'text',
-            text: `Rate limit exceeded (${limit} tool calls/hour on this free connector). For higher volume, use FlyBasis Search via RapidAPI or Apify: https://agentsearch-api.vercel.app`,
+            text: `Rate limit exceeded (${limit} tool calls/hour on this connector). Configure FLYBASIS_MCP_RATE_LIMIT on the server to raise it.`,
           }],
         },
       });
     }
   }
 
-  const server = new McpServer({ name: 'flybasis', version: '1.0.0' });
+  const server = new McpServer({ name: 'flybasis', version: VERSION });
   registerTools(server);
 
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });

@@ -1,13 +1,14 @@
 {
   "name": "flybasis-mcp",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Remote MCP connector for FlyBasis Search API — LLM-ready web search + direct answers + URL-to-clean-text fetch for agents and RAG (web SERP, keyless instant answers, and SSRF-guarded URL → clean text/markdown) exposed as MCP tools for Claude/ChatGPT/any MCP client. The wrapped upstream is metered behind a RapidAPI proxy-secret guard; this connector authenticates its own outbound calls and applies a soft per-IP rate limit so the free MCP tier stays a discovery channel.",
+  "description": "Self-contained, keyless remote MCP connector shipped inside SpicyTool — web SERP via DuckDuckGo Lite with Wikipedia fallback, keyless DuckDuckGo/Wikipedia instant answers, and SSRF-guarded URL-to-clean-text/markdown fetch. No API keys, no RapidAPI proxy, no external upstream required. Exposes web_search / instant_answer / fetch_url to Claude/ChatGPT/any MCP client. (Award availability is a separate SpicyTool concern: backend/providers/flybasis.py over the Flybasis Socket.IO feed.)",
   "type": "module",
   "main": "api/mcp.js",
   "scripts": {
     "dev": "node local-server.js",
-    "smoke": "node test/smoke.mjs"
+    "smoke": "node test/smoke.mjs",
+    "test:offline": "node test/offline.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

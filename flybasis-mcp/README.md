@@ -1,72 +1,75 @@
-# FlyBasis MCP connector
+# FlyBasis MCP connector (keyless, self-contained)
 
-This connector is included in the SpicyTool repository under `flybasis-mcp/` as a self-contained deployment. It provides web-search and URL-context tools for MCP clients and is separate from SpicyTool’s award-flight provider (`backend/providers/flybasis.py`). The backend remains the source of award availability, while this connector supplies general web/RAG capabilities.
+This connector lives in the SpicyTool repository under `flybasis-mcp/` and is a
+**self-contained, keyless** MCP (Model Context Protocol) web toolkit. Everything
+it needs to run is in this repo file — no external API keys, no RapidAPI, no
+paid proxy, no separate upstream deployment.
 
-A remote **MCP (Model Context Protocol)** connector for [FlyBasis Search API](https://agentsearch-api.vercel.app) — an LLM/MCP-native web toolkit for agents and RAG pipelines: **web search** (provider-abstracted SERP), **keyless instant answers**, and **URL → clean text/markdown** fetch ready for an LLM context window.
+**Live (needs redeploy — see below):** `https://flybasis-mcp.vercel.app/mcp` —
+3 tools, one per capability.
 
-**Live:** `https://flybasis-mcp.vercel.app/mcp` — 3 tools, one per FlyBasis Search `/v1` endpoint. Since the upstream FlyBasis Search deployment is metered (RapidAPI/Apify) and gates `/v1/*` behind a RapidAPI proxy-secret guard, this connector authenticates its own outbound calls with that same secret (`FLYBASIS_MCP_PROXY_SECRET`, sent as the `X-RapidAPI-Proxy-Secret` header) and applies a soft per-IP rate limit (`FLYBASIS_MCP_RATE_LIMIT`, default 30 tool-calls/hour, in-memory) so the free MCP tier stays a discovery channel rather than an unmetered bypass of the paid listing — see `lib/ratelimit.js`.
+> ⚠️ **This is NOT award data.** Award availability in SpicyTool comes **only**
+> from `backend/providers/flybasis.py`, which dials the Flybasis Socket.IO award
+> feed (`https://enterprise-api.flybasis.com/sockets/v1/stream-flights`,
+> `auth={"token": <FLYBASIS_API_KEY>}`). This connector supplies general
+> **web context** (`web_search` / `instant_answer` / `fetch_url`) for the
+> itinerary "Web context" panel. It will never produce flights.
 
-## What this is, and why it's a separate connector
+## What changed (v2.0.0 — why this exists)
 
-FlyBasis Search API is a plain REST API. Any HTTP client can already call it directly. This repo exists because **MCP clients (Claude, ChatGPT, and other MCP-aware agents) don't consume arbitrary REST APIs — they consume MCP tools.** `flybasis-mcp` is a thin adapter layer that:
+The previous version passed every tool call through to a metered upstream
+(`agentsearch-api.vercel.app`) that gates `/v1/*` behind a RapidAPI proxy
+secret. That secret was not in the repo (and should never be) — so the connector
+depended on a deployment that no longer exists (`DEPLOYMENT_NOT_FOUND`) plus a
+secret only the operator could hold. It is now rebuilt so **nothing is required
+from outside this file**:
 
-- Exposes each FlyBasis Search endpoint as a discoverable, typed MCP **tool** (name, description, zod input schema, annotations) that an LLM can reason about and call directly, instead of having to be taught the REST surface out-of-band.
-- Speaks the MCP **streamable-HTTP** transport at a single `/mcp` endpoint, so it can be registered as a connector in Claude, ChatGPT, or any other MCP client with one URL.
-- Does nothing else. It has no business logic of its own — every tool call is a pass-through `fetch` to FlyBasis Search, and the JSON response FlyBasis Search returns is handed back verbatim as the tool result.
+| Tool | v2.0.0 implementation | Keys |
+|---|---|---|
+| `web_search` | DuckDuckGo Lite organic SERP, with automatic Wikipedia OpenSearch fallback | none |
+| `instant_answer` | DuckDuckGo Instant Answer API, Wikipedia REST summary fallback | none |
+| `fetch_url` | Self-hosted fetch + local SSRF guard + boilerplate stripping → text/markdown | none |
 
-## Free discovery tier over a metered API
-
-This connector is a **free discovery/growth tier** in front of the metered FlyBasis Search API. The upstream (`flybasis-search-api.vercel.app`) is sold on RapidAPI/Apify; this MCP wrapper authenticates to it with the shared RapidAPI proxy secret and caps usage per-IP so it stays a taste-test rather than an unmetered path around the paid plans. Heavy/production volume should go through [FlyBasis Search on RapidAPI/Apify](https://agentsearch-api.vercel.app).
-
-## Authentication: None on the MCP side (deliberate)
-
-FlyBasis Search's data has no per-user dimension — it's public web data (SERP results, DuckDuckGo instant answers, cleaned page text). There is nothing to gate per-caller, so this connector intentionally ships with:
-
-- No OAuth, no login, no bearer tokens for the MCP caller
-- No Supabase / database
-- No demo-vs-real account split — every caller gets the same real, live data
-
-`api/mcp.js` builds a fresh, stateless `McpServer` per request and serves it with zero MCP-caller auth checks. The only outbound auth is the upstream RapidAPI proxy secret described above, which the connector holds server-side.
+Optional upgrades (still no code change): set `FLYBASIS_MCP_BRAVE_KEY` or
+`FLYBASIS_MCP_SERPER_KEY` to use a commercial SERP provider; the connector keeps
+the same tools/schema either way.
 
 ## Tool list
 
-One tool per FlyBasis Search `/v1` endpoint (from `flybasis-search-api/openapi.yaml`; `/api/health` is intentionally not wrapped):
+| Tool | Description |
+|---|---|
+| `web_search` | Normalized organic results: position, title, url, snippet, source, domain + meta envelope (provider, sources, took_ms, ads_filtered). |
+| `instant_answer` | Keyless instant answer: heading, type (abstract/answer/disambiguation), text, source, sourceUrl, optional image, related topics + meta. |
+| `fetch_url` | SSRF-guarded public URL → clean text (default) or markdown, plus `finalUrl` and up to 50 extracted links when `links=true`. |
 
-| Tool | FlyBasis Search endpoint | Description |
-|---|---|---|
-| `web_search` | `GET /v1/search` | Web SERP via a provider-abstracted backend (Brave or Serper). Returns normalized results with position/title/url/snippet/domain. |
-| `instant_answer` | `GET /v1/answer` | Keyless DuckDuckGo instant answer — definitions, entities, quick facts. |
-| `fetch_url` | `GET /v1/fetch` | Keyless, SSRF-guarded URL → clean, boilerplate-free text or markdown for RAG. |
-
-All 3 tools are read-only and annotated `{ readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }` — none of them write anything, and all of them reflect live, externally-changing web data.
-
-## How it wraps flybasis-search-api
-
-Each tool handler does a plain `fetch(\`${FLYBASIS_MCP_API_BASE_URL}${path}\`, ...)` against the real FlyBasis Search REST API and returns the parsed JSON as MCP tool-result content:
-
-```js
-{ content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
-```
-
-The outbound request carries `X-RapidAPI-Proxy-Secret: <FLYBASIS_MCP_PROXY_SECRET>` so it passes the upstream guard on `/v1/*`. Upstream HTTP errors (4xx/5xx) are caught and surfaced as a typed MCP error result via an `asError` helper rather than crashing the request.
+All 3 tools are read-only, annotated `{ readOnlyHint: true, destructiveHint:
+false, idempotentHint: true, openWorldHint: true }`, return upstream JSON
+verbatim in the tool result, and surface failures as typed MCP errors (never a
+crashed request).
 
 ## Environment variables
 
+Nothing is required. Defaults are keyless.
+
 | Var | Default | Purpose |
 |---|---|---|
-| `FLYBASIS_MCP_API_BASE_URL` | `https://agentsearch-api.vercel.app` | Upstream FlyBasis Search base URL (override for local/self-hosted testing). |
-| `FLYBASIS_MCP_PROXY_SECRET` | _(empty)_ | RapidAPI proxy secret, sent as `X-RapidAPI-Proxy-Secret` to pass the upstream `/v1/*` guard. Without it, guarded routes return 403. |
-| `FLYBASIS_MCP_RATE_LIMIT` | `30` | Soft per-IP `tools/call` cap per hour (in-memory, per serverless instance). |
+| `FLYBASIS_MCP_RATE_LIMIT` | `30` | Soft per-IP `tools/call` cap per hour (in-memory, per instance). |
+| `FLYBASIS_MCP_BRAVE_KEY` | _(empty)_ | Optional: use Brave Search API for `web_search`. |
+| `FLYBASIS_MCP_SERPER_KEY` | _(empty)_ | Optional: use Serper (Google) for `web_search`. |
+| `FLYBASIS_MCP_API_BASE_URL` | _(empty)_ | Legacy compat only: forward to a custom upstream REST API. |
+| `FLYBASIS_MCP_PROXY_SECRET` | _(empty)_ | Legacy compat only: header sent when forwarding upstream. |
+| `FLYBASIS_MCP_FORCE_LEGACY` | `0` | Legacy compat only: force pass-through mode. |
 
 ## Project layout
 
 ```
 api/mcp.js       MCP endpoint (StreamableHTTPServerTransport, stateless, no MCP-caller auth)
-api/health.js    GET /api/health
-lib/tools.js     All 3 tool definitions (zod schemas + fetch-and-forward handlers, proxy-secret auth)
+api/health.js    GET /api/health (reports mode + configured providers)
+lib/tools.js     All 3 tools: keyless implementations + parsers + SSRF guard
 lib/ratelimit.js Soft per-IP tools/call rate limiter
 local-server.js  Plain-Node http server for local dev / smoke testing (not deployed)
 test/smoke.mjs   Real end-to-end smoke test (initialize, tools/list, tools/call)
+test/offline.mjs ZERO-network unit tests for parsers/normalizers (runs anywhere)
 vercel.json      Routes /mcp -> api/mcp.js, /health -> api/health.js
 server.json      MCP registry manifest
 ```
@@ -76,13 +79,34 @@ server.json      MCP registry manifest
 ```bash
 npm install
 npm run dev          # starts local-server.js on :3900
-npm run smoke        # runs test/smoke.mjs against the local server
+npm run test:offline # parser unit tests — NO network needed
+npm run smoke        # protocol smoke test (data calls need outbound network)
 ```
 
-To exercise a real end-to-end fetch through the upstream guard, set the proxy secret first:
+## Deploy (one command — no keys, no extra services)
+
+The previous `flybasis-mcp.vercel.app` deployment is gone (`DEPLOYMENT_NOT_FOUND`).
+Re-deploy from this folder to any Vercel project with:
 
 ```bash
-export FLYBASIS_MCP_PROXY_SECRET=<the RapidAPI proxy secret>
-npm run dev &
-npm run smoke
+cd flybasis-mcp
+npx vercel --prod     # or: import this folder into https://vercel.com/new
 ```
+
+That serves `https://<your-project>.vercel.app/mcp`. Point SpicyTool at it with
+`FLYBASIS_MCP_URL=https://<your-project>.vercel.app/mcp` in `.env`. Any
+Node≥20 serverless host works the same way (the handlers use only `fetch`, the
+MCP SDK, and `node:dns/promises`). No databases, no auth infra, no secrets.
+
+## Relationship to the award feed
+
+Do not confuse the two:
+
+- **Award search (the actual product):** `backend/providers/flybasis.py` +
+  `Flybasis-index.md` — Flybasis WebSocket award feed, gated by
+  `FLYBASIS_API_KEY` issued directly by Flybasis to the operator. **The repo
+  deliberately ships without that key** (credential-gating is a hard project
+  constraint); see `../FLYBASIS_GO_LIVE.md` for exactly how to connect it.
+- **This connector:** general web context for RAG/enrichment. Keyless, no award
+  data, never merged into search results (`backend/services/web_context.py`
+  labels everything `is_award_data=false`).

@@ -286,7 +286,7 @@ departure date"`.
 | `AWARDTOOL_API_KEY` | *(blank)* | enables the AwardTool adapter |
 | `POINTSPATH_API_KEY` | *(blank)* | enables the PointsPath adapter |
 | `POINTSYEAH_API_KEY` | *(blank)* | enables the PointsYeah adapter |
-| `FLYBASIS_API_KEY` | *(blank)* | enables the Flybasis adapter (Socket.IO award feed, see `Flybasis-index.md`) |
+| `FLYBASIS_API_KEY` | *(blank)* | enables the Flybasis adapter (Socket.IO award feed, see `Flybasis-index.md`). Issued **by Flybasis** to the operator — see [`FLYBASIS_GO_LIVE.md`](FLYBASIS_GO_LIVE.md) for the exact steps, verification, and a copy-paste prompt for the next chat. |
 | `REDIS_URL` | `redis://localhost:6379/0` | cache; falls back to memory if unreachable |
 | `CACHE_TTL` | `2700` | seconds, clamped to the 30–60 min band |
 | `PROVIDER_TIMEOUT` | `3.5` | per-request budget for third-party providers |
@@ -297,7 +297,22 @@ departure date"`.
 
 Every third-party adapter is **inert until an operator supplies a credential
 issued to them by that provider**. A disabled provider reports a clear,
-actionable reason and never breaks a request.
+actionable reason and never breaks a request. When a provider *is* configured
+and the upstream socket fails, the **exact `ProviderError` is surfaced** in the
+API response (`providers[].error`) — it is never masked. `.env` is loaded from
+the repo root and `backend/.env` (both git-ignored); `python-dotenv` is now in
+both requirements manifests so the documented `backend/.env` path actually
+works on local runs as well as `docker compose`/Vercel env vars.
+
+**Flybasis award search vs. the web-context connector:** award availability is
+exclusively `backend/providers/flybasis.py` (Socket.IO award feed). The
+`flybasis-mcp/` folder is a **separate, keyless** web-context MCP connector
+(`web_search` / `instant_answer` / `fetch_url`) — it supplies the "Web context"
+panel and can never produce flights. Its deployment
+(`https://flybasis-mcp.vercel.app/mcp`) previously died (`DEPLOYMENT_NOT_FOUND`);
+redeploy it keylessly from `flybasis-mcp/` (`npx vercel --prod`) and point
+`FLYBASIS_MCP_URL` at the new URL. Everything it needs is in the repo — no
+RapidAPI, no proxy secret.
 
 ## Design principles
 
