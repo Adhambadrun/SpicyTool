@@ -165,6 +165,10 @@ button{font-family:inherit}
 .dp-chip:hover{background:#282830;color:#fff}
 .dp-chip.on{background:rgba(225,29,46,.15);border-color:rgba(225,29,46,.4);color:#E11D2E;font-weight:600}
 .dp-chip.on:hover{background:rgba(225,29,46,.22)}
+.dp-chip[disabled]{opacity:.4;cursor:default}
+.dp-chip[disabled]:hover{background:#202025;color:#8E8E93}
+.dp-flex-hint{align-self:center;font-size:11px;color:#8E8E93;white-space:nowrap}
+.dp-day.flex{box-shadow:inset 0 0 0 1px rgba(225,29,46,.45);color:#fff}
 .dp-months{margin-top:16px}
 .dp-nav{display:grid;grid-template-columns:auto 1fr 1fr auto;align-items:center;gap:10px;margin-bottom:8px}
 .dp-month{font-size:12px;font-weight:600;color:#fff;text-align:center;white-space:nowrap}
@@ -230,7 +234,7 @@ button{font-family:inherit}
 .bt-published{color:#CBD5E1;background:rgba(148,163,184,.12);border-color:rgba(148,163,184,.35)}
 .bt-consolidator{color:#F9A8D4;background:rgba(236,72,153,.12);border-color:rgba(236,72,153,.35)}
 .bt-basis{color:#FCA5A5;background:rgba(225,29,46,.12);border-color:rgba(225,29,46,.4)}
-/* passengers + flexibility stepper panels */
+/* passengers stepper panel */
 .pax-panel{min-width:300px}
 .pax-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 8px}
 .pax-row + .pax-row{border-top:1px solid var(--pop-border)}
@@ -241,11 +245,6 @@ button{font-family:inherit}
 .pax-step:hover{border-color:#4A4F5C}
 .pax-step[disabled]{opacity:.35;cursor:default}
 .pax-n{min-width:18px;text-align:center;font-size:14px;font-weight:600;color:#fff;font-family:ui-monospace,monospace}
-.flex-panel{min-width:280px;padding:4px}
-.flex-ctl{display:flex;align-items:center;justify-content:center;gap:14px;padding:12px 8px 8px}
-.flex-val{min-width:92px;text-align:center;font-size:16px;font-weight:700;color:#fff}
-.flex-val small{display:block;font-size:10.5px;font-weight:500;color:#8E97A8;letter-spacing:.04em;text-transform:uppercase}
-.flex-note{font-size:11.5px;color:#8E97A8;text-align:center;padding:0 10px 10px}
 /* support button */
 a.mp-btn{text-decoration:none}
 
@@ -599,9 +598,6 @@ a.brand:hover .wordmark{opacity:.9}
           <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 9l-7 7-7-7"/></svg>
         </button>
         <button type="button" class="cabin-btn" id="pax-btn"><b id="pax-val">1 Passenger</b>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 9l-7 7-7-7"/></svg>
-        </button>
-        <button type="button" class="cabin-btn" id="flex-btn" title="Search nearby dates — fans out one search per day, ± up to 3 days"><b id="flex-val">Exact Dates</b>
           <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 9l-7 7-7-7"/></svg>
         </button>
       </div>
@@ -1156,7 +1152,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;","
 const state = {
   origins: ["CAI"], destinations: ["LHR"],
   date: "2026-09-16", returnDate: null, cabin: "business",
-  pax: { adults: 1, children: 0, infants: 0 }, flex: 0, trip: "oneway",
+  pax: { adults: 1, children: 0, infants: 0 }, flex: 0, retFlex: 0, trip: "oneway",   /* flex/retFlex = ±N-day search window around departure/return (not stay length) */
   results: [], routes: [], streaming: false, sort: "best",
   filters: {
     stops:"any", airline:"", ticket:"", program:"",
@@ -1321,7 +1317,7 @@ function openDP(){
   const sel = new Date(state.date + "T12:00:00");
   dpMonth = new Date(sel.getFullYear(), sel.getMonth(), 1);
   dpArm = state.trip === "roundtrip" ? "ret" : "dep";
-  dpSnapshot = { date: state.date, returnDate: state.returnDate, flex: state.flex };
+  dpSnapshot = { date: state.date, returnDate: state.returnDate, flex: state.flex, retFlex: state.retFlex };
   const el = document.createElement("div");
   el.className = "dp"; el.id = "dp";
   $("f-date").appendChild(el);
@@ -1352,6 +1348,8 @@ function dpGridCells(y, m){
     if (id === state.date) cls.push("sel");
     else if (state.trip === "roundtrip" && id === state.returnDate) cls.push("ret");
     else if (+dt === +today) cls.push("today");
+    /* ring the extra dates the ± window will also search (before AND after the selected day) */
+    if (id !== state.date && id !== state.returnDate && (flexDates().includes(id) || retFlexDates().includes(id))) cls.push("flex");
     cells += `<button type="button" class="${cls.join(" ")}" data-date="${id}">${d}</button>`;
   }
   const trailing = 7 * Math.ceil((first + dim) / 7) - (first + dim);
@@ -1367,15 +1365,18 @@ function drawDP(){
   const CAL_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>`;
   const ARROW_L = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>`;
   const ARROW_R = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>`;
+  /* ±N chips = search-window flexibility, NOT trip length: "Oct 1 + ±2 days" searches Sep 29 … Oct 3 (5 dates). */
   const depChips = `
       <div class="dp-chips">
-        <button type="button" class="dp-chip ${state.flex === 1 ? "on" : ""}" data-flex="1">± 1 day</button>
-        <button type="button" class="dp-chip ${state.flex === 2 ? "on" : ""}" data-flex="2">± 2 day</button>
+        <button type="button" class="dp-chip ${state.flex === 1 ? "on" : ""}" data-flex="1" title="Also search 1 day before and 1 day after departure">± 1 day</button>
+        <button type="button" class="dp-chip ${state.flex === 2 ? "on" : ""}" data-flex="2" title="Also search 2 days before and 2 days after departure">± 2 days</button>
+        ${state.flex > 0 ? `<span class="dp-flex-hint">${flexRangeLabel(sel, state.flex)}</span>` : ""}
       </div>`;
   const retChips = rt ? `
       <div class="dp-chips">
-        <button type="button" class="dp-chip ${ret && ret === shiftISO(sel, 1) ? "on" : ""}" data-ret="1">± 1 day</button>
-        <button type="button" class="dp-chip ${ret && ret === shiftISO(sel, 2) ? "on" : ""}" data-ret="2">± 2 day</button>
+        <button type="button" class="dp-chip ${state.retFlex === 1 ? "on" : ""}" data-ret="1" title="Also search 1 day before and 1 day after return" ${ret ? "" : "disabled"}>± 1 day</button>
+        <button type="button" class="dp-chip ${state.retFlex === 2 ? "on" : ""}" data-ret="2" title="Also search 2 days before and 2 days after return" ${ret ? "" : "disabled"}>± 2 days</button>
+        ${ret && state.retFlex > 0 ? `<span class="dp-flex-hint">${flexRangeLabel(ret, state.retFlex)}</span>` : ""}
       </div>` : "";
   const depCol = `
     <div>
@@ -1434,20 +1435,20 @@ function drawDP(){
   el.querySelectorAll("[data-flex]").forEach(b => b.addEventListener("click", e => {
     e.stopPropagation();
     const v = +b.dataset.flex;
-    state.flex = state.flex === v ? 0 : v;      /* toggle ±1 / ±2 search flexibility */
-    syncFlexLabel(); drawDP();
+    state.flex = state.flex === v ? 0 : v;      /* toggle ±1 / ±2 day window around the departure date */
+    syncDate(); drawDP();
   }));
   el.querySelectorAll("[data-ret]").forEach(b => b.addEventListener("click", e => {
     e.stopPropagation();
+    if (!state.returnDate) return;
     const v = +b.dataset.ret;
-    const target = shiftISO(state.date, v);
-    state.returnDate = (state.returnDate === target) ? null : target;   /* toggle */
+    state.retFlex = state.retFlex === v ? 0 : v;   /* toggle ±1 / ±2 day window around the return date (never changes the date itself) */
     dpArm = "ret"; syncDate(); drawDP();
   }));
   el.querySelectorAll("[data-clear]").forEach(b => b.addEventListener("click", e => {
     e.stopPropagation();
-    if (b.dataset.clear === "dep"){ state.date = todayISO(); state.returnDate = null; dpArm = "ret"; }
-    else { state.returnDate = null; dpArm = "ret"; }
+    if (b.dataset.clear === "dep"){ state.date = todayISO(); state.returnDate = null; state.retFlex = 0; dpArm = "ret"; }
+    else { state.returnDate = null; state.retFlex = 0; dpArm = "ret"; }
     syncDate(); drawDP();
   }));
   el.querySelectorAll("[data-nav]").forEach(b => b.addEventListener("click", e => {
@@ -1457,8 +1458,8 @@ function drawDP(){
   el.querySelectorAll("[data-dp]").forEach(b => b.addEventListener("click", e => {
     e.stopPropagation();
     if (b.dataset.dp === "cancel" && dpSnapshot){
-      state.date = dpSnapshot.date; state.returnDate = dpSnapshot.returnDate; state.flex = dpSnapshot.flex;
-      syncDate(); syncFlexLabel();
+      state.date = dpSnapshot.date; state.returnDate = dpSnapshot.returnDate; state.flex = dpSnapshot.flex; state.retFlex = dpSnapshot.retFlex || 0;
+      syncDate();
     } else {
       syncDate();
     }
@@ -1469,14 +1470,19 @@ function syncPaxLabel(){
   const n = paxTotal(), inf = state.pax.infants;
   $("pax-val").textContent = n === 1 && !inf ? "1 Passenger" : `${n + inf} Passenger${n + inf === 1 ? "" : "s"}`;
 }
-function syncFlexLabel(){
-  $("flex-val").textContent = state.flex > 0 ? `Flexibility ±${state.flex} Days` : "Exact Dates";
+/* "Oct 1 + ±2 days" => "Sep 29 – Oct 3" (the window that will actually be searched) */
+function flexRangeLabel(iso, n){
+  if (!iso || !(n > 0)) return "";
+  return `${shortDate(shiftISO(iso, -n))} – ${shortDate(shiftISO(iso, n))}`;
 }
 function syncDate(){
-  const d = fmtDate(state.date);
-  $("date-val").textContent = state.trip === "roundtrip"
-    ? `${shortDate(state.date)} → ${state.returnDate ? shortDate(state.returnDate) : "Add return"}`
-    : d;
+  const dep = state.flex > 0 ? `${shortDate(state.date)} ±${state.flex}` : (state.trip === "roundtrip" ? shortDate(state.date) : fmtDate(state.date));
+  const ret = state.returnDate ? (state.retFlex > 0 ? `${shortDate(state.returnDate)} ±${state.retFlex}` : shortDate(state.returnDate)) : "Add return";
+  $("date-val").textContent = state.trip === "roundtrip" ? `${dep} → ${ret}` : dep;
+  const parts = [];
+  if (state.flex > 0) parts.push(`Departure: searching ${flexRangeLabel(state.date, state.flex)}`);
+  if (state.trip === "roundtrip" && state.returnDate && state.retFlex > 0) parts.push(`Return: searching ${flexRangeLabel(state.returnDate, state.retFlex)}`);
+  $("f-date").title = parts.join(" · ");
 }
 
 /* ============================ generic dropdowns ============================ */
@@ -1530,15 +1536,22 @@ function startSearch(){
   if (state.trip === "roundtrip" && !state.returnDate) return searchError("Select a return date (open the date picker).");
   runSearch();
 }
-function flexDates(){
-  /* ±N days around the selected departure (0 => just the selected date) */
-  const n = Math.max(0, Math.min(3, state.flex|0));
+function flexDates(base = state.date, flex = state.flex){
+  /* Flexibility window: the selected date plus N days BEFORE and N days AFTER it
+     (0 => just the selected date). e.g. Oct 1 with ±2 => Sep 29, Sep 30, Oct 1, Oct 2, Oct 3.
+     This is a search window only — it never changes how long the trip is. */
+  const n = Math.max(0, Math.min(3, flex|0));
   const out = [];
   for (let i = -n; i <= n; i++){
-    const d = shiftISO(state.date, i);
+    const d = shiftISO(base, i);
     if (d >= todayISO()) out.push(d);
   }
   return out;
+}
+function retFlexDates(){
+  if (state.trip !== "roundtrip" || !state.returnDate) return [];
+  /* return window, clipped so a return is never before its departure */
+  return flexDates(state.returnDate, state.retFlex).filter(d => d >= state.date);
 }
 function todayISO(){
   const t = new Date(); t.setHours(12,0,0,0);
@@ -1556,9 +1569,9 @@ async function runSearch(){
     airports:"", cabinF:"any", alliance:"any", premium:"any",
     depTime:"any", arrTime:"any", duration:"any", dates:"any"
   };
-  state.lastQuery = { origins:[...state.origins], destinations:[...state.destinations], date:state.date, cabin:state.cabin, trip:state.trip, returnDate:state.returnDate, flex:state.flex };
+  state.lastQuery = { origins:[...state.origins], destinations:[...state.destinations], date:state.date, cabin:state.cabin, trip:state.trip, returnDate:state.returnDate, flex:state.flex, retFlex:state.retFlex };
   renderResults(); renderFilterBar();
-  if (state.flex > 0){ await flexSearch(); return; }
+  if (state.flex > 0 || (state.trip === "roundtrip" && state.returnDate && state.retFlex > 0)){ await flexSearch(); return; }
   const qsBase = `origin=${state.origins.join(",")}&destination=${state.destinations.join(",")}&date=${state.date}&cabin=${state.cabin}&passengers=${paxTotal()}&max_stops=1`;
   const qsRT = (state.trip === "roundtrip" && state.returnDate) ? `&return_date=${state.returnDate}` : "";
   // try v2 stream first (real providers + local engine)
@@ -1653,18 +1666,26 @@ async function runSearch(){
   try { await tryV2(); }
   catch { tryV1(); }
 }
-/* flexibility fan-out: one REST search per nearby date, merged + deduped — uses v2 then v1 */
+/* flexibility fan-out: one REST search per date in the ± window (N days before AND after the picked
+   date — the picked date itself is always included), merged + deduped — uses v2 then v1.
+   Round-trip: departure window × return window, so a ±1 departure with a ±1 return = up to 9 searches. */
 async function flexSearch(){
-  const dates = flexDates();
+  const depDates = flexDates();
+  const retDates = retFlexDates();
+  const rt = state.trip === "roundtrip" && !!state.returnDate;
   const qsBaseV2 = `origin=${state.origins.join(",")}&destination=${state.destinations.join(",")}&cabin=${state.cabin}&passengers=${paxTotal()}&max_stops=1`;
-  const qsBaseV1 = qsBaseV2 + (state.trip === "roundtrip" && state.returnDate ? `&return_date=${state.returnDate}` : "");
   try {
-    // try v2 first for each date
-    const jobsV2 = dates.map(d => fetch(`/api/v2/search?${qsBaseV2}&date=${d}`).then(r => r.ok ? r.json() : null).catch(() => null));
+    // try v2 first for each departure date (v2 is one-way only, same as the non-flex path)
+    const jobsV2 = depDates.map(d => fetch(`/api/v2/search?${qsBaseV2}&date=${d}`).then(r => r.ok ? r.json() : null).catch(() => null));
     let packs = await Promise.all(jobsV2);
-    // if all null, fallback to v1
+    // if all null, fallback to v1 (v1 understands return_date, so pair every departure with every return in the window)
     if (packs.every(p => !p || !p.results)){
-      const jobsV1 = dates.map(d => api(`/api/v1/search?${qsBaseV1}&date=${d}`).then(r => r.ok ? r.json() : null).catch(() => null));
+      const combos = [];
+      for (const d of depDates){
+        if (!rt){ combos.push([d, null]); continue; }
+        for (const r of retDates) if (r >= d) combos.push([d, r]);
+      }
+      const jobsV1 = combos.map(([d, r]) => api(`/api/v1/search?${qsBaseV2}&date=${d}${r ? `&return_date=${r}` : ""}`).then(x => x.ok ? x.json() : null).catch(() => null));
       packs = await Promise.all(jobsV1);
     }
     const seen = new Set(); let routes = [];
@@ -2345,9 +2366,10 @@ function restoreSearch(){
     state.returnDate = q.returnDate || null;
     if (q.cabin) state.cabin = q.cabin;
     state.flex = q.flex || 0;
+    state.retFlex = q.retFlex || 0;
     setTrip(q.trip === "roundtrip" ? "roundtrip" : "oneway");
     $("cabin-val").textContent = CABIN_LABEL[state.cabin] || state.cabin;
-    renderField("origin"); renderField("destination"); syncPaxLabel(); syncFlexLabel();
+    renderField("origin"); renderField("destination"); syncPaxLabel();
   }
   /* city names for the restored itinerary (AIRPORT_META is only filled during a live search) */
   for (const r of state.results){
@@ -2601,30 +2623,6 @@ function init(){
         });
       }
       syncPaxLabel();
-    });
-  });
-  $("flex-btn").addEventListener("click", e => {
-    e.stopPropagation();
-    const el = document.createElement("div");
-    el.className = "dd flex-panel";
-    el.innerHTML = `
-      <div class="flex-ctl">
-        <button type="button" class="pax-step" data-fl="-1" aria-label="Fewer flexible days" ${state.flex <= 0 ? "disabled" : ""}>−</button>
-        <div class="flex-val"><span id="flex-n">±${state.flex}</span><small>Days</small></div>
-        <button type="button" class="pax-step" data-fl="1" aria-label="More flexible days" ${state.flex >= 3 ? "disabled" : ""}>+</button>
-      </div>
-      <div class="flex-note">Searches every date within ±${state.flex === 0 ? 0 : state.flex} day${state.flex === 1 ? "" : "s"} of your departure — ${state.flex === 0 ? "exact dates only." : flexDates().length + " date" + (flexDates().length === 1 ? "" : "s") + " in total."}</div>`;
-    placeDD(el, $("flex-btn").parentElement);
-    el.addEventListener("mousedown", e => e.preventDefault());
-    el.addEventListener("click", e => {
-      e.stopPropagation();
-      const b = e.target.closest("[data-fl]"); if (!b) return;
-      state.flex = Math.max(0, Math.min(3, state.flex + (+b.dataset.fl)));
-      $("flex-n").textContent = "±" + state.flex;
-      el.querySelector("[data-fl='-1']").disabled = state.flex <= 0;
-      el.querySelector("[data-fl='1']").disabled = state.flex >= 3;
-      el.querySelector(".flex-note").textContent = `Searches every date within ±${state.flex} day${state.flex === 1 ? "" : "s"} of your departure — ${state.flex === 0 ? "exact dates only." : flexDates().length + " date" + (flexDates().length === 1 ? "" : "s") + " in total."}`;
-      syncFlexLabel();
     });
   });
   /* trip tabs — round-trip combines both one-way legs (mixed programs allowed) */
