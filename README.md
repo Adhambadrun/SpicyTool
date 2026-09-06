@@ -47,9 +47,10 @@ excluded from the bundle). Import the repo in Vercel and deploy — `/`,
 Recommended environment variables (Project → Settings → Environment
 Variables):
 
-- `AUTH_SECRET` — any long random string. Without it each serverless
-  instance signs sessions with its own in-memory key, so a session may be
-  rejected after a cold start.
+- `AUTH_SECRET` — optional long random string. Without it the signing key is
+  derived deterministically from the login config, so sessions stay valid
+  across serverless cold starts (set it for a stronger, deployment-agnostic
+  key).
 - `LOGIN_PIN`, `ALLOWED_LOGIN_EMAILS` — optional overrides.
 - `REDIS_URL` — optional; without it the cache runs in memory per instance.
 
@@ -167,12 +168,11 @@ the itinerary page.
   `same_program`, with per-leg rows in the price breakdown. Filters apply to
   both legs (e.g. Nonstop = nonstop both ways).
 - **Airline logos — all 39 carriers, zero placeholders.** Every carrier
-  renders its official IATA-style wordmark as an inlined PNG data URI on a
-  white tile — one consistent size/format (fitted to 96×20, displayed at
-  16 px): the urbullet `iata-airelines-logos` set (flattened, trimmed),
-  with the Avianca and Virgin Atlantic wordmarks sourced from
-  seeklogo/freebiesupply (the feed served LifeMiles green and a gray variant
-  for those two). Unknown future codes still fall back to monogram tiles.
+  renders as a small rectangular brand-colored tile with its IATA code
+  (32×22 px, e.g. `LH` on Lufthansa navy, `AF` on Air France navy, `LX` on
+  Swiss red) — one consistent size/format across the cards, the timeline
+  legs and the price popover. Unknown future codes fall back to a
+  deterministic hashed color tile.
 - Deterministic first-party engine: the same query always returns the same
   results; different dates differ.
 - **Carrier network (39)** — Aegean, Aer Lingus, Air Canada, Air Dolomiti,
@@ -226,7 +226,9 @@ the itinerary page.
 `?token=` for `EventSource`). The token is minted only through the PIN flow;
 tests mint tokens in-process against the same per-install signing secret
 (`backend/data/.auth_secret`, auto-generated, git-ignored; override with
-`AUTH_SECRET`).
+`AUTH_SECRET`). On read-only/ephemeral filesystems (serverless) the secret
+is derived deterministically from the login config, so a session survives
+cold starts instead of logging the user out mid-use.
 | `GET /api/v2/providers` | provider inventory + gating reasons |
 | `GET /api/v2/telemetry` | blocklist + blocked-request counter |
 | `GET /api/v2/cache/stats` | cache backend, hits/misses, TTL |
