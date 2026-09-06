@@ -83,10 +83,15 @@ The UI is a pixel-faithful implementation of the repository's Stitch mockups
   6-digit **PIN** input with **Sign In** and "use a different email".
   No theme toggle (dark-only runtime), no demo path: every sign-in goes
   through the real server-side PIN check.
-- **Real logo** — the SpicyTool mark (`logo.png` in the repo root, uploaded
-  by the owner) is cropped to the artwork, rendered at 144px and inlined as
-  an optimized PNG data URI: 72px in the login hero, 32px in both app
-  headers.
+- **Real logo — one asset, one link.** The SpicyTool mark (`logo.png` in the
+  repo root, uploaded by the owner) is cropped to the artwork, rendered at
+  144px and inlined as an optimized PNG data URI (`LOGO_SRC`). That single
+  constant feeds **every** place the brand appears — 72px in the login hero,
+  32px in the search, results *and* itinerary headers, plus the tab
+  favicon/apple-touch icon (set at boot, no second copy of the artwork in the
+  HTML). In all three app headers the logo + wordmark are one real
+  `<a href="/">`, i.e. the same link as the app itself, and clicking it
+  always returns to the search screen.
 - **Live sign-in session** — the app opens on the PIN login; a verified
   session (sessionStorage token, dies with the tab) unlocks the app, swaps
   the avatar to the `code 5` gradient-ring initials and offers Sign out
@@ -106,13 +111,28 @@ The UI is a pixel-faithful implementation of the repository's Stitch mockups
   (broker-only rows carry no engine results yet). The "Ticket via
   SpicyTool.com" option was removed at the owner's request — brokers is the
   only mode; the "Try Broad Search" promo CTA remains mockup-only.
-- **Itinerary page (code 13)** — clicking a fare tile opens a full itinerary
-  page in a new tab (and the price popover's **Get VI\*** opens the same page
-  as a pop-up window): announcement bar, live header, stepper,
-  Retail/Cost/Discount summary, per-leg segment timeline with layover
-  notices, and the Award Redemptions matrix — generated same-origin from that
-  result's data, no backend round-trip. Hovering a fare tile shows the
-  booking program(s) with points + taxes.
+- **Itinerary (code 13) — an in-app view, never a blank tab.** Clicking a
+  fare tile (or the price popover's **Get VI\***, or the stepper's
+  *Itinerary* step) renders the itinerary **inside the app**: announcement
+  banner, the same logo header (`<a href="/">`), the stepper, then the
+  Retail/Cost/Discount summary, the per-leg segment timeline with layover
+  notices and the Award Redemptions matrix — generated same-origin from that
+  result's data, no backend round-trip. The view also carries **the app's real
+  search bar**: the same `#search-card` node (airport chips, swap, the dates
+  **calendar**, cabin/passengers/flexibility, Search) is moved into the
+  itinerary, so a new search can be run without going back. It is never
+  blank — with no selection it shows a "No itinerary selected" card with a
+  way back.
+- **Itinerary links (`#results`, `#itinerary/<id>`)** — every view has a real
+  URL. *Itinerary in new tab* and *Get VI\** are plain links to
+  `/#itinerary/<id>`; the last search (query + up to 80 results) is persisted
+  to `sessionStorage`/`localStorage`, so a new tab, a refresh or a shared
+  link restores the search bar and renders that exact itinerary instead of a
+  blank page (pop-up blockers can no longer swallow it). The matrix's
+  **Flight link** is a real link to the operating airline's own site
+  (`swiss.com`, `lufthansa.com`, …), and legs read "Operated by Swiss
+  International Air Lines" rather than "Operated by LX".
+- Hovering a fare tile shows the booking program(s) with points + taxes.
 - All colors/radii/spacings/shadows are the computed equivalents of the
   mockups' Tailwind classes; fonts use the mockups' own stacks (Inter with
   system fallbacks — no external CDNs).
@@ -167,12 +187,20 @@ the itinerary page.
   different loyalty programs** — pairs are ranked by total points and marked
   `same_program`, with per-leg rows in the price breakdown. Filters apply to
   both legs (e.g. Nonstop = nonstop both ways).
-- **Airline logos — all 39 carriers, zero placeholders.** Every carrier
-  renders as a small rectangular brand-colored tile with its IATA code
-  (32×22 px, e.g. `LH` on Lufthansa navy, `AF` on Air France navy, `LX` on
-  Swiss red) — one consistent size/format across the cards, the timeline
-  legs and the price popover. Unknown future codes fall back to a
-  deterministic hashed color tile.
+- **Airline logos — real artwork for all 39 carriers, zero placeholders.**
+  Every carrier renders its **official full-colour mark** as a 24×24 image on
+  a white tile — SWISS is the red square with the white cross, Lufthansa the
+  crane in a circle, KLM the crown, Emirates the calligraphy — identical
+  across the result cards, the expanded timeline, the itinerary legs and the
+  new tab. Artwork is loaded from the same public sources flight-search sites
+  use (`www.gstatic.com/flights/airline_logos/70px/<IATA>.png`, then
+  `pics.avs.io/200/200/<IATA>.png`); if a code is missing there, or the
+  browser is offline, the logo falls back to the built-in brand tile (the
+  carrier's official glyph in SVG on its brand colour, e.g. `LX` white cross
+  on Swiss red) — so the slot is never empty and never a broken image.
+  Unknown future codes fall back to a deterministic hashed-colour tile.
+  Carrier names (`CARRIER_NAMES`) and official sites (`CARRIER_SITES`) ship
+  with the same table.
 - Deterministic first-party engine: the same query always returns the same
   results; different dates differ.
 - **Carrier network (39)** — Aegean, Aer Lingus, Air Canada, Air Dolomiti,
