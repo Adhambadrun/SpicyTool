@@ -4,10 +4,16 @@ set -u
 cd "$(dirname "$0")"
 PY=.venv/bin/python
 pass=0; fail=0
-# The modeled engine is OFF by default (live-only searches). This sweep exercises the
-# engine itself, so it must be run against a server started with SPICYTOOL_MODELED_ENGINE=1.
+# Production relays Flybasis ONLY (see SPICYTOOL_PROVIDERS). This sweep exercises the
+# full multi-provider aggregation plus the modeled engine, so it must run against a
+# server started with SPICYTOOL_MODELED_ENGINE=1 AND SPICYTOOL_PROVIDERS=all.
 if [ "$(curl -s localhost:8000/api/v1/health | $PY -c 'import json,sys;print(json.load(sys.stdin).get("modeled_engine"))')" != "True" ]; then
   echo "acceptance_check.sh needs the server started with SPICYTOOL_MODELED_ENGINE=1 (modeled engine is off by default)."; exit 2
+fi
+NPROV=$(curl -s localhost:8000/api/v2/providers | $PY -c 'import json,sys;print(len(json.load(sys.stdin)["providers"]))')
+if [ "$NPROV" != "5" ]; then
+  echo "acceptance_check.sh sweeps all 5 providers; this server relays $NPROV.";
+  echo "Restart it with SPICYTOOL_PROVIDERS=all SPICYTOOL_MODELED_ENGINE=1 (production relays Flybasis only)."; exit 2
 fi
 # In-process session token (shares the server's signing secret; no API backdoor).
 TOKEN=$(cd backend && ../.venv/bin/python -c "from core.auth import issue_token; print(issue_token('adhambadraan@gmail.com'))")
@@ -268,6 +274,33 @@ assert d3 and d3[0]['code'] == 'BEG', d3
 print('new carriers:', sorted(airlines & NEW), '| RT ticket types OK | BEG found')
 EOF
 [ $? -eq 0 ] && ok "new carrier network + ticket types" || bad "new carriers"
+
+echo "== 18. Flybasis-only relay (default provider set) =="
+# In-process: independent of how the server under sweep was started.
+(cd backend && env -u SPICYTOOL_PROVIDERS ../.venv/bin/python - <<'EOF'
+import sys
+from services import aggregator
+
+# Default (no SPICYTOOL_PROVIDERS) must relay Flybasis and nothing else.
+assert aggregator.configured_provider_names() == ("Flybasis",), aggregator.configured_provider_names()
+names = [p.name for p in aggregator.registry()]
+assert names == ["Flybasis"], names
+assert [p["provider"] for p in aggregator.provider_report()] == ["Flybasis"]
+assert aggregator.select(None) and [p.name for p in aggregator.select(None)] == ["Flybasis"]
+# A caller cannot re-add another adapter by name when it is not in the set.
+assert aggregator.select(["PointsYeah", "AwardTool", "SpicyToolEngine"]) == []
+# No Flybasis credential => nothing is live, and the notice says so.
+assert aggregator.live_providers() == [], aggregator.live_providers()
+reason = aggregator._no_live_reason(aggregator.registry())
+assert reason and "Flybasis" in reason, reason
+print("default relay = %s; other adapters unreachable; notice ok" % names)
+EOF
+) && (cd backend && SPICYTOOL_PROVIDERS=all ../.venv/bin/python -c "
+from services import aggregator
+assert len(aggregator.registry()) == 5, [p.name for p in aggregator.registry()]
+print('SPICYTOOL_PROVIDERS=all ->', [p.name for p in aggregator.registry()])
+")
+[ $? -eq 0 ] && ok "Flybasis-only relay default + override" || bad "Flybasis-only relay"
 
 echo
 echo "=============================="

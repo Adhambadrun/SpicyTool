@@ -18,10 +18,11 @@ router = APIRouter(prefix="/api/v2")
 SSE_HEADERS = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
 
 _NOTE = (
-    "Only live providers are searched. Third-party adapters stay disabled until "
-    "the operator supplies their own credential (issued directly by that "
-    "provider) via the matching env var. The first-party SpicyToolEngine returns "
-    "modeled sample data and is OFF unless SPICYTOOL_MODELED_ENGINE=1 is set."
+    "SpicyTool relays the Flybasis search engine only — every itinerary shown "
+    "is Flybasis output. Flybasis stays disabled until the operator supplies "
+    "their own FLYBASIS_API_KEY (issued directly by Flybasis). Other adapters "
+    "and the first-party modeled SpicyToolEngine are not searched; widen this "
+    "only for demos/offline sweeps with SPICYTOOL_PROVIDERS."
 )
 
 

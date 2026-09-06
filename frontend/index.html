@@ -1599,8 +1599,8 @@ function todayISO(){
   return t.toISOString().slice(0, 10);
 }
 function paxTotal(){ return Math.max(1, (state.pax.adults|0) + (state.pax.children|0)); }
-/* LIVE DATA ONLY: v2 aggregation streams results from the real, credentialed providers (Flybasis, AwardTool,
-   PointsYeah, PointsPath). The modeled v1 engine is never used as a fallback — if no live provider answers,
+/* LIVE DATA ONLY: v2 aggregation streams results from the Flybasis search engine, the sole relayed provider.
+   The modeled v1 engine is never used as a fallback — if Flybasis does not answer,
    the user sees an honest empty state instead of sample itineraries. */
 function noteProviders(d){
   if (!d) return;
@@ -2087,7 +2087,7 @@ function renderResults(){
       $("empty-msg").textContent = "Could not reach the search service. Check that the backend is running and try again.";
     } else if (!state.live){
       h3.textContent = "No live award provider connected";
-      $("empty-msg").textContent = state.notice || "Add a provider credential (Flybasis, AwardTool, PointsYeah or PointsPath) on the server to search real availability. Sample data is never shown.";
+      $("empty-msg").textContent = state.notice || "SpicyTool relays the Flybasis search engine only. Add a FLYBASIS_API_KEY on the server to search real availability. Sample data is never shown.";
     } else if (failed.length){
       h3.textContent = "Live providers returned errors";
       $("empty-msg").textContent = failed.map(p => `${p.provider}: ${p.error}`).join(" · ");
