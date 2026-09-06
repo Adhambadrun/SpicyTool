@@ -65,6 +65,29 @@ errors, the response now carries the **exact** ProviderError
 (`providers[0].error`), e.g. `Flybasis connection failed: <reason>` or
 `Flybasis error event: <message>` — sent as given by the server.
 
+### Prove the socket works BEFORE you have a key
+
+`FLYBASIS_BASE_URL` (optional, mirrors `AGENTSEARCH_BASE_URL`) points the award
+socket at any host, so the whole live path can be exercised without a
+credential and without outbound network:
+
+```bash
+cd backend && ../.venv/bin/python tools/verify_flybasis_socket.py
+# 9 checks over a REAL websocket against tools/flybasis_mock.py: connect + auth
+# payload, the documented `search` body, stops/layover/mixed-cabin/bookability
+# normalization, both directions of a round trip, `error` events surfaced
+# verbatim, a silent upstream failing loudly inside its budget, a rejected
+# token reading as auth failure (never as "no results"), and the provider cache.
+```
+
+If that passes, the ONLY thing between you and live results is the key — which
+is the answer to "search returns nothing". To confirm a real key on a real
+endpoint, the same checks run against production:
+
+```bash
+FLYBASIS_API_KEY=<your key> ../.venv/bin/python tools/verify_flybasis_socket.py --live
+```
+
 ### Also redeploy the web-context connector (free, no keys)
 
 `https://flybasis-mcp.vercel.app/mcp` is dead (`DEPLOYMENT_NOT_FOUND`). The
@@ -115,4 +138,5 @@ guard, deploy config, offline tests).
 >   stop. Keep the empty state honest.
 > - Quality gate: `cd flybasis-mcp && npm run test:offline` must pass, and
 >   `bash acceptance_check.sh` (server with
->   `SPICYTOOL_PROVIDERS=all SPICYTOOL_MODELED_ENGINE=1`) must stay 27/27.
+>   `SPICYTOOL_PROVIDERS=all SPICYTOOL_MODELED_ENGINE=1`) must finish with
+>   **0 failed** — it grows over time, so gate on "0 failed", not on a count.
