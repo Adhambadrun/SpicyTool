@@ -17,3 +17,6 @@ backend/data/.auth_secret
 
 # Node (flybasis-mcp)
 node_modules/
+
+# Captured HTTP archives may contain session tokens — never commit
+*.har
