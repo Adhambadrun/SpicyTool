@@ -1,4 +1,4 @@
-// api/mcp.js — the MCP endpoint. AgentSearch's data (web SERP results, DuckDuckGo
+// api/mcp.js — the MCP endpoint. FlyBasis Search's data (web SERP results, DuckDuckGo
 // instant answers, cleaned URL text/markdown) is fully public and carries no
 // per-user state, so this connector deliberately has NO auth, NO sessions, NO
 // Supabase, NO billing, NO demo-vs-real split: every caller gets the same real,
@@ -42,14 +42,14 @@ export default async function handler(req, res) {
           isError: true,
           content: [{
             type: 'text',
-            text: `Rate limit exceeded (${limit} tool calls/hour on this free connector). For higher volume, use AgentSearch via RapidAPI or Apify: https://agentsearch-api.vercel.app`,
+            text: `Rate limit exceeded (${limit} tool calls/hour on this free connector). For higher volume, use FlyBasis Search via RapidAPI or Apify: https://agentsearch-api.vercel.app`,
           }],
         },
       });
     }
   }
 
-  const server = new McpServer({ name: 'agentsearch', version: '1.0.0' });
+  const server = new McpServer({ name: 'flybasis', version: '1.0.0' });
   registerTools(server);
 
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });

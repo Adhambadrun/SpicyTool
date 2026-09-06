@@ -1,34 +1,34 @@
-// lib/tools.js — MCP tool definitions for the AgentSearch connector.
+// lib/tools.js — MCP tool definitions for the FlyBasis Search connector.
 //
-// One tool per AgentSearch API endpoint (see openapi.yaml in the agentsearch-api
+// One tool per FlyBasis Search API endpoint (see openapi.yaml in the flybasis-search-api
 // repo for the source of truth). Every tool is a thin, stateless fetch against
-// the live AgentSearch deployment — no caching, no per-caller auth, no per-caller
-// state. AgentSearch's data (web SERP results, DuckDuckGo instant answers, cleaned
+// the live FlyBasis Search deployment — no caching, no per-caller auth, no per-caller
+// state. FlyBasis Search's data (web SERP results, DuckDuckGo instant answers, cleaned
 // URL text/markdown) is fully public, so there is nothing to gate on the
 // MCP-caller side: every caller sends the same request shape and gets the same
 // real data back.
 //
-// The upstream agentsearch-api deployment IS metered (sold on RapidAPI/Apify) and
+// The upstream flybasis-search-api deployment IS metered (sold on RapidAPI/Apify) and
 // its /v1/* routes sit behind a RapidAPI proxy-secret guard, so this connector
 // authenticates its own outbound calls with that same proxy secret
-// (AGENTSEARCH_MCP_PROXY_SECRET, sent as the X-RapidAPI-Proxy-Secret header) and
+// (FLYBASIS_MCP_PROXY_SECRET, sent as the X-RapidAPI-Proxy-Secret header) and
 // applies its own soft per-IP rate limit (api/mcp.js + lib/ratelimit.js) so this
 // free MCP tier stays a discovery/growth channel rather than an unmetered bypass
 // of the paid listing.
 //
-// Base URL is configurable via AGENTSEARCH_MCP_API_BASE_URL for local/self-hosted
+// Base URL is configurable via FLYBASIS_MCP_API_BASE_URL for local/self-hosted
 // testing; it defaults to the production deployment.
 
 import { z } from 'zod';
 
-const BASE_URL = (process.env.AGENTSEARCH_MCP_API_BASE_URL || 'https://agentsearch-api.vercel.app').replace(/\/+$/, '');
-// The production AgentSearch deployment gates /v1/* behind a RapidAPI-proxy-secret
-// (see agentsearch-api — only /api/health is open on the origin). This connector
+const BASE_URL = (process.env.FLYBASIS_MCP_API_BASE_URL || process.env.AGENTSEARCH_MCP_API_BASE_URL || 'https://agentsearch-api.vercel.app').replace(/\/+$/, '');
+// The production FlyBasis Search deployment gates /v1/* behind a RapidAPI-proxy-secret
+// (see flybasis-search-api — only /api/health is open on the origin). This connector
 // authenticates as that same RapidAPI-proxy consumer class to reach real data by
 // sending the secret in the X-RapidAPI-Proxy-Secret header — see lib/ratelimit.js
 // for the usage cap that keeps this a free/discovery tier rather than an unmetered
 // bypass of the paid RapidAPI/Apify listing.
-const PROXY_SECRET = process.env.AGENTSEARCH_MCP_PROXY_SECRET || '';
+const PROXY_SECRET = process.env.FLYBASIS_MCP_PROXY_SECRET || process.env.AGENTSEARCH_MCP_PROXY_SECRET || '';
 
 const asText = (obj) => ({ content: [{ type: 'text', text: JSON.stringify(obj, null, 2) }] });
 const asError = (err) => ({
@@ -36,7 +36,7 @@ const asError = (err) => ({
   content: [{ type: 'text', text: `Error: ${err.message || String(err)}` }],
 });
 
-// Every AgentSearch tool only reads public web data — never writes, never touches
+// Every FlyBasis Search tool only reads public web data — never writes, never touches
 // a caller's account (there is no account). openWorldHint is true because the
 // underlying data comes from the live web (an open, changing world outside this
 // server's control).
@@ -61,7 +61,7 @@ async function callUpstream(path, params) {
     if (PROXY_SECRET) headers['X-RapidAPI-Proxy-Secret'] = PROXY_SECRET;
     res = await fetch(url, { headers, signal: controller.signal });
   } catch (e) {
-    throw new Error(`AgentSearch API request failed (${url.pathname}${url.search}): ${e.message || e}`);
+    throw new Error(`FlyBasis Search API request failed (${url.pathname}${url.search}): ${e.message || e}`);
   } finally {
     clearTimeout(timeout);
   }
@@ -75,7 +75,7 @@ async function callUpstream(path, params) {
   }
 
   if (!res.ok) {
-    const message = body?.error?.message || `AgentSearch API returned HTTP ${res.status} for ${url.pathname}${url.search}`;
+    const message = body?.error?.message || `FlyBasis Search API returned HTTP ${res.status} for ${url.pathname}${url.search}`;
     const err = new Error(message);
     err.status = res.status;
     err.body = body;
@@ -85,7 +85,7 @@ async function callUpstream(path, params) {
 }
 
 // Wraps a (args) => { path, params } mapper into an MCP tool handler that calls
-// AgentSearch and returns the JSON as tool-result content, or a typed error.
+// FlyBasis Search and returns the JSON as tool-result content, or a typed error.
 function forward(mapper) {
   return async (args = {}) => {
     try {

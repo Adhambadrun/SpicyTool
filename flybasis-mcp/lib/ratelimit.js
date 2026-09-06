@@ -1,9 +1,9 @@
 // lib/ratelimit.js — a soft, best-effort per-IP cap on tools/call requests.
 //
-// AgentSearch-MCP is deliberately unauthenticated (see api/mcp.js / README), but
-// its upstream (agentsearch-api.vercel.app) is a metered product sold on
+// FlyBasis MCP is deliberately unauthenticated (see api/mcp.js / README), but
+// its upstream (flybasis-search-api.vercel.app) is a metered product sold on
 // RapidAPI/Apify. This connector authenticates to that upstream with the same
-// RapidAPI proxy-secret the paid listing uses (AGENTSEARCH_MCP_PROXY_SECRET), so
+// RapidAPI proxy-secret the paid listing uses (FLYBASIS_MCP_PROXY_SECRET), so
 // a free/no-auth MCP tier needs its own usage cap or it becomes an unmetered
 // bypass of the paid listing. This is a lightweight discovery/growth tier, not
 // the metered product — heavy users should go through RapidAPI/Apify. Enforcement
@@ -12,7 +12,7 @@
 // limit, not a hard security boundary.
 
 const WINDOW_MS = 60 * 60_000; // 1 hour
-const MAX_PER_WINDOW = Number(process.env.AGENTSEARCH_MCP_RATE_LIMIT || 30);
+const MAX_PER_WINDOW = Number(process.env.FLYBASIS_MCP_RATE_LIMIT || process.env.AGENTSEARCH_MCP_RATE_LIMIT || 30);
 
 const hits = new Map(); // ip -> array of timestamps within the current window
 
