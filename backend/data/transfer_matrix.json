@@ -1,11 +1,35 @@
 {
   "credit_cards": {
-    "AMEX": {"name": "Amex Membership Rewards", "short": "Amex MR", "color": "#006FCF"},
-    "CHASE": {"name": "Chase Ultimate Rewards", "short": "Chase UR", "color": "#117ACA"},
-    "CAPONE": {"name": "Capital One Miles", "short": "Cap One", "color": "#D22E35"},
-    "CITI": {"name": "Citi ThankYou Points", "short": "Citi TYP", "color": "#003B70"},
-    "BILT": {"name": "Bilt Rewards", "short": "Bilt", "color": "#00A0DF"},
-    "MARRIOTT": {"name": "Marriott Bonvoy", "short": "Bonvoy", "color": "#A61C31"}
+    "AMEX": {
+      "name": "Amex Membership Rewards",
+      "short": "Amex MR",
+      "color": "#006FCF"
+    },
+    "CHASE": {
+      "name": "Chase Ultimate Rewards",
+      "short": "Chase UR",
+      "color": "#117ACA"
+    },
+    "CAPONE": {
+      "name": "Capital One Miles",
+      "short": "Cap One",
+      "color": "#D22E35"
+    },
+    "CITI": {
+      "name": "Citi ThankYou Points",
+      "short": "Citi TYP",
+      "color": "#003B70"
+    },
+    "BILT": {
+      "name": "Bilt Rewards",
+      "short": "Bilt",
+      "color": "#00A0DF"
+    },
+    "MARRIOTT": {
+      "name": "Marriott Bonvoy",
+      "short": "Bonvoy",
+      "color": "#A61C31"
+    }
   },
   "airline_programs": {
     "AC_AEROPLAN": {
@@ -13,11 +37,26 @@
       "alliance": "Star Alliance",
       "color": "#D31145",
       "partners": {
-        "AMEX": {"ratio": 1.0, "instant": true},
-        "CHASE": {"ratio": 1.0, "instant": true},
-        "CAPONE": {"ratio": 1.0, "instant": true},
-        "CITI": {"ratio": 1.0, "instant": true},
-        "MARRIOTT": {"ratio": 0.3333, "instant": false}
+        "AMEX": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "CHASE": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "CAPONE": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "CITI": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "MARRIOTT": {
+          "ratio": 0.3333,
+          "instant": false
+        }
       }
     },
     "UA_MILEAGEPLUS": {
@@ -25,18 +64,10 @@
       "alliance": "Star Alliance",
       "color": "#0033A0",
       "partners": {
-        "MARRIOTT": {"ratio": 0.3333, "instant": false}
-      }
-    },
-    "AV_LIFEMILES": {
-      "name": "Avianca LifeMiles",
-      "alliance": "Star Alliance",
-      "color": "#E4002B",
-      "partners": {
-        "AMEX": {"ratio": 1.0, "instant": true},
-        "CAPONE": {"ratio": 1.0, "instant": true},
-        "CITI": {"ratio": 1.0, "instant": true},
-        "MARRIOTT": {"ratio": 0.3333, "instant": false}
+        "MARRIOTT": {
+          "ratio": 0.3333,
+          "instant": false
+        }
       }
     },
     "TK_MILESSMILES": {
@@ -44,29 +75,18 @@
       "alliance": "Star Alliance",
       "color": "#C70A0C",
       "partners": {
-        "CAPONE": {"ratio": 1.0, "instant": true},
-        "CITI": {"ratio": 1.0, "instant": true},
-        "MARRIOTT": {"ratio": 0.3333, "instant": false}
-      }
-    },
-    "SQ_KRISFLYER": {
-      "name": "Singapore KrisFlyer",
-      "alliance": "Star Alliance",
-      "color": "#F0A800",
-      "partners": {
-        "AMEX": {"ratio": 1.0, "instant": true},
-        "CHASE": {"ratio": 1.0, "instant": true},
-        "CAPONE": {"ratio": 1.0, "instant": true},
-        "CITI": {"ratio": 1.0, "instant": true},
-        "MARRIOTT": {"ratio": 0.3333, "instant": false}
-      }
-    },
-    "ET_SHEBAMILES": {
-      "name": "Ethiopian ShebaMiles",
-      "alliance": "Star Alliance",
-      "color": "#6DA544",
-      "partners": {
-        "MARRIOTT": {"ratio": 0.3333, "instant": false}
+        "CAPONE": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "CITI": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "MARRIOTT": {
+          "ratio": 0.3333,
+          "instant": false
+        }
       }
     },
     "AF_FLYINGBLUE": {
@@ -74,12 +94,30 @@
       "alliance": "SkyTeam",
       "color": "#002157",
       "partners": {
-        "AMEX": {"ratio": 1.0, "instant": true},
-        "CHASE": {"ratio": 1.0, "instant": true},
-        "CAPONE": {"ratio": 1.0, "instant": true},
-        "CITI": {"ratio": 1.0, "instant": true},
-        "BILT": {"ratio": 1.0, "instant": true},
-        "MARRIOTT": {"ratio": 0.3333, "instant": false}
+        "AMEX": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "CHASE": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "CAPONE": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "CITI": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "BILT": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "MARRIOTT": {
+          "ratio": 0.3333,
+          "instant": false
+        }
       }
     },
     "DL_SKYMILES": {
@@ -87,43 +125,14 @@
       "alliance": "SkyTeam",
       "color": "#C8102E",
       "partners": {
-        "AMEX": {"ratio": 1.0, "instant": true},
-        "MARRIOTT": {"ratio": 0.3333, "instant": false}
-      }
-    },
-    "VS_FLYINGCLUB": {
-      "name": "Virgin Atlantic Flying Club",
-      "alliance": "SkyTeam",
-      "color": "#E10A17",
-      "partners": {
-        "AMEX": {"ratio": 1.0, "instant": true},
-        "CHASE": {"ratio": 1.0, "instant": true},
-        "CAPONE": {"ratio": 1.0, "instant": true},
-        "CITI": {"ratio": 1.0, "instant": true},
-        "MARRIOTT": {"ratio": 0.3333, "instant": false}
-      }
-    },
-    "BA_AVIOS": {
-      "name": "British Airways Executive Club",
-      "alliance": "Oneworld",
-      "color": "#075AAA",
-      "partners": {
-        "AMEX": {"ratio": 1.0, "instant": true},
-        "CHASE": {"ratio": 1.0, "instant": true},
-        "CAPONE": {"ratio": 1.0, "instant": true},
-        "CITI": {"ratio": 1.0, "instant": true},
-        "MARRIOTT": {"ratio": 0.3333, "instant": false}
-      }
-    },
-    "QR_PRIVILEGECLUB": {
-      "name": "Qatar Privilege Club Avios",
-      "alliance": "Oneworld",
-      "color": "#5C0632",
-      "partners": {
-        "AMEX": {"ratio": 1.0, "instant": true},
-        "CAPONE": {"ratio": 1.0, "instant": true},
-        "CITI": {"ratio": 1.0, "instant": true},
-        "MARRIOTT": {"ratio": 0.3333, "instant": false}
+        "AMEX": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "MARRIOTT": {
+          "ratio": 0.3333,
+          "instant": false
+        }
       }
     },
     "AA_AADVANTAGE": {
@@ -131,8 +140,14 @@
       "alliance": "Oneworld",
       "color": "#0078D2",
       "partners": {
-        "BILT": {"ratio": 1.0, "instant": true},
-        "MARRIOTT": {"ratio": 0.3333, "instant": false}
+        "BILT": {
+          "ratio": 1.0,
+          "instant": true
+        },
+        "MARRIOTT": {
+          "ratio": 0.3333,
+          "instant": false
+        }
       }
     },
     "AS_MILEAGEPLAN": {
@@ -140,19 +155,59 @@
       "alliance": "Oneworld",
       "color": "#0B2949",
       "partners": {
-        "MARRIOTT": {"ratio": 0.3333, "instant": false}
+        "MARRIOTT": {
+          "ratio": 0.3333,
+          "instant": false
+        }
       }
     },
-    "EK_SKYWARDS": {
-      "name": "Emirates Skywards",
+    "EY_GUEST": {
+      "name": "Etihad Guest",
       "alliance": "Independent",
-      "color": "#D71920",
+      "color": "#BD8B13",
       "partners": {
-        "AMEX": {"ratio": 1.0, "instant": true},
-        "CHASE": {"ratio": 1.0, "instant": true},
-        "CAPONE": {"ratio": 1.0, "instant": true},
-        "CITI": {"ratio": 1.0, "instant": true},
-        "MARRIOTT": {"ratio": 0.3333, "instant": false}
+        "CAPONE": {
+          "instant": true,
+          "ratio": 1.0
+        },
+        "CITI": {
+          "instant": true,
+          "ratio": 1.0
+        },
+        "MARRIOTT": {
+          "instant": false,
+          "ratio": 0.3333
+        }
+      }
+    },
+    "QF_FREQUENTFLYER": {
+      "name": "Qantas Frequent Flyer",
+      "alliance": "Oneworld",
+      "color": "#E40000",
+      "partners": {
+        "AMEX": {
+          "instant": true,
+          "ratio": 1.0
+        },
+        "MARRIOTT": {
+          "instant": false,
+          "ratio": 0.3333
+        }
+      }
+    },
+    "TP_MILESGO": {
+      "name": "TAP Miles&Go",
+      "alliance": "Star Alliance",
+      "color": "#00A04E",
+      "partners": {
+        "CITI": {
+          "instant": true,
+          "ratio": 1.0
+        },
+        "MARRIOTT": {
+          "instant": false,
+          "ratio": 0.3333
+        }
       }
     }
   }

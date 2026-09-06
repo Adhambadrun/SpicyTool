@@ -139,6 +139,8 @@ def _roundtrip_pair(out: AwardResult, ret: AwardResult) -> dict:
         "return_leg": ret.model_dump(),
         "duration_minutes": out.route.duration_minutes + ret.route.duration_minutes,
         "mixed_cabin": bool(out.mixed_cabin or ret.mixed_cabin),
+        "ticket_type": out.ticket_type,
+        "ticket_types": [out.ticket_type, ret.ticket_type],
         "seats_remaining": min(out.seats_remaining, ret.seats_remaining),
         "pricing": {
             "points": points,

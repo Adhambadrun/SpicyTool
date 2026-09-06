@@ -13,15 +13,12 @@ CABIN_SCALE = {"economy": 0.45, "premium": 0.70, "business": 1.00, "first": 1.35
 # Per-program carrier surcharge bases (USD). Programs not listed (LifeMiles)
 # are non-surcharging: total taxes are capped at $85.
 SURCHARGE_BASE = {
-    "BA_AVIOS": 350.0,
-    "VS_FLYINGCLUB": 280.0,
     "AF_FLYINGBLUE": 210.0,
-    "EK_SKYWARDS": 180.0,
-    "QR_PRIVILEGECLUB": 95.0,
-    "SQ_KRISFLYER": 90.0,
-    "ET_SHEBAMILES": 60.0,
+    "QF_FREQUENTFLYER": 120.0,
+    "TP_MILESGO": 60.0,
     "AC_AEROPLAN": 45.0,
     "TK_MILESSMILES": 42.0,
+    "EY_GUEST": 30.0,
     "AA_AADVANTAGE": 5.60,
     "UA_MILEAGEPLUS": 5.60,
     "DL_SKYMILES": 5.60,
@@ -169,6 +166,12 @@ def points_for(program: str, route: Route, cabin: str) -> int:
         return max(0, _round_to(int(12000 + dist * _FLYINGBLUE_CPM[cabin]), 500))
     if program == "DL_SKYMILES":
         return _dynamic(route, cabin, 1.15)
+    if program == "EY_GUEST":
+        return _dynamic(route, cabin, 1.0)
+    if program == "QF_FREQUENTFLYER":
+        return _round_to(int(_band_points(_UNITED_BANDS, dist, cabin) * 1.08), 500)
+    if program == "TP_MILESGO":
+        return _round_to(int(_band_points(_TURKISH_BANDS, dist, cabin) * 0.95), 500)
     if program == "EK_SKYWARDS":
         return _dynamic(route, cabin, 1.05)
     raise ValueError(f"unknown program {program}")

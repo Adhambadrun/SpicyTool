@@ -1,20 +1,22 @@
-"""SpicyTool — free, login-free award-flight search.
+"""SpicyTool — award-flight search behind email-OTP login.
 
-FastAPI app: v1 first-party engine routes, v2 aggregation router, static
-frontend served from the same origin.
+FastAPI app: v1 first-party engine routes (auth-protected), v2 aggregation
+router, static frontend served from the same origin.
 """
 from __future__ import annotations
 
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from adapters.programs import PROGRAM_ADAPTERS
-from core import geo
+from core import auth, geo
 from core.http_engine import get_engine
 from core.redis_cache import award_cache
 from services import orchestrator
@@ -38,9 +40,90 @@ app = FastAPI(title="SpicyTool", version="1.0.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+# Login enforcement: on by default; set AUTH_ENFORCE=0 to disable (tests only).
+AUTH_ENFORCE = os.getenv("AUTH_ENFORCE", "1") not in ("0", "false", "no")
+
+
+def require_auth(request: Request) -> None:
+    """Session check for engine routes. Token via Authorization header or ?token=."""
+    if not AUTH_ENFORCE:
+        return
+    token = None
+    header = request.headers.get("authorization", "")
+    if header.lower().startswith("bearer "):
+        token = header[7:].strip()
+    token = token or request.query_params.get("token")
+    if not auth.verify_token(token):
+        raise HTTPException(status_code=401, detail="Sign in to search award flights.")
+
+
+# ------------------------------------------------------------------ auth ----
+
+
+class OTPRequest(BaseModel):
+    email: str
+
+
+class OTPVerify(BaseModel):
+    email: str
+    code: str
+
+
+@app.post("/api/v1/auth/request-otp")
+async def request_otp(body: OTPRequest):
+    email = body.email.strip().lower()
+    if not auth.validate_email(email):
+        return JSONResponse(
+            {"detail": "Enter your work email (name@bcflights.com)."}, status_code=400
+        )
+    ok, error, retry_after = await auth.request_otp(email)
+    if not ok:
+        status = 503 if "reach the email service" in error else 400
+        return JSONResponse(
+            {"detail": error, "retry_after": retry_after}, status_code=status
+        )
+    return {
+        "ok": True,
+        "email": email,
+        "expires_in": auth.OTP_TTL_SECONDS,
+        "cooldown": auth.OTP_RESEND_COOLDOWN,
+    }
+
+
+@app.post("/api/v1/auth/verify-otp")
+async def verify_otp(body: OTPVerify):
+    email = body.email.strip().lower()
+    token = auth.verify_otp(email, body.code)
+    if not token:
+        return JSONResponse(
+            {"detail": "That code is not valid (or it expired). Request a new one."},
+            status_code=400,
+        )
+    return {
+        "ok": True,
+        "email": email,
+        "token": token,
+        "expires_in": auth.SESSION_TTL_HOURS * 3600,
+    }
+
+
+@app.get("/api/v1/auth/session")
+async def auth_session(request: Request):
+    header = request.headers.get("authorization", "")
+    token = header[7:].strip() if header.lower().startswith("bearer ") else None
+    token = token or request.query_params.get("token")
+    email = auth.verify_token(token)
+    return {"valid": bool(email), "email": email}
+
+
+@app.post("/api/v1/auth/logout")
+async def auth_logout():
+    # Stateless tokens: the client discards the session after this call.
+    return {"ok": True}
 
 from api_v2 import router as v2_router  # noqa: E402
 
@@ -89,7 +172,7 @@ def _airport_params(origin: str, destination: str):
     return None, (origins, destinations)
 
 
-@app.get("/api/v1/search")
+@app.get("/api/v1/search", dependencies=[Depends(require_auth)])
 async def search(
     origin: str,
     destination: str,
@@ -120,7 +203,7 @@ async def search(
     )
 
 
-@app.get("/api/v1/search/stream")
+@app.get("/api/v1/search/stream", dependencies=[Depends(require_auth)])
 async def search_stream(
     request: Request,
     origin: str,
@@ -161,7 +244,7 @@ async def search_stream(
     return EventSourceResponse(gen(), headers=SSE_HEADERS)
 
 
-@app.get("/api/v1/calendar")
+@app.get("/api/v1/calendar", dependencies=[Depends(require_auth)])
 async def calendar(
     origin: str,
     destination: str,

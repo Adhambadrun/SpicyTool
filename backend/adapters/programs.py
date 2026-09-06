@@ -1,4 +1,8 @@
-"""The 14 loyalty-program adapters with distinct simulated latencies."""
+"""The 10 loyalty-program adapters with distinct simulated latencies.
+
+Each adapter states which metal it can book: own carriers, whole alliances,
+and explicit non-alliance partner carriers (partner_carriers hook in base).
+"""
 from __future__ import annotations
 
 from .base import BaseAwardAdapter
@@ -17,30 +21,109 @@ class AeroplanAdapter(BaseAwardAdapter):
     def bookable_alliances(self):
         return ["Star Alliance"]
 
+    def partner_carriers(self):
+        return ["EI"]  # Aer Lingus is an Aeroplan partner
 
-class UnitedAdapter(BaseAwardAdapter):
-    program_code = "UA_MILEAGEPLUS"
-    program_name = "United MileagePlus"
-    alliance = "Star Alliance"
-    color = "#0033A0"
-    latency = 0.9
+
+class FlyingBlueAdapter(BaseAwardAdapter):
+    program_code = "AF_FLYINGBLUE"
+    program_name = "Air France/KLM Flying Blue"
+    alliance = "SkyTeam"
+    color = "#002157"
+    latency = 1.2
 
     def own_carriers(self):
-        return ["UA"]
+        return ["AF", "KL"]
 
     def bookable_alliances(self):
-        return ["Star Alliance"]
+        return ["SkyTeam"]
 
 
-class LifeMilesAdapter(BaseAwardAdapter):
-    program_code = "AV_LIFEMILES"
-    program_name = "Avianca LifeMiles"
+class MileagePlanAdapter(BaseAwardAdapter):
+    program_code = "AS_MILEAGEPLAN"
+    program_name = "Alaska Airlines Mileage Plan"
+    alliance = "Oneworld"
+    color = "#0B2949"
+    latency = 1.0
+
+    def bookable_alliances(self):
+        return ["Oneworld"]
+
+    def partner_carriers(self):
+        return ["DE", "FI"]  # Condor + Icelandair are Alaska partners
+
+
+class AAdvantageAdapter(BaseAwardAdapter):
+    program_code = "AA_AADVANTAGE"
+    program_name = "American AAdvantage"
+    alliance = "Oneworld"
+    color = "#0078D2"
+    latency = 0.8
+
+    def own_carriers(self):
+        return ["AA"]
+
+    def bookable_alliances(self):
+        return ["Oneworld"]
+
+
+class SkyMilesAdapter(BaseAwardAdapter):
+    program_code = "DL_SKYMILES"
+    program_name = "Delta SkyMiles"
+    alliance = "SkyTeam"
+    color = "#003268"
+    latency = 1.0
+
+    def own_carriers(self):
+        return ["DL"]
+
+    def bookable_alliances(self):
+        return ["SkyTeam"]
+
+    def partner_carriers(self):
+        return ["VS"]  # Virgin Atlantic is Delta's JV partner
+
+
+class EtihadGuestAdapter(BaseAwardAdapter):
+    program_code = "EY_GUEST"
+    program_name = "Etihad Guest"
+    alliance = "Independent"
+    color = "#BD8B13"
+    latency = 1.4
+
+    def own_carriers(self):
+        return ["EY"]
+
+    def bookable_alliances(self):
+        return None
+
+    def partner_carriers(self):
+        return ["JU"]  # Air Serbia
+
+
+class QantasAdapter(BaseAwardAdapter):
+    program_code = "QF_FREQUENTFLYER"
+    program_name = "Qantas Frequent Flyer"
+    alliance = "Oneworld"
+    color = "#E40000"
+    latency = 1.6
+
+    def bookable_alliances(self):
+        return ["Oneworld"]
+
+    def partner_carriers(self):
+        return ["EK", "FZ"]  # Emirates + flyDubai partner with Qantas
+
+
+class TAPAdapter(BaseAwardAdapter):
+    program_code = "TP_MILESGO"
+    program_name = "TAP Miles&Go"
     alliance = "Star Alliance"
-    color = "#E4002B"
+    color = "#00A04E"
     latency = 1.3
 
     def own_carriers(self):
-        return ["AV"]
+        return ["TP"]
 
     def bookable_alliances(self):
         return ["Star Alliance"]
@@ -59,162 +142,38 @@ class TurkishAdapter(BaseAwardAdapter):
     def bookable_alliances(self):
         return ["Star Alliance"]
 
+    def partner_carriers(self):
+        return ["JU"]  # Air Serbia
 
-class KrisFlyerAdapter(BaseAwardAdapter):
-    program_code = "SQ_KRISFLYER"
-    program_name = "Singapore KrisFlyer"
+
+class UnitedAdapter(BaseAwardAdapter):
+    program_code = "UA_MILEAGEPLUS"
+    program_name = "United MileagePlus"
     alliance = "Star Alliance"
-    color = "#F0A800"
-    latency = 1.7
+    color = "#0033A0"
+    latency = 0.9
 
     def own_carriers(self):
-        return ["SQ"]
+        return ["UA"]
 
     def bookable_alliances(self):
         return ["Star Alliance"]
 
-
-class ShebaMilesAdapter(BaseAwardAdapter):
-    program_code = "ET_SHEBAMILES"
-    program_name = "Ethiopian ShebaMiles"
-    alliance = "Star Alliance"
-    color = "#6DA544"
-    latency = 1.4
-
-    def own_carriers(self):
-        return ["ET"]
-
-    def bookable_alliances(self):
-        return ["Star Alliance"]
-
-
-class FlyingBlueAdapter(BaseAwardAdapter):
-    program_code = "AF_FLYINGBLUE"
-    program_name = "Air France/KLM Flying Blue"
-    alliance = "SkyTeam"
-    color = "#002157"
-    latency = 1.0
-
-    def own_carriers(self):
-        return ["AF", "KL"]
-
-    def bookable_alliances(self):
-        return ["SkyTeam"]
-
-
-class SkyMilesAdapter(BaseAwardAdapter):
-    program_code = "DL_SKYMILES"
-    program_name = "Delta SkyMiles"
-    alliance = "SkyTeam"
-    color = "#C8102E"
-    latency = 0.8
-
-    def own_carriers(self):
-        return ["DL"]
-
-    def bookable_alliances(self):
-        return ["SkyTeam"]
-
-
-class FlyingClubAdapter(BaseAwardAdapter):
-    program_code = "VS_FLYINGCLUB"
-    program_name = "Virgin Atlantic Flying Club"
-    alliance = "SkyTeam"
-    color = "#E10A17"
-    latency = 1.2
-
-    def own_carriers(self):
-        return ["VS"]
-
-    def bookable_alliances(self):
-        return ["SkyTeam"]
-
-
-class AviosAdapter(BaseAwardAdapter):
-    program_code = "BA_AVIOS"
-    program_name = "British Airways Executive Club"
-    alliance = "Oneworld"
-    color = "#075AAA"
-    latency = 1.0
-
-    def own_carriers(self):
-        return ["BA"]
-
-    def bookable_alliances(self):
-        return ["Oneworld"]
-
-
-class PrivilegeClubAdapter(BaseAwardAdapter):
-    program_code = "QR_PRIVILEGECLUB"
-    program_name = "Qatar Privilege Club Avios"
-    alliance = "Oneworld"
-    color = "#5C0632"
-    latency = 1.35
-
-    def own_carriers(self):
-        return ["QR"]
-
-    def bookable_alliances(self):
-        return ["Oneworld"]
-
-
-class AAdvantageAdapter(BaseAwardAdapter):
-    program_code = "AA_AADVANTAGE"
-    program_name = "American AAdvantage"
-    alliance = "Oneworld"
-    color = "#0078D2"
-    latency = 0.85
-
-    def own_carriers(self):
-        return ["AA"]
-
-    def bookable_alliances(self):
-        return ["Oneworld"]
-
-
-class MileagePlanAdapter(BaseAwardAdapter):
-    program_code = "AS_MILEAGEPLAN"
-    program_name = "Alaska Mileage Plan"
-    alliance = "Oneworld"
-    color = "#0B2949"
-    latency = 1.55
-
-    def own_carriers(self):
-        return ["AS"]
-
-    def bookable_alliances(self):
-        return ["Oneworld"]
-
-
-class SkywardsAdapter(BaseAwardAdapter):
-    program_code = "EK_SKYWARDS"
-    program_name = "Emirates Skywards"
-    alliance = "Independent"
-    color = "#D71920"
-    latency = 1.6
-
-    def own_carriers(self):
-        return ["EK"]
-
-    def bookable_alliances(self):
-        return None  # independent: own metal only
+    def partner_carriers(self):
+        return ["B6"]  # JetBlue (Blue Sky partnership)
 
 
 PROGRAM_ADAPTERS: list[BaseAwardAdapter] = [
     AeroplanAdapter(),
-    UnitedAdapter(),
-    LifeMilesAdapter(),
-    TurkishAdapter(),
-    KrisFlyerAdapter(),
-    ShebaMilesAdapter(),
     FlyingBlueAdapter(),
-    SkyMilesAdapter(),
-    FlyingClubAdapter(),
-    AviosAdapter(),
-    PrivilegeClubAdapter(),
-    AAdvantageAdapter(),
     MileagePlanAdapter(),
-    SkywardsAdapter(),
+    AAdvantageAdapter(),
+    SkyMilesAdapter(),
+    EtihadGuestAdapter(),
+    QantasAdapter(),
+    TAPAdapter(),
+    TurkishAdapter(),
+    UnitedAdapter(),
 ]
 
 

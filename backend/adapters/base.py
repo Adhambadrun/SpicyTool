@@ -1,15 +1,38 @@
-"""Base class for the 14 first-party loyalty-program adapters (v1 engine)."""
+"""Base class for the 10 first-party loyalty-program adapters (v1 engine)."""
 from __future__ import annotations
 
 import hashlib
 
 from core import network, pricing
 from core.schema import AwardResult, Pricing, Route
-from providers.enrich import attach_transfer_partners, cash_estimate, cpp as compute_cpp
+from providers.enrich import (
+    attach_transfer_partners,
+    cash_estimate,
+    cpp as compute_cpp,
+    has_amex_partner,
+)
 
 # Deterministic per-cabin scarcity of award space.
 SCARCITY = {"economy": 0.72, "premium": 0.48, "business": 0.42, "first": 0.20}
 OWN_METAL_BONUS = 1.35
+
+# Ticket types + deterministic points multipliers (a hidden-city award prices
+# below the through-fare chart, an AMEX-discount award is 5% off, etc.).
+TICKET_TYPES = (
+    "award",
+    "hc",
+    "upg",
+    "dis",
+    "consolidator",
+    "basis_exclusive",
+    "published",
+)
+TICKET_TYPE_MULT = {
+    "hc": 0.82,
+    "dis": 0.95,
+    "consolidator": 0.93,
+    "basis_exclusive": 0.88,
+}
 
 
 class BaseAwardAdapter:
@@ -32,18 +55,24 @@ class BaseAwardAdapter:
         """Alliances whose metal this program can book; None = own metal only."""
         return None
 
+    def partner_carriers(self) -> list[str]:
+        """Non-alliance partner metal this program can book."""
+        return []
+
     # ---------------------------------------------------------------- api ---
 
     def can_book(self, itin: Route) -> bool:
-        own = self.own_carriers()
-        if any(seg.carrier in own for seg in itin.segments):
-            return True
-        alliances = self.bookable_alliances()
-        if alliances is None:
-            return False
-        return all(
-            network.alliance_of(seg.carrier) in alliances for seg in itin.segments
-        )
+        own = set(self.own_carriers())
+        partners = set(self.partner_carriers())
+        alliances = self.bookable_alliances() or []
+
+        def eligible(seg) -> bool:
+            if seg.carrier in own or seg.carrier in partners:
+                return True
+            return bool(alliances) and network.alliance_of(seg.carrier) in alliances
+
+        # Every segment must be own metal, a named partner, or alliance metal.
+        return all(eligible(seg) for seg in itin.segments)
 
     def availability(self, itin: Route, cabin: str, date: str) -> int:
         """Deterministic seat count: 0 (no space) or 1-6 seats."""
@@ -65,6 +94,34 @@ class BaseAwardAdapter:
             return False
         return network.rng("mixed", self.program_code, itin.segments[0].flight_number, cabin, date) < 0.15
 
+    def _ticket_type(
+        self, itin: Route, cabin: str, date: str, mixed: bool
+    ) -> str:
+        """Deterministic ticket type for one result.
+
+        Mixed-cabin results are "upg" (upgrade award). Otherwise a seeded roll
+        assigns hidden-city ("hc"), AMEX-discount ("dis"), consolidator,
+        Basis-Exclusive and published-fare tickets; the rest are plain awards.
+        """
+        if mixed:
+            return "upg"
+        seed = hashlib.sha256(
+            f"ttype|{self.program_code}|{itin.segments[0].flight_number}"
+            f"|{itin.departure_time}|{cabin}|{date}".encode()
+        ).hexdigest()
+        roll = int(seed[:12], 16) / float(0xFFFFFFFFFFFF + 1)
+        if roll < 0.08 and itin.stops >= 1:
+            return "hc"
+        if roll < 0.15 and has_amex_partner(self.program_code):
+            return "dis"
+        if roll < 0.20:
+            return "consolidator"
+        if roll < 0.24:
+            return "basis_exclusive"
+        if roll < 0.28:
+            return "published"
+        return "award"
+
     def search(
         self,
         candidates: list[Route],
@@ -80,11 +137,13 @@ class BaseAwardAdapter:
             seats = self.availability(itin, cabin, date)
             if seats < passengers:
                 continue
+            mixed = self._mixed_cabin(itin, cabin, date)
+            ticket_type = self._ticket_type(itin, cabin, date, mixed)
             pts = pricing.points_for(self.program_code, itin, cabin)
+            pts = int(pts * TICKET_TYPE_MULT.get(ticket_type, 1.0))
             fees = pricing.taxes_for(
                 self.program_code, cabin, max(len(itin.segments), 1)
             )
-            mixed = self._mixed_cabin(itin, cabin, date)
             key = hashlib.sha256(
                 f"{self.program_code}|{itin.segments[0].flight_number}|{itin.departure_time}|{cabin}".encode()
             ).hexdigest()[:10]
@@ -99,6 +158,7 @@ class BaseAwardAdapter:
                 route=itin,
                 cabin_class=cabin,  # type: ignore[arg-type]
                 mixed_cabin=mixed,
+                ticket_type=ticket_type,
                 pricing=Pricing(
                     points=pts,
                     cash_fees=fees,

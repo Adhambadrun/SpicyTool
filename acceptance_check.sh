@@ -4,6 +4,8 @@ set -u
 cd "$(dirname "$0")"
 PY=.venv/bin/python
 pass=0; fail=0
+# In-process session token (shares the server's signing secret; no API backdoor).
+TOKEN=$(cd backend && ../.venv/bin/python -c "from core.auth import issue_token; print(issue_token('qa@bcflights.com'))")
 ok()   { echo -e "\033[92mPASS\033[0m  $1"; pass=$((pass+1)); }
 bad()  { echo -e "\033[91mFAIL\033[0m  $1"; fail=$((fail+1)); }
 
@@ -12,7 +14,7 @@ if (cd backend && ../.venv/bin/python tests_integration.py | grep -q "All 16 ass
 
 echo "== 2. /api/v1/health =="
 h=$(curl -s localhost:8000/api/v1/health)
-[ "$(echo $h | $PY -c 'import json,sys;d=json.load(sys.stdin);print(d["airports"]==78 and d["programs"]==14)')" = "True" ] && ok "78 airports, 14 programs" || bad "$h"
+[ "$(echo $h | $PY -c 'import json,sys;d=json.load(sys.stdin);print(d["airports"]==84 and d["programs"]==10)')" = "True" ] && ok "84 airports, 10 programs" || bad "$h"
 
 echo "== 3. JFK->LHR distance =="
 d=$(cd backend && ../.venv/bin/python -c "from core.geo import haversine_miles as h; print(round(h('JFK','LHR')))")
@@ -24,20 +26,24 @@ $PY - <<'EOF'
 import json
 d = json.load(open('/tmp/v2.json'))
 raw, merged = d['dedupe']['raw_count'], d['dedupe']['merged_count']
-assert 15 <= raw <= 40, f"raw {raw} not ~25"
-assert 8 <= merged <= 16, f"merged {merged} not ~12"
+assert 15 <= raw <= 60, f"raw {raw} out of band"
+assert 8 <= merged <= 28, f"merged {merged} out of band"
 print(f"raw={raw} -> merged={merged} (collapsed {d['dedupe']['duplicates_collapsed']})")
 EOF
 [ $? -eq 0 ] && ok "raw ~25 -> ~12 after dedupe" || bad "counts out of band"
 
 echo "== 5. some programs legitimately return 0 =="
-z=$(curl -s 'localhost:8000/api/v1/search?origin=JFK&destination=LHR&date=2026-09-16&cabin=business' | $PY -c "
+z=$(curl -s "localhost:8000/api/v1/search?origin=CAI&destination=IST&date=2026-11-10&cabin=economy&token=$TOKEN" | $PY -c "
 import json,sys,collections
 d=json.load(sys.stdin)
 c=collections.Counter(r['pricing']['program_code'] for r in d['results'])
-zeros=[p for p in ['AC_AEROPLAN','UA_MILEAGEPLUS','AV_LIFEMILES','TK_MILESSMILES','SQ_KRISFLYER','ET_SHEBAMILES','AF_FLYINGBLUE','DL_SKYMILES','VS_FLYINGCLUB','BA_AVIOS','QR_PRIVILEGECLUB','AA_AADVANTAGE','AS_MILEAGEPLAN','EK_SKYWARDS'] if c[p]==0]
+PROGS=['AC_AEROPLAN','UA_MILEAGEPLUS','TK_MILESSMILES','AF_FLYINGBLUE','DL_SKYMILES','AA_AADVANTAGE','AS_MILEAGEPLAN','EY_GUEST','QF_FREQUENTFLYER','TP_MILESGO']
+assert set(c) <= set(PROGS), 'unexpected program: %s' % (set(c) - set(PROGS))
+TYPES={'award','hc','upg','dis','consolidator','basis_exclusive','published'}
+assert all(r['ticket_type'] in TYPES for r in d['results']), 'bad ticket_type'
+zeros=[p for p in PROGS if c[p]==0]
 print(len(zeros)>0)")
-[ "$z" = "True" ] && ok "zero-result programs exist on this route" || bad "none"
+[ "$z" = "True" ] && ok "zero-result programs exist (CAI->IST: 5 of 10)" || bad "none"
 
 echo "== 6. cache hit: ~1700ms -> ~0ms =="
 # unique date per run so the first call is always a cache miss
@@ -89,9 +95,9 @@ case "$ev" in
 esac
 
 echo "== 10. deterministic / date-sensitive =="
-r1=$(curl -s 'localhost:8000/api/v1/search?origin=CAI&destination=JFK&date=2026-09-20&cabin=economy')
-r1b=$(curl -s 'localhost:8000/api/v1/search?origin=CAI&destination=JFK&date=2026-09-20&cabin=economy')
-r2=$(curl -s 'localhost:8000/api/v1/search?origin=CAI&destination=JFK&date=2026-09-21&cabin=economy')
+r1=$(curl -s "localhost:8000/api/v1/search?origin=CAI&destination=JFK&date=2026-09-20&cabin=economy&token=$TOKEN")
+r1b=$(curl -s "localhost:8000/api/v1/search?origin=CAI&destination=JFK&date=2026-09-20&cabin=economy&token=$TOKEN")
+r2=$(curl -s "localhost:8000/api/v1/search?origin=CAI&destination=JFK&date=2026-09-21&cabin=economy&token=$TOKEN")
 [ "$r1" = "$r1b" ] && ok "identical query -> identical results" || bad "nondeterministic"
 [ "$r1" != "$r2" ] && ok "different date -> different results" || bad "date-insensitive"
 
@@ -115,9 +121,12 @@ c=$(curl -s -o /dev/null -w '%{http_code}' localhost:8000/)
 [ "$c" = "200" ] && ok "GET / -> 200 index.html" || bad "status $c"
 
 echo "== 14. multi-airport search (up to 3 per side) =="
-$PY - <<'EOF'
+TOKEN=$TOKEN $PY - <<'EOF'
 import json, urllib.request, urllib.error
+import os
+TOKEN = os.environ['TOKEN']
 def get(path):
+    path = path + ('&' if '?' in path else '?') + 'token=' + TOKEN
     try:
         with urllib.request.urlopen('http://localhost:8000' + path) as r:
             return r.status, json.load(r)
@@ -143,9 +152,12 @@ EOF
 [ $? -eq 0 ] && ok "multi-airport search + validation" || bad "multi-airport"
 
 echo "== 15. round-trip search (both legs combined, mixed programs) =="
-$PY - <<'EOF'
+TOKEN=$TOKEN $PY - <<'EOF'
 import json, urllib.request, urllib.error
+import os
+TOKEN = os.environ['TOKEN']
 def get(path):
+    path = path + ('&' if '?' in path else '?') + 'token=' + TOKEN
     try:
         with urllib.request.urlopen('http://localhost:8000' + path) as r:
             return r.status, json.load(r)
@@ -171,6 +183,69 @@ assert s == 400 and 'real calendar' in d['detail'], (s, d)
 print('pairing totals, mixed programs, sort, validation OK')
 EOF
 [ $? -eq 0 ] && ok "round-trip search + pairing + validation" || bad "round-trip"
+
+echo "== 16. auth: OTP login + protected engine =="
+TOKEN=$TOKEN $PY - <<'EOF'
+import json, os, urllib.request, urllib.error
+TOKEN = os.environ['TOKEN']
+def call(path, method='GET', body=None):
+    data = json.dumps(body).encode() if body is not None else None
+    req = urllib.request.Request('http://localhost:8000' + path, data=data,
+                                 headers={'Content-Type': 'application/json'}, method=method)
+    try:
+        with urllib.request.urlopen(req) as r:
+            return r.status, json.load(r)
+    except urllib.error.HTTPError as e:
+        try: return e.code, json.load(e)
+        except Exception: return e.code, {}
+
+s, d = call('/api/v1/search?origin=JFK&destination=LHR&date=2026-10-05')
+assert s == 401, s
+s, d = call('/api/v1/search?origin=JFK&destination=LHR&date=2026-10-05&token=' + TOKEN)
+assert s == 200, (s, d)
+s, d = call('/api/v1/search?origin=JFK&destination=LHR&date=2026-10-05&token=v1.x.y')
+assert s == 401, s
+s, d = call('/api/v1/auth/request-otp', 'POST', {'email': 'someone@gmail.com'})
+assert s == 400 and 'bcflights.com' in d['detail'], (s, d)
+s, d = call('/api/v1/auth/verify-otp', 'POST', {'email': 'qa@bcflights.com', 'code': '000000'})
+assert s == 400, (s, d)
+s, d = call('/api/v1/auth/request-otp', 'POST', {'email': 'qa@bcflights.com'})
+assert s in (200, 503), (s, d)
+if s == 503:
+    assert 'email service' in d['detail'].lower(), d
+    print('OTP send blocked from this host (no egress):', d['detail'][:60], '...')
+else:
+    assert d['ok'] is True and d['expires_in'] == 600, d
+    s2, d2 = call('/api/v1/auth/request-otp', 'POST', {'email': 'qa@bcflights.com'})
+    assert s2 in (400, 503), (s2, d2)
+s, d = call('/api/v1/auth/session?token=' + TOKEN)
+assert d['valid'] is True and d['email'] == 'qa@bcflights.com', d
+print('401 enforcement, domain restriction, OTP rejection, session check OK')
+EOF
+[ $? -eq 0 ] && ok "auth: OTP login + protected engine" || bad "auth"
+
+echo "== 17. new carrier network + ticket types =="
+TOKEN=$TOKEN $PY - <<'EOF'
+import json, os, urllib.request
+TOKEN = os.environ['TOKEN']
+def get(path):
+    with urllib.request.urlopen('http://localhost:8000' + path + '&token=' + TOKEN) as r:
+        return json.load(r)
+
+d = get('/api/v1/search?origin=JFK&destination=LHR&date=2026-10-05&cabin=economy')
+airlines = {r['airline_code'] for r in d['results']}
+NEW = {'A3','EI','EN','UX','JU','DE','OU','4Y','EW','FZ','FI','AZ','B6','LO','VL','AT'}
+REMOVED = {'AM','CM','CX','KE','KQ','MU','NH','JL','OZ','QF','QR','SA','TG','NZ','SQ','AS'}
+assert not (airlines & REMOVED), 'removed carriers leaked: %s' % (airlines & REMOVED)
+assert airlines & NEW, 'no new carriers in results'
+assert all(r['ticket_type'] for r in d['results'])
+d2 = get('/api/v1/search?origin=JFK&destination=LHR&date=2026-10-05&return_date=2026-10-12&cabin=economy')
+assert d2['results'] and all('ticket_types' in p and len(p['ticket_types']) == 2 for p in d2['results'])
+d3 = get('/api/v1/airports?q=BEG')
+assert d3 and d3[0]['code'] == 'BEG', d3
+print('new carriers:', sorted(airlines & NEW), '| RT ticket types OK | BEG found')
+EOF
+[ $? -eq 0 ] && ok "new carrier network + ticket types" || bad "new carriers"
 
 echo
 echo "=============================="

@@ -112,6 +112,12 @@ def _matrix() -> dict:
         return json.load(fh)
 
 
+def has_amex_partner(program_code: str) -> bool:
+    """True if Membership Rewards (AMEX) transfers into this program."""
+    program = _matrix()["airline_programs"].get(program_code)
+    return bool(program and "AMEX" in program.get("partners", {}))
+
+
 def program_names() -> dict[str, str]:
     return {code: p["name"] for code, p in _matrix()["airline_programs"].items()}
 

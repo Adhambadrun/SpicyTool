@@ -70,6 +70,8 @@ class AwardResult(BaseModel):
     route: Route
     cabin_class: Cabin
     mixed_cabin: bool = False
+    # Ticket type: award | hc | upg | dis | consolidator | basis_exclusive | published
+    ticket_type: str = "award"
     pricing: Pricing
     transfer_partners: list[TransferPartner] = Field(default_factory=list)
     seats_remaining: int = 0
