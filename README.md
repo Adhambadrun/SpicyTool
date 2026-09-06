@@ -281,6 +281,10 @@ more than 3 airports per side → `400 "At most 3 origin airports"`;
 `return_date` before `date` → `400 "Return date must be on or after the
 departure date"`.
 
+> ⚠️ **Rotate the exposed key.** A real RapidAPI key was committed to this
+> public repo in `bbd85a2`. See [`ROTATE_KEY.md`](ROTATE_KEY.md) for the
+> zero-downtime rotation steps.
+
 ## Verifying live, on GitHub Actions
 
 This sandbox has no general outbound internet (SNI-filtered allowlist), so the
