@@ -294,7 +294,7 @@ a.mp-btn{text-decoration:none}
 .tile.best{background:var(--brand)}
 .tile.best:hover{background:var(--brand-hover)}
 .airline-col{display:flex;align-items:center;gap:12px;width:176px;flex-shrink:0}
-.airline-logo{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800;flex-shrink:0;box-shadow:0 1px 2px rgba(0,0,0,.2);letter-spacing:.02em;line-height:1;flex-shrink:0}
+.airline-logo{width:24px;height:24px;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800;flex-shrink:0;box-shadow:0 1px 2px rgba(0,0,0,.2);letter-spacing:.02em;line-height:1;flex-shrink:0}
 .airline-logo svg{width:16px;height:16px;display:block}
 .airline-logo.text-logo{font-size:9px;font-weight:800;letter-spacing:.02em}
 .airline-name{font-size:14px;font-weight:500;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -2047,6 +2047,10 @@ function itineraryHTML(r){
     .it-brand{display:flex;align-items:center;gap:10px}
     .it-brand img{width:36px;height:36px;border-radius:12px;object-fit:contain;box-shadow:0 4px 6px -1px rgba(127,29,29,.2)}
     .it-brand b{font-size:20px;font-weight:800;letter-spacing:-.025em;color:#fff}
+    /* airline logos — uniform 24px rounded (4px) brand tiles, same as image-3 / the results page */
+    .airline-logo{width:24px;height:24px;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800;flex-shrink:0;box-shadow:0 1px 2px rgba(0,0,0,.2);letter-spacing:.02em;line-height:1}
+    .airline-logo svg{width:16px;height:16px;display:block}
+    .airline-logo.text-logo{font-size:9px;font-weight:800;letter-spacing:.02em}
     .wm-s{color:#E11D2E;animation:wm-glow 2.6s ease-in-out infinite}
     .wm-t{font-style:normal;color:#fff}
     @keyframes wm-glow{0%,100%{text-shadow:0 0 3px rgba(225,29,46,.35),0 0 10px rgba(225,29,46,.15)}50%{text-shadow:0 0 6px rgba(225,29,46,.9),0 0 18px rgba(225,29,46,.55),0 0 40px rgba(225,29,46,.3)}}
@@ -2054,9 +2058,7 @@ function itineraryHTML(r){
     .it-live{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:#FF4D5E;background:rgba(225,29,46,.15);border:1px solid rgba(225,29,46,.3);padding:2px 10px;border-radius:9999px}
     .it-live i{width:6px;height:6px;border-radius:9999px;background:#E11D2E;animation:itp 1.4s infinite}
     .it-hdr-r{display:flex;align-items:center;gap:12px}
-    .it-mp{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;font-size:12px;font-weight:500;color:#CBD5E1;background:#1A1A1E;border:1px solid #262A35;border-radius:8px}
-    .it-mp em{font-style:normal;font-size:11px;font-weight:700;font-family:ui-monospace,monospace;color:#E11D2E;background:rgba(225,29,46,.2);padding:1px 6px;border-radius:4px}
-        .it-av{width:32px;height:32px;border-radius:9999px;padding:1.5px;background:linear-gradient(to top right,#E11D2E,#EF4444);box-shadow:0 0 0 2px rgba(225,29,46,.4);display:flex}
+    .it-av{width:32px;height:32px;border-radius:9999px;padding:1.5px;background:linear-gradient(to top right,#E11D2E,#EF4444);box-shadow:0 0 0 2px rgba(225,29,46,.4);display:flex}
     .it-av span,.it-av{align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff}
     .it-av span{width:100%;height:100%;border-radius:9999px;background:#18181D;display:flex;align-items:center;justify-content:center}
     .it-av-off{background:#18181D;box-shadow:none;border:1px solid #262A35;color:#94A3B8}
@@ -2066,6 +2068,8 @@ function itineraryHTML(r){
     @media(min-width:640px){h1{font-size:42px}}
     .it-steps{width:100%;max-width:672px;margin:0 auto 40px;display:flex;align-items:center;justify-content:space-between;position:relative}
     .it-step{display:flex;align-items:center;gap:10px;z-index:10}
+    .it-step-btn{background:none;border:none;padding:0;margin:0;font-family:inherit;cursor:pointer;transition:opacity .15s;text-align:left}
+    .it-step-btn:hover{opacity:.8}
     .it-step i{width:24px;height:24px;border-radius:9999px;background:#E11D2E;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 4px rgba(225,29,46,.2),0 2px 4px rgba(225,29,46,.3);color:#fff;flex-shrink:0}
     .it-step span{font-size:14px;font-weight:600;color:#fff;white-space:nowrap}
     .it-line{flex:1;height:1px;background:#334155;margin:0 12px}
@@ -2119,12 +2123,9 @@ function itineraryHTML(r){
     .it-link{color:#E11D2E;font-weight:500;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
     .it-link:hover{text-decoration:underline}
     .it-total td{font-weight:600;color:#fff;border-bottom:none}
-    .it-mf{margin-top:24px;padding-top:16px;border-top:1px solid #1E1E24;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:12px}
-    @media(min-width:640px){.it-mf{flex-direction:row;align-items:center}}
-    .it-vi-link{font-size:12px;color:#E11D2E;font-weight:500;display:inline-flex;align-items:center;gap:4px;text-decoration:none}
-    .it-vi-link:hover{text-decoration:underline}
+    .it-mf{margin-top:24px;padding-top:16px;border-top:1px solid #1E1E24;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:12px}
+    @media(min-width:640px){.it-mf{flex-direction:row;align-items:center;justify-content:flex-end}}
     .it-vi{display:inline-flex;align-items:center;gap:8px;padding:10px 24px;border-radius:8px;background:#E11D2E;color:#fff;font-weight:600;font-size:14px;letter-spacing:.02em;border:none;box-shadow:0 10px 15px -3px rgba(225,29,46,.3);cursor:default}
-    .it-note{font-size:12px;color:#64748B;margin:-16px 0 32px;max-width:576px}
     footer{border-top:1px solid #23232A;background:#0A0A0B;padding:24px 16px;text-align:center;font-size:12px;color:#64748B}
     .it-f-in{max-width:1152px;margin:0 auto;padding:0 16px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:12px}
     @media(min-width:640px){.it-f-in{flex-direction:row}}
@@ -2144,16 +2145,15 @@ function itineraryHTML(r){
 <header class="it-hdr"><div class="it-hdr-in">
   <div class="it-brand"><img alt="SpicyTool Logo" src="${LOGO_SRC}"><b><span class="wm-s">Spicy</span><em class="wm-t">Tool</em></b></div>
   <div class="it-hdr-r">
-    <span class="it-mp" title="Manage broker CPMs in the app">Modify programs <em>${brokerPrograms().length}</em></span>
     ${avatar}
   </div>
 </div></header>
 <main>
   <h1>Itinerary</h1>
   <div class="it-steps">
-    <div class="it-step"><i>${check}</i><span>Modify Search</span></div>
+    <button type="button" class="it-step it-step-btn" title="Back to the flight search" onclick="if(window.opener){try{window.opener.showSearchView()}catch(e){window.location.href='/'}}window.close()"><i>${check}</i><span>Modify Search</span></button>
     <div class="it-line"></div>
-    <div class="it-step"><i>${check}</i><span>Flights</span></div>
+    <button type="button" class="it-step it-step-btn" title="Back to the flights list" onclick="if(window.opener){try{window.opener.showResultsView()}catch(e){window.location.href='/'}}window.close()"><i>${check}</i><span>Flights</span></button>
     <div class="it-line"></div>
     <div class="it-step"><i>${check}</i><span>Itinerary</span></div>
   </div>
@@ -2175,14 +2175,11 @@ function itineraryHTML(r){
       <tbody>${matrixRows}</tbody>
     </table>
     <div class="it-mf">
-      <a class="it-vi-link" href="#" onclick="return false" title="VI* membership">Get VI* membership <span>→</span></a>
       <button type="button" class="it-vi" title="Itinerary summary — no bookings are made in this view">Get VI* <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path clip-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" fill-rule="evenodd"/></svg></button>
     </div>
   </section>
-  <p class="it-note">Cash = miles × your broker CPM + taxes · Retail is a modeled estimate · No bookings are made in this view.</p>
 </main>
 <footer><div class="it-f-in">
-  <div style="display:flex;align-items:center;gap:10px"><img alt="SpicyTool" src="${LOGO_SRC}" style="width:28px;height:28px;border-radius:8px;object-fit:contain"><b><span class="wm-s">Spicy</span><em class="wm-t">Tool</em> v1.0</b><span style="color:#475569">•</span><span style="color:#94A3B8">Premium Award Flight Analytics</span></div>
   <div style="display:flex;align-items:center;gap:16px"><a href="#" onclick="return false" style="color:#94A3B8;text-decoration:none;font-weight:600;letter-spacing:.04em">DISCORD</a><span style="color:#334155">|</span><span>© 2026 SpicyTool Ltd. Award prices modeled by SpicyTool engine</span></div>
 </div></footer>
 </body>
