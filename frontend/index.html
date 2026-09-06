@@ -189,6 +189,9 @@ button{font-family:inherit}
 .dp-day.dow{width:auto;height:auto;margin:0 0 3px;color:#71717A;font-size:10px;font-weight:600;cursor:default;line-height:14px}
 .dp-day.dow:hover{background:none;color:#71717A}
 .dp-day.other{color:#48484F;pointer-events:none}
+/* outside the booking window: faded, no hover, not clickable */
+.dp-day.off{color:#3A3A40;opacity:.5;pointer-events:none;cursor:default;text-decoration:line-through}
+.dp-day.off:hover{background:none;color:#3A3A40}
 .dp-day.today{background:#27272F;color:#fff;font-weight:600}
 .dp-day.sel,.dp-day.ret{background:#E11D2E;color:#fff;font-weight:600;box-shadow:0 0 0 2px rgba(225,29,46,.4),0 1px 2px 0 rgba(225,29,46,.5)}
 .dp-day.sel:hover,.dp-day.ret:hover{background:#E11D2E;color:#fff}
@@ -537,6 +540,21 @@ a.brand:hover .wordmark{opacity:.9}
 .it-lay-d{color:#E11D2E;font-weight:500}
 .it-matrix{width:100%;max-width:640px;background:#141416;border:1px solid #23232A;border-radius:12px;padding:20px;margin-bottom:24px;box-shadow:0 20px 25px -5px rgba(0,0,0,.25)}
 @media(min-width:640px){.it-matrix{padding:24px}}
+/* ---- Web context panel: general web data, deliberately styled apart from the
+   award UI so it can never be read as availability. Muted, dashed, badged. ---- */
+.wc-panel{width:100%;max-width:640px;background:#101013;border:1px dashed #33333C;border-radius:12px;padding:16px 18px;margin:0 0 24px}
+.wc-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.wc-head h3{margin:0;font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#8A8A96}
+.wc-badge{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#0E0E11;background:#8A8A96;border-radius:999px;padding:3px 9px}
+.wc-note{margin:8px 0 12px;font-size:12.5px;line-height:1.5;color:#7C7C88}
+.wc-disc{margin:12px 0 8px;font-size:11.5px;line-height:1.45;color:#6E6E7A;border-top:1px solid #23232A;padding-top:10px}
+.wc-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.wc-list a{color:#C9C9D4;font-size:13px;font-weight:600;text-decoration:none}
+.wc-list a:hover{text-decoration:underline}
+.wc-dom{margin-left:8px;font-size:11px;color:#5E5E6A}
+.wc-snip{margin:3px 0 0;font-size:12px;line-height:1.45;color:#7C7C88}
+.wc-dim{margin:10px 0 0;font-size:12.5px;color:#6E6E7A}
+.wc-panel .it-ghost{pointer-events:auto}
 .it-mh{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #1E1E24;flex-wrap:wrap}
 .it-mh h3{font-size:14px;font-weight:600;color:#E2E8F0}
 .it-mh span{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#94A3B8;font-weight:600}
@@ -1173,7 +1191,10 @@ const esc = (s) => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;","
 /* ============================ state ============================ */
 const state = {
   origins: ["CAI"], destinations: ["LHR"],
-  date: "2026-09-16", returnDate: null, cabin: "business",
+  /* dynamic so the default never ages out of the booking window (shiftISO/todayISO
+     are hoisted function declarations; clampISO is NOT safe here — it reads
+     BOOK_WINDOW_DAYS, a const declared further down the file) */
+  date: shiftISO(todayISO(), 10), returnDate: null, cabin: "business",
   pax: { adults: 1, children: 0, infants: 0 }, flex: 0, retFlex: 0, trip: "oneway",
   hc: true, superHc: false,   /* advanced toggles — include hidden-city/upgrade fares; super hc = deeper hidden-city sweep */   /* flex/retFlex = ±N-day search window around departure/return (not stay length) */
   results: [], routes: [], streaming: false, sort: "best",
@@ -1338,8 +1359,10 @@ let dpMonth = null, dpArm = "dep";
 let dpSnapshot = null;
 function openDP(){
   closeDP(); closeDD();
+  state.date = clampISO(state.date);                       /* a restored/deep-linked date may be stale */
+  if (state.returnDate && !isBookable(state.returnDate)) state.returnDate = null;
   const sel = new Date(state.date + "T12:00:00");
-  dpMonth = new Date(sel.getFullYear(), sel.getMonth(), 1);
+  dpMonth = clampMonth(new Date(sel.getFullYear(), sel.getMonth(), 1));
   dpArm = state.trip === "roundtrip" ? "ret" : "dep";
   dpSnapshot = { date: state.date, returnDate: state.returnDate, flex: state.flex, retFlex: state.retFlex };
   const el = document.createElement("div");
@@ -1355,6 +1378,27 @@ function shiftISO(iso, days){
   d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
 }
+/* ---- booking window -------------------------------------------------------
+   Only today through today + BOOK_WINDOW_DAYS is selectable. Anything earlier
+   (already departed) or later (outside the award calendar) is faded out and
+   disabled, and the month pager cannot go past either edge. */
+const BOOK_WINDOW_DAYS = 330;
+function bookableMin(){ return todayISO(); }
+function bookableMax(){ return shiftISO(todayISO(), BOOK_WINDOW_DAYS); }
+function isBookable(iso){ return !!iso && iso >= bookableMin() && iso <= bookableMax(); }
+function clampISO(iso){
+  if (!iso) return bookableMin();
+  if (iso < bookableMin()) return bookableMin();
+  if (iso > bookableMax()) return bookableMax();
+  return iso;
+}
+function monthOf(iso){ const d = new Date(iso + "T12:00:00"); return new Date(d.getFullYear(), d.getMonth(), 1); }
+function clampMonth(first){
+  const min = monthOf(bookableMin()), max = monthOf(bookableMax());
+  if (first < min) return min;
+  if (first > max) return max;
+  return first;
+}
 function dpGridCells(y, m){
   /* one month grid: day-of-week header, dimmed edge days, today ring, brand-red selection — attached style */
   const first = new Date(y, m, 1).getDay();
@@ -1368,6 +1412,13 @@ function dpGridCells(y, m){
   for (let d = 1; d <= dim; d++){
     const dt = new Date(y, m, d);
     const id = idx(y, m, d);
+    if (!isBookable(id)){
+      /* faded + unselectable: before today, or beyond the 330-day window */
+      const why = id < bookableMin() ? "Date has passed"
+        : `Beyond the ${BOOK_WINDOW_DAYS}-day booking window (last day ${shortDate(bookableMax())})`;
+      cells += `<button type="button" class="dp-day off" data-date="${id}" disabled aria-disabled="true" title="${why}">${d}</button>`;
+      continue;
+    }
     const cls = ["dp-day"];
     if (id === state.date) cls.push("sel");
     else if (state.trip === "roundtrip" && id === state.returnDate) cls.push("ret");
@@ -1386,6 +1437,10 @@ function drawDP(){
   const sel = state.date, ret = state.returnDate;
   const y = dpMonth.getFullYear(), m = dpMonth.getMonth();
   const m2 = new Date(y, m + 1, 1);
+  /* grey out the pager arrows once the booking window is reached */
+  const curFirst = new Date(y, m, 1);
+  const atMin = curFirst <= monthOf(bookableMin());
+  const atMax = curFirst >= monthOf(bookableMax());
   const CAL_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>`;
   const ARROW_L = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>`;
   const ARROW_R = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>`;
@@ -1424,10 +1479,10 @@ function drawDP(){
     ${rt ? `<div class="dp-cols">${depCol}${retCol}</div>` : depCol}
     <div class="dp-months">
       <div class="dp-nav">
-        <button type="button" class="dp-arrow" data-nav="-1" aria-label="Previous month">${ARROW_L}</button>
+        <button type="button" class="dp-arrow" data-nav="-1" aria-label="Previous month"${atMin ? " disabled" : ""}>${ARROW_L}</button>
         <span class="dp-month">${MONTHS[m]} ${y}</span>
         <span class="dp-month">${MONTHS[m2.getMonth()]} ${m2.getFullYear()}</span>
-        <button type="button" class="dp-arrow" data-nav="1" aria-label="Next month">${ARROW_R}</button>
+        <button type="button" class="dp-arrow" data-nav="1" aria-label="Next month"${atMax ? " disabled" : ""}>${ARROW_R}</button>
       </div>
       <div class="dp-grids">
         <div class="dp-grid">${dpGridCells(y, m)}</div>
@@ -1441,6 +1496,7 @@ function drawDP(){
   el.querySelectorAll("[data-date]").forEach(b => b.addEventListener("click", e => {
     e.stopPropagation();
     const iso = b.dataset.date;
+    if (!isBookable(iso)) return;   /* belt and braces: the cell is already disabled */
     if (!rt){ state.date = iso; syncDate(); drawDP(); return; }   /* staged until Set dates */
     if (dpArm === "ret" && iso > state.date){
       state.returnDate = iso; syncDate(); drawDP(); return;       /* staged until Set dates */
@@ -1477,7 +1533,10 @@ function drawDP(){
   }));
   el.querySelectorAll("[data-nav]").forEach(b => b.addEventListener("click", e => {
     e.stopPropagation();
-    dpMonth = new Date(dpMonth.getFullYear(), dpMonth.getMonth() + (+b.dataset.nav), 1); drawDP();
+    const next = new Date(dpMonth.getFullYear(), dpMonth.getMonth() + (+b.dataset.nav), 1);
+    /* never page outside the booking window */
+    if (next < monthOf(bookableMin()) || next > monthOf(bookableMax())) return;
+    dpMonth = next; drawDP();
   }));
   el.querySelectorAll("[data-dp]").forEach(b => b.addEventListener("click", e => {
     e.stopPropagation();
@@ -1585,7 +1644,9 @@ function flexDates(base = state.date, flex = state.flex){
   const out = [];
   for (let i = -n; i <= n; i++){
     const d = shiftISO(base, i);
-    if (d >= todayISO()) out.push(d);
+    /* the ± window is clipped to the booking window too: no searching a date
+       that has passed or one beyond the last selectable day */
+    if (isBookable(d)) out.push(d);
   }
   return out;
 }
@@ -1599,8 +1660,8 @@ function todayISO(){
   return t.toISOString().slice(0, 10);
 }
 function paxTotal(){ return Math.max(1, (state.pax.adults|0) + (state.pax.children|0)); }
-/* LIVE DATA ONLY: v2 aggregation streams results from the real, credentialed providers (Flybasis, AwardTool,
-   PointsYeah, PointsPath). The modeled v1 engine is never used as a fallback — if no live provider answers,
+/* LIVE DATA ONLY: v2 aggregation streams results from the Flybasis search engine, the sole relayed provider.
+   The modeled v1 engine is never used as a fallback — if Flybasis does not answer,
    the user sees an honest empty state instead of sample itineraries. */
 function noteProviders(d){
   if (!d) return;
@@ -2069,7 +2130,14 @@ function renderResults(){
   if (!vis.length){
     host.innerHTML = "";
     const empty = $("empty"); empty.hidden = false; syncItineraryStep();
-    const q = state.lastQuery || {};
+    /* Fall back to the live form state: renderResults() also runs before the first
+       search has populated state.lastQuery, and an empty `q` would otherwise render
+       a sentence with no date and no cabin ("...on this route for  in this cabin"). */
+    const q = {
+      date: state.date, returnDate: state.returnDate, cabin: state.cabin,
+      trip: state.trip, flex: state.flex, retFlex: state.retFlex,
+      ...(state.lastQuery || {}),
+    };
     const h3 = empty.querySelector("h3");
     const failed = state.providers.filter(p => p && p.ok === false && p.error && !/disabled/i.test(p.error));
     if (state.results.length){
@@ -2080,7 +2148,7 @@ function renderResults(){
       $("empty-msg").textContent = "Could not reach the search service. Check that the backend is running and try again.";
     } else if (!state.live){
       h3.textContent = "No live award provider connected";
-      $("empty-msg").textContent = state.notice || "Add a provider credential (Flybasis, AwardTool, PointsYeah or PointsPath) on the server to search real availability. Sample data is never shown.";
+      $("empty-msg").textContent = state.notice || "SpicyTool relays the Flybasis search engine only. Add a FLYBASIS_API_KEY on the server to search real availability. Sample data is never shown.";
     } else if (failed.length){
       h3.textContent = "Live providers returned errors";
       $("empty-msg").textContent = failed.map(p => `${p.provider}: ${p.error}`).join(" · ");
@@ -2088,7 +2156,7 @@ function renderResults(){
       h3.textContent = "No award availability";
       $("empty-msg").textContent = q.trip === "roundtrip"
         ? `${state.liveProviders.join(", ") || "Live providers"} found no award space for ${shortDate(q.date)} → ${shortDate(q.returnDate)} on this route and cabin. Try other dates, airports or cabin.`
-        : `${state.liveProviders.join(", ") || "Live providers"} found no award space on this route for ${shortDate(q.date)} in ${CABIN_LABEL[q.cabin] || q.cabin || "this cabin"}. Try nearby dates (± days in the calendar) or other airports.`;
+        : `${state.liveProviders.join(", ") || "Live providers"} found no award space on this route for ${shortDate(q.date)} in ${CABIN_LABEL[q.cabin] || q.cabin || "this cabin"}. Try nearby dates (the ±1 / ±2 day chips in the date picker) or other airports.`;
     }
     return;
   }
@@ -2337,8 +2405,11 @@ function restoreSearch(){
   if (q){
     if (Array.isArray(q.origins) && q.origins.length) state.origins = q.origins.slice(0, MAX_AIRPORTS);
     if (Array.isArray(q.destinations) && q.destinations.length) state.destinations = q.destinations.slice(0, MAX_AIRPORTS);
-    if (q.date) state.date = q.date;
-    state.returnDate = q.returnDate || null;
+    /* a restored/shared link can carry a date that has since passed, or one
+       beyond the booking window — pull it back inside the selectable range */
+    if (q.date) state.date = clampISO(q.date);
+    state.returnDate = (q.returnDate && isBookable(q.returnDate) && q.returnDate >= state.date)
+      ? q.returnDate : null;
     if (q.cabin) state.cabin = q.cabin;
     state.flex = q.flex || 0;
     state.retFlex = q.retFlex || 0;
@@ -2482,8 +2553,61 @@ function renderItinerary(r){
       <a class="it-vi" href="${esc(itineraryURL(r.id))}" target="_blank" rel="noopener" title="Open this itinerary in its own tab — a real link, never a blank page">Get VI* ${ARROW_SVG}</a>
     </div>
   </section>
+  <section class="wc-panel" id="wc-panel" data-purpose="web-context" aria-label="Web context (not award data)">
+    <div class="wc-head">
+      <h3>Web context</h3>
+      <span class="wc-badge">Not award data</span>
+    </div>
+    <p class="wc-note">Optional background from the FlyBasis Search MCP connector — general web data about this route and program. It is <strong>not</strong> award availability, pricing or seat counts, and it never changes the flights listed above.</p>
+    <button type="button" class="it-ghost" id="wc-load">Load web context</button>
+    <div id="wc-body" hidden></div>
+  </section>
 `;
   $("it-back-flights").addEventListener("click", () => showResultsView());
+  const wcBtn = $("wc-load");
+  if (wcBtn) wcBtn.addEventListener("click", () => loadWebContext(r));
+}
+
+/* ==================== web context (FlyBasis Search MCP — NOT award data) ====================
+   Loads on demand only, renders into its own panel, and is fire-and-forget: a
+   failure just leaves a note. Nothing here ever touches state.results. */
+function wcHTML(d){
+  /* Defensive: refuse to render anything not explicitly labelled non-award. */
+  if (!d || d.is_award_data !== false || d.kind !== "web_context") return `<p class="wc-dim">Web context unavailable.</p>`;
+  if (!d.ok) return `<p class="wc-dim">${esc(d.error || "Web context unavailable.")}</p>`;
+  const disc = `<p class="wc-disc">${esc(d.disclaimer || "")}</p>`;
+  const rows = (d.data && Array.isArray(d.data.results)) ? d.data.results : [];
+  if (!rows.length) return disc + `<p class="wc-dim">No web results for that query.</p>`;
+  return disc + `<ul class="wc-list">` + rows.slice(0, 6).map(x => `
+      <li>
+        <a href="${esc(x.url || "#")}" target="_blank" rel="noopener nofollow">${esc(x.title || x.url || "Untitled")}</a>
+        <span class="wc-dom">${esc(x.domain || "")}</span>
+        <p class="wc-snip">${esc(x.snippet || "")}</p>
+      </li>`).join("") + `</ul>`;
+}
+async function loadWebContext(r){
+  const body = $("wc-body"), btn = $("wc-load");
+  if (!body || !btn) return;
+  const leg = legOut(r) || r;
+  if (!leg || !leg.route){ body.hidden = false; body.innerHTML = `<p class="wc-dim">No route to look up.</p>`; return; }
+  btn.disabled = true; btn.textContent = "Loading…";
+  body.hidden = false;
+  body.innerHTML = `<p class="wc-dim">Fetching web context…</p>`;
+  const qs = new URLSearchParams({
+    origin: leg.route.origin,
+    destination: leg.route.destination,
+    program: (leg.pricing && leg.pricing.program_code) || "",
+    cabin: state.cabin || "",
+    limit: "5",
+  });
+  try {
+    const res = await fetch(`/api/v2/context?${qs.toString()}`);
+    body.innerHTML = wcHTML(await res.json());
+  } catch {
+    body.innerHTML = `<p class="wc-dim">Web context unavailable.</p>`;
+  } finally {
+    btn.hidden = true;
+  }
 }
 
 /* ============================ init ============================ */

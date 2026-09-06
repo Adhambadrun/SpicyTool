@@ -7,6 +7,7 @@ already emitted, so the UI never flickers or double-renders.
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 from typing import AsyncIterator
 
@@ -18,19 +19,36 @@ from providers.pointspath import PointsPath
 from providers.pointsyeah import PointsYeah
 from services import dedupe as dedupe_service
 
+# Every adapter the app knows how to talk to, in display order.
+_ALL_PROVIDERS = (AwardTool, PointsYeah, PointsPath, Flybasis, SpicyToolEngine)
+
+# SpicyTool relays the Flybasis search engine and nothing else: every itinerary
+# shown to a user is Flybasis output. The other adapters stay in the tree (and
+# stay covered by tests_integration.py) but are NOT searched by default.
+# Override for demos / offline sweeps with SPICYTOOL_PROVIDERS="all", or a
+# comma-separated name list, e.g. SPICYTOOL_PROVIDERS="Flybasis,PointsPath".
+PROVIDERS_ENV = "SPICYTOOL_PROVIDERS"
+DEFAULT_PROVIDERS = ("Flybasis",)
+
 _registry: list[BaseProvider] | None = None
 
 
+def configured_provider_names() -> tuple[str, ...]:
+    """Provider names to search: SPICYTOOL_PROVIDERS if set, else Flybasis only."""
+    raw = os.environ.get(PROVIDERS_ENV, "").strip()
+    if not raw:
+        return DEFAULT_PROVIDERS
+    if raw.lower() == "all":
+        return tuple(cls.name for cls in _ALL_PROVIDERS)
+    return tuple(p.strip() for p in raw.split(",") if p.strip())
+
+
 def registry() -> list[BaseProvider]:
+    """Instantiate exactly the configured providers — Flybasis by default."""
     global _registry
     if _registry is None:
-        _registry = [
-            AwardTool(),
-            PointsYeah(),
-            PointsPath(),
-            Flybasis(),
-            SpicyToolEngine(),
-        ]
+        wanted = {n.lower() for n in configured_provider_names()}
+        _registry = [cls() for cls in _ALL_PROVIDERS if cls.name.lower() in wanted]
     return _registry
 
 
@@ -56,9 +74,9 @@ def _no_live_reason(providers: list[BaseProvider]) -> str | None:
     if live_providers(providers):
         return None
     return (
-        "No live award-data provider is configured. Add at least one credential "
-        "(FLYBASIS_API_KEY, AWARDTOOL_API_KEY, POINTSYEAH_API_KEY or "
-        "POINTSPATH_API_KEY) to search real availability."
+        "No live award data is available. SpicyTool relays the Flybasis search "
+        "engine only — set FLYBASIS_API_KEY to a key issued to you by Flybasis "
+        "to search real availability."
     )
 
 

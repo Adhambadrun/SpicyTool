@@ -4,10 +4,16 @@ set -u
 cd "$(dirname "$0")"
 PY=.venv/bin/python
 pass=0; fail=0
-# The modeled engine is OFF by default (live-only searches). This sweep exercises the
-# engine itself, so it must be run against a server started with SPICYTOOL_MODELED_ENGINE=1.
+# Production relays Flybasis ONLY (see SPICYTOOL_PROVIDERS). This sweep exercises the
+# full multi-provider aggregation plus the modeled engine, so it must run against a
+# server started with SPICYTOOL_MODELED_ENGINE=1 AND SPICYTOOL_PROVIDERS=all.
 if [ "$(curl -s localhost:8000/api/v1/health | $PY -c 'import json,sys;print(json.load(sys.stdin).get("modeled_engine"))')" != "True" ]; then
   echo "acceptance_check.sh needs the server started with SPICYTOOL_MODELED_ENGINE=1 (modeled engine is off by default)."; exit 2
+fi
+NPROV=$(curl -s localhost:8000/api/v2/providers | $PY -c 'import json,sys;print(len(json.load(sys.stdin)["providers"]))')
+if [ "$NPROV" != "5" ]; then
+  echo "acceptance_check.sh sweeps all 5 providers; this server relays $NPROV.";
+  echo "Restart it with SPICYTOOL_PROVIDERS=all SPICYTOOL_MODELED_ENGINE=1 (production relays Flybasis only)."; exit 2
 fi
 # In-process session token (shares the server's signing secret; no API backdoor).
 TOKEN=$(cd backend && ../.venv/bin/python -c "from core.auth import issue_token; print(issue_token('adhambadraan@gmail.com'))")
@@ -268,6 +274,87 @@ assert d3 and d3[0]['code'] == 'BEG', d3
 print('new carriers:', sorted(airlines & NEW), '| RT ticket types OK | BEG found')
 EOF
 [ $? -eq 0 ] && ok "new carrier network + ticket types" || bad "new carriers"
+
+echo "== 18. Flybasis-only relay (default provider set) =="
+# In-process: independent of how the server under sweep was started.
+(cd backend && env -u SPICYTOOL_PROVIDERS ../.venv/bin/python - <<'EOF'
+import sys
+from services import aggregator
+
+# Default (no SPICYTOOL_PROVIDERS) must relay Flybasis and nothing else.
+assert aggregator.configured_provider_names() == ("Flybasis",), aggregator.configured_provider_names()
+names = [p.name for p in aggregator.registry()]
+assert names == ["Flybasis"], names
+assert [p["provider"] for p in aggregator.provider_report()] == ["Flybasis"]
+assert aggregator.select(None) and [p.name for p in aggregator.select(None)] == ["Flybasis"]
+# A caller cannot re-add another adapter by name when it is not in the set.
+assert aggregator.select(["PointsYeah", "AwardTool", "SpicyToolEngine"]) == []
+# No Flybasis credential => nothing is live, and the notice says so.
+assert aggregator.live_providers() == [], aggregator.live_providers()
+reason = aggregator._no_live_reason(aggregator.registry())
+assert reason and "Flybasis" in reason, reason
+print("default relay = %s; other adapters unreachable; notice ok" % names)
+EOF
+) && (cd backend && SPICYTOOL_PROVIDERS=all ../.venv/bin/python -c "
+from services import aggregator
+assert len(aggregator.registry()) == 5, [p.name for p in aggregator.registry()]
+print('SPICYTOOL_PROVIDERS=all ->', [p.name for p in aggregator.registry()])
+")
+[ $? -eq 0 ] && ok "Flybasis-only relay default + override" || bad "Flybasis-only relay"
+
+echo "== 19. web context is labelled non-award and never touches results =="
+# The connector may be unreachable from the test host; what must hold either way
+# is the labelling, the input validation, and that search results are untouched.
+curl -s 'localhost:8000/api/v2/search?origin=JFK&destination=LHR&date=2026-09-17&cabin=business' > /tmp/wc_before.json
+$PY - <<'EOF'
+import json, urllib.error, urllib.request
+
+def get(path, want=200):
+    url = "http://localhost:8000" + path
+    try:
+        with urllib.request.urlopen(url) as r:
+            return r.status, json.load(r)
+    except urllib.error.HTTPError as e:
+        return e.code, json.load(e)
+
+# bad input is rejected, not silently served
+s, _ = get("/api/v2/context?tool=bogus");            assert s == 400, f"bad tool -> {s}"
+s, _ = get("/api/v2/context?tool=fetch_url");        assert s == 400, f"fetch_url w/o url -> {s}"
+
+# every payload is labelled non-award, whatever the connector did
+for path in ("/api/v2/context?origin=JFK&destination=LHR&program=AC_AEROPLAN&cabin=business",
+             "/api/v2/context?tool=instant_answer&q=Aeroplan"):
+    s, d = get(path)
+    assert s == 200, f"{path} -> {s}"
+    assert d["kind"] == "web_context", d.get("kind")
+    assert d["is_award_data"] is False, "is_award_data must be False"
+    assert d["source"] == "flybasis-mcp"
+    assert "NOT award" in d["disclaimer"], d.get("disclaimer")
+    print(f"  {d['tool']:15} ok={str(d['ok']):5} kind={d['kind']} is_award_data={d['is_award_data']}")
+
+# web context must never feed the results list
+b = json.load(open("/tmp/wc_before.json"))
+get("/api/v2/context?origin=JFK&destination=LHR&program=AC_AEROPLAN")
+s, a = get("/api/v2/search?origin=JFK&destination=LHR&date=2026-09-17&cabin=business")
+assert a["count"] == b["count"], f"result count moved {b['count']} -> {a['count']}"
+assert [r["id"] for r in a["results"]] == [r["id"] for r in b["results"]], "result ids changed"
+print(f"  search unaffected: {a['count']} results, identical ids")
+EOF
+[ $? -eq 0 ] && ok "web context labelled non-award, results untouched" || bad "web context"
+
+echo "== 20. date picker booking window (today .. today+330) =="
+# Boots the real frontend/index.html in jsdom. Skips (does NOT pass) when the
+# harness is unavailable, so a missing dep can never read as a green check.
+if command -v node >/dev/null 2>&1; then
+  ( cd frontend/test && [ -d node_modules/jsdom ] || npm install --silent >/dev/null 2>&1
+    node booking-window.mjs )
+  rc=$?
+  if   [ $rc -eq 0 ];  then ok "booking window: past + >330d faded and unselectable"
+  elif [ $rc -eq 77 ]; then echo "  SKIP (jsdom not installed — cd frontend/test && npm install)"
+  else bad "booking window (see output above)"; fi
+else
+  echo "  SKIP (node not available)"
+fi
 
 echo
 echo "=============================="

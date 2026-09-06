@@ -11,17 +11,19 @@ from core.http_engine import TELEMETRY_BLOCKLIST, get_engine, is_telemetry_host
 from core.redis_cache import award_cache
 from providers.base import SearchQuery
 from services import aggregator
-from services.orchestrator import parse_airports, validate
+from services import web_context
+from services.orchestrator import adapter_map, parse_airports, validate
 
 router = APIRouter(prefix="/api/v2")
 
 SSE_HEADERS = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
 
 _NOTE = (
-    "Only live providers are searched. Third-party adapters stay disabled until "
-    "the operator supplies their own credential (issued directly by that "
-    "provider) via the matching env var. The first-party SpicyToolEngine returns "
-    "modeled sample data and is OFF unless SPICYTOOL_MODELED_ENGINE=1 is set."
+    "SpicyTool relays the Flybasis search engine only — every itinerary shown "
+    "is Flybasis output. Flybasis stays disabled until the operator supplies "
+    "their own FLYBASIS_API_KEY (issued directly by Flybasis). Other adapters "
+    "and the first-party modeled SpicyToolEngine are not searched; widen this "
+    "only for demos/offline sweeps with SPICYTOOL_PROVIDERS."
 )
 
 
@@ -175,3 +177,51 @@ async def search_stream(
             yield {"event": event["status"], "data": _json.dumps(event)}
 
     return EventSourceResponse(gen(), headers=SSE_HEADERS)
+
+
+@router.get("/context")
+async def context(
+    origin: str | None = None,
+    destination: str | None = None,
+    program: str | None = None,
+    cabin: str | None = None,
+    q: str | None = None,
+    tool: str = "web_search",
+    url: str | None = None,
+    limit: int = Query(5, ge=1, le=10),
+):
+    """General web context from the FlyBasis Search MCP connector.
+
+    NOT award data. This route never touches the award aggregator, its results
+    are never merged into a search, and every payload is labelled
+    ``kind="web_context"`` / ``is_award_data=false`` with a disclaimer. Award
+    availability still comes only from ``/api/v2/search``.
+    """
+    program_name = None
+    if program:
+        adapter = adapter_map().get(program.upper())
+        program_name = adapter.program_name if adapter else program
+
+    if tool == "fetch_url":
+        if not url:
+            return JSONResponse({"detail": "fetch_url requires 'url'"}, status_code=400)
+        return await web_context.fetch_url(url)
+    if tool == "instant_answer":
+        text = q or web_context.build_query(origin, destination, program_name, cabin)
+        if not text:
+            return JSONResponse(
+                {"detail": "instant_answer requires 'q', or 'origin' and 'destination'"},
+                status_code=400,
+            )
+        return await web_context.instant_answer(text)
+    if tool != "web_search":
+        return JSONResponse(
+            {"detail": f"Unknown tool '{tool}' (expected web_search, instant_answer or fetch_url)"},
+            status_code=400,
+        )
+    if q:
+        return await web_context.web_search(q, limit=limit)
+    return await web_context.route_context(
+        origin, destination, program_name=program_name, cabin=cabin, limit=limit
+    )
+
