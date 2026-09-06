@@ -369,6 +369,10 @@ a.mp-btn{text-decoration:none}
 .pp-airline{width:28px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
 .pp-taxes{color:#9FA9BA}
 .pp-note{font-size:11px;color:#838C9E;margin-top:8px}
+/* live search status line (above skeletons) */
+.live-status{display:flex;align-items:center;gap:10px;font-size:13px;color:#8E97AA;padding:2px 4px 6px}
+.live-spin{width:14px;height:14px;border-radius:9999px;border:2px solid #2A2E3A;border-top-color:#34D399;animation:spin .8s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
 /* skeletons + empty */
 .sk-card{background:var(--r-card);border:1px solid var(--r-border);border-radius:12px;padding:20px;display:flex;gap:24px;align-items:center;flex-wrap:wrap}
 .sk-block{background:#1D2028;border-radius:8px;animation:pulse 1.6s ease-in-out infinite}
@@ -1181,6 +1185,7 @@ const state = {
     depTime:"any", arrTime:"any", duration:"any", dates:"any"
   },
   expanded: null, ppop: null, calendar: [], lastQuery: null, providers: [],
+  live: true, liveProviders: [], notice: null, searchFailed: false,   /* live-provider status from the v2 stream */
   itineraryId: null,          /* the result whose itinerary is open — also the #itinerary/<id> link target */
 };
 /* ---- result shape accessors (one-way AwardResult | round-trip pair) ---- */
@@ -1596,12 +1601,66 @@ function todayISO(){
   return t.toISOString().slice(0, 10);
 }
 function paxTotal(){ return Math.max(1, (state.pax.adults|0) + (state.pax.children|0)); }
-/* live data: v2 aggregation (providers/ + local_engine) is the source of truth — real external APIs when credentials are set, otherwise chart-accurate local engine. v1 is fallback. */
+/* LIVE DATA ONLY: v2 aggregation streams results from the real, credentialed providers (Flybasis, AwardTool,
+   PointsYeah, PointsPath). The modeled v1 engine is never used as a fallback — if no live provider answers,
+   the user sees an honest empty state instead of sample itineraries. */
+function noteProviders(d){
+  if (!d) return;
+  if (d.providers && Array.isArray(d.providers) && d.providers.length && typeof d.providers[0] === "object") state.providers = d.providers;
+  if (typeof d.live === "boolean") state.live = d.live;
+  if (Array.isArray(d.live_providers)) state.liveProviders = d.live_providers;
+  if ("notice" in d) state.notice = d.notice || null;
+}
+function absorbResults(list){
+  if (!list || !list.length) return false;
+  for (const r of list){
+    for (const leg of (legRet(r) ? [legOut(r), legRet(r)] : [r])){
+      if (!leg || !leg.route) continue;
+      AIRPORT_META[leg.route.origin] = AIRPORT_META[leg.route.origin] || { code:leg.route.origin, city:leg.route.origin };
+      AIRPORT_META[leg.route.destination] = AIRPORT_META[leg.route.destination] || { code:leg.route.destination, city:leg.route.destination };
+    }
+  }
+  const seen = new Set(state.results.map(r => r.id));
+  for (const r of list){ if (!seen.has(r.id)){ seen.add(r.id); state.results.push(r); } }
+  return true;
+}
+function searchOneDate(date){
+  /* one v2 SSE stream for a single departure date; resolves when the server sends `complete` (or fails) */
+  const rt = state.trip === "roundtrip" && state.returnDate;
+  const qsRT = rt ? `&return_date=${state.returnDate}&return_flex=${Math.max(0, Math.min(3, state.retFlex|0))}` : "";
+  const qs = `origin=${state.origins.join(",")}&destination=${state.destinations.join(",")}&date=${date}&cabin=${state.cabin}&passengers=${paxTotal()}&max_stops=1${qsRT}${advQS()}`;
+  return new Promise(resolve => {
+    let es;
+    try { es = new EventSource(`/api/v2/search/stream?${qs}${authQS()}`); } catch { resolve(false); return; }
+    let gotStart = false, finished = false;
+    const finish = ok => { if (finished) return; finished = true; clearTimeout(startTimer); clearTimeout(hardTimer); try { es.close(); } catch {} resolve(ok); };
+    const startTimer = setTimeout(() => { if (!gotStart) finish(false); }, 8000);           /* server unreachable */
+    const hardTimer  = setTimeout(() => finish(gotStart), 45000);                             /* never hang the UI */
+    es.addEventListener("start", e => {
+      gotStart = true;
+      try { const d = JSON.parse(e.data); noteProviders(d); state.routes = (d.query && d.query.routes) || state.routes; } catch {}
+      renderResults();
+    });
+    es.addEventListener("data", e => {
+      gotStart = true;
+      try {
+        const d = JSON.parse(e.data);
+        if (absorbResults(d.results)){ sortResults(); renderResults(); renderFilterBar(); }
+        noteProviders(d);
+      } catch {}
+    });
+    es.addEventListener("complete", e => {
+      try { const d = JSON.parse(e.data); noteProviders(d); absorbResults(d.results); } catch {}
+      finish(true);
+    });
+    es.addEventListener("error", () => { if (!gotStart) finish(false); /* after start: EventSource retries until complete */ });
+  });
+}
 async function runSearch(){
   closeTT(); closeDP(); closeDD();
   showResultsView();
   state.streaming = true; state.results = []; state.routes = []; state.expanded = null; state.ppop = null;
-  state.itineraryId = null;
+  state.itineraryId = null; state.notice = null; state.searchFailed = false;
   state.filters = {
     stops:"any", airline:"", ticket:"", program:"",
     airports:"", cabinF:"any", alliance:"any", premium:"any",
@@ -1609,141 +1668,13 @@ async function runSearch(){
   };
   state.lastQuery = { origins:[...state.origins], destinations:[...state.destinations], date:state.date, cabin:state.cabin, trip:state.trip, returnDate:state.returnDate, flex:state.flex, retFlex:state.retFlex, hc:state.hc, superHc:state.superHc };
   renderResults(); renderFilterBar();
-  if (state.flex > 0 || (state.trip === "roundtrip" && state.returnDate && state.retFlex > 0)){ await flexSearch(); return; }
-  const qsBase = `origin=${state.origins.join(",")}&destination=${state.destinations.join(",")}&date=${state.date}&cabin=${state.cabin}&passengers=${paxTotal()}&max_stops=1${advQS()}`;
-  const qsRT = (state.trip === "roundtrip" && state.returnDate) ? `&return_date=${state.returnDate}` : "";
-  // try v2 stream first (real providers + local engine)
-  const tryV2 = () => new Promise((resolve, reject) => {
-    const urlV2 = `/api/v2/search/stream?${qsBase}${authQS()}`;
-    let es;
-    try { es = new EventSource(urlV2); } catch (e){ reject(e); return; }
-    let gotData = false;
-    let startTimer = setTimeout(() => { /* if no start in 4s, fallback to v1 */ if (!gotData){ es.close(); reject(new Error("v2 timeout")); } }, 4000);
-    es.addEventListener("start", e => {
-      clearTimeout(startTimer);
-      gotData = true;
-      try {
-        const d = JSON.parse(e.data);
-        state.providers = d.providers || d.query?.providers || [];
-        state.routes = (d.query && d.query.routes) || [];
-      } catch {}
-    });
-    es.addEventListener("data", e => {
-      gotData = true;
-      try {
-        const d = JSON.parse(e.data);
-        if (d.results && d.results.length){
-          for (const r of d.results){
-            for (const leg of (legRet(r) ? [legOut(r), legRet(r)] : [r])){
-              AIRPORT_META[leg.route.origin] = AIRPORT_META[leg.route.origin] || { code:leg.route.origin, city:leg.route.origin };
-              AIRPORT_META[leg.route.destination] = AIRPORT_META[leg.route.destination] || { code:leg.route.destination, city:leg.route.destination };
-            }
-          }
-          state.results = state.results.concat(d.results);
-          sortResults(); renderResults(); renderFilterBar();
-        }
-        if (d.providers) state.providers = d.providers;
-      } catch {}
-    });
-    es.addEventListener("complete", e => {
-      clearTimeout(startTimer);
-      try {
-        const d = JSON.parse(e.data);
-        state.streaming = false;
-        if (d.results && d.results.length) state.results = d.results;
-        if (d.providers) state.providers = d.providers;
-        sortResults(); renderResults(); renderFilterBar();
-        persistSearch(); loadCalendar();
-      } catch { state.streaming = false; renderResults(); }
-      es.close(); resolve(true);
-    });
-    es.addEventListener("error", () => {
-      if (!gotData){
-        clearTimeout(startTimer);
-        es.close(); reject(new Error("v2 error"));
-      }
-      // otherwise let it retry; complete will close
-    });
-  });
-
-  const tryV1 = () => {
-    const qs = `${qsBase}${qsRT}`;
-    const url = `/api/v1/search/stream?${qs}${authQS()}`;
-    const es = new EventSource(url);
-    es.addEventListener("start", e => {
-      try { const d = JSON.parse(e.data); state.providers = d.providers; state.routes = (d.query && d.query.routes) || []; } catch {}
-    });
-    es.addEventListener("program", e => {
-      try {
-        const d = JSON.parse(e.data);
-        if (d.results && d.results.length){
-          for (const r of d.results){
-            for (const leg of (legRet(r) ? [legOut(r), legRet(r)] : [r])){
-              AIRPORT_META[leg.route.origin] = AIRPORT_META[leg.route.origin] || { code:leg.route.origin, city:leg.route.origin };
-              AIRPORT_META[leg.route.destination] = AIRPORT_META[leg.route.destination] || { code:leg.route.destination, city:leg.route.destination };
-            }
-          }
-          state.results = state.results.concat(d.results);
-          sortResults(); renderResults();
-        }
-      } catch {}
-    });
-    es.addEventListener("complete", e => {
-      try {
-        const d = JSON.parse(e.data);
-        state.streaming = false;
-        if (d.results && d.results.length) state.results = d.results;
-        sortResults(); renderResults(); renderFilterBar();
-        persistSearch(); loadCalendar();
-      } catch { state.streaming = false; }
-      es.close();
-    });
-    es.addEventListener("error", () => { /* retry until complete */ });
-  };
-
-  try { await tryV2(); }
-  catch { tryV1(); }
-}
-/* flexibility fan-out: one REST search per date in the ± window (N days before AND after the picked
-   date — the picked date itself is always included), merged + deduped — uses v2 then v1.
-   Round-trip: departure window × return window, so a ±1 departure with a ±1 return = up to 9 searches. */
-async function flexSearch(){
-  const depDates = flexDates();
-  const retDates = retFlexDates();
-  const rt = state.trip === "roundtrip" && !!state.returnDate;
-  const qsBaseV2 = `origin=${state.origins.join(",")}&destination=${state.destinations.join(",")}&cabin=${state.cabin}&passengers=${paxTotal()}&max_stops=1${advQS()}`;
-  try {
-    // try v2 first for each departure date (v2 is one-way only, same as the non-flex path)
-    const jobsV2 = depDates.map(d => fetch(`/api/v2/search?${qsBaseV2}&date=${d}`).then(r => r.ok ? r.json() : null).catch(() => null));
-    let packs = await Promise.all(jobsV2);
-    // if all null, fallback to v1 (v1 understands return_date, so pair every departure with every return in the window)
-    if (packs.every(p => !p || !p.results)){
-      const combos = [];
-      for (const d of depDates){
-        if (!rt){ combos.push([d, null]); continue; }
-        for (const r of retDates) if (r >= d) combos.push([d, r]);
-      }
-      const jobsV1 = combos.map(([d, r]) => api(`/api/v1/search?${qsBaseV2}&date=${d}${r ? `&return_date=${r}` : ""}`).then(x => x.ok ? x.json() : null).catch(() => null));
-      packs = await Promise.all(jobsV1);
-    }
-    const seen = new Set(); let routes = [];
-    for (const d of packs){
-      if (!d || !d.results) continue;
-      routes = routes.concat(d.query ? d.query.routes : []);
-      for (const r of d.results){
-        for (const leg of (legRet(r) ? [legOut(r), legRet(r)] : [r])){
-          AIRPORT_META[leg.route.origin] = AIRPORT_META[leg.route.origin] || { code:leg.route.origin, city:leg.route.origin };
-          AIRPORT_META[leg.route.destination] = AIRPORT_META[leg.route.destination] || { code:leg.route.destination, city:leg.route.destination };
-        }
-        if (!seen.has(r.id)){ seen.add(r.id); state.results.push(r); }
-      }
-      if (d.providers) state.providers = d.providers;
-    }
-    state.routes = routes;
-  } catch { state.results = []; }
+  /* every date in the ± window is a live search of its own; results merge + dedupe by id */
+  const dates = flexDates();
+  const oks = await Promise.all(dates.map(searchOneDate));
+  state.searchFailed = !oks.some(Boolean);
   state.streaming = false;
   sortResults(); renderResults(); renderFilterBar();
-  persistSearch(); loadCalendar();
+  if (state.results.length) persistSearch();
 }
 function sortResults(){
   if (state.sort === "fastest") state.results.sort((a,b) => rDurV(a) - rDurV(b));
@@ -2128,7 +2059,8 @@ function renderResults(){
   const vis = visibleResults();
   $("empty").hidden = true;
   if (state.streaming && state.results.length === 0){
-    host.innerHTML = Array.from({length:4}, (_,i) => `<div class="sk-card">
+    const who = state.liveProviders.length ? `Searching live availability on ${state.liveProviders.join(", ")}…` : "Connecting to live award providers…";
+    host.innerHTML = `<div class="live-status"><span class="live-spin"></span>${esc(who)}</div>` + Array.from({length:4}, (_,i) => `<div class="sk-card">
       <div class="sk-block" style="width:96px;height:44px"></div>
       <div class="sk-block" style="width:140px;height:24px"></div>
       <div class="sk-block" style="flex:1;min-width:180px;height:24px"></div>
@@ -2140,11 +2072,26 @@ function renderResults(){
     host.innerHTML = "";
     const empty = $("empty"); empty.hidden = false; syncItineraryStep();
     const q = state.lastQuery || {};
-    $("empty-msg").textContent = state.results.length
-      ? "No flights match the current filters — relax a filter or Clear All."
-      : q.trip === "roundtrip"
-        ? `No round-trip combinations found for ${shortDate(q.date)} → ${shortDate(q.returnDate)} across ${state.routes.length || 1} route${state.routes.length === 1 ? "" : "s"}. Try other dates, airports or cabin.`
-        : `No award flights found across ${state.routes.length || 1} route${state.routes.length === 1 ? "" : "s"} for this date and cabin. Try nearby dates or other airports.`;
+    const h3 = empty.querySelector("h3");
+    const failed = state.providers.filter(p => p && p.ok === false && p.error && !/disabled/i.test(p.error));
+    if (state.results.length){
+      h3.textContent = "No award flights found";
+      $("empty-msg").textContent = "No flights match the current filters — relax a filter or Clear All.";
+    } else if (state.searchFailed){
+      h3.textContent = "Search service unreachable";
+      $("empty-msg").textContent = "Could not reach the search service. Check that the backend is running and try again.";
+    } else if (!state.live){
+      h3.textContent = "No live award provider connected";
+      $("empty-msg").textContent = state.notice || "Add a provider credential (Flybasis, AwardTool, PointsYeah or PointsPath) on the server to search real availability. Sample data is never shown.";
+    } else if (failed.length){
+      h3.textContent = "Live providers returned errors";
+      $("empty-msg").textContent = failed.map(p => `${p.provider}: ${p.error}`).join(" · ");
+    } else {
+      h3.textContent = "No award availability";
+      $("empty-msg").textContent = q.trip === "roundtrip"
+        ? `${state.liveProviders.join(", ") || "Live providers"} found no award space for ${shortDate(q.date)} → ${shortDate(q.returnDate)} on this route and cabin. Try other dates, airports or cabin.`
+        : `${state.liveProviders.join(", ") || "Live providers"} found no award space on this route for ${shortDate(q.date)} in ${CABIN_LABEL[q.cabin] || q.cabin || "this cabin"}. Try nearby dates (± days in the calendar) or other airports.`;
+    }
     return;
   }
   host.innerHTML = vis.map(r => cardHTML(r, r.id === state.expanded)).join("");
@@ -2153,16 +2100,6 @@ function renderResults(){
   if (popR){ const card = host.querySelector(`[data-id="${popR.id}"]`); if (card) card.insertAdjacentHTML("beforeend", ppopHTML(popR)); }
 }
 
-/* ============================ calendar ============================ */
-async function loadCalendar(){
-  if (!state.lastQuery) return;
-  const q = state.lastQuery;
-  try {
-    const res = await api(`/api/v1/calendar?origin=${q.origins.join(",")}&destination=${q.destinations.join(",")}&start_date=${q.date}&days=14&cabin=${q.cabin}`);
-    const d = await res.json();
-    state.calendar = d.calendar || [];
-  } catch { state.calendar = []; }
-}
 
 /* ============================ view wiring (hash-routed: #results, #itinerary/<id>) ============================ */
 let lastSetHash = null;
@@ -2395,6 +2332,7 @@ function restoreSearch(){
   if (!d) return false;
   state.results = d.results;
   state.providers = d.providers || [];
+  state.live = true;
   state.lastQuery = d.query || null;
   if (d.itineraryId) state.itineraryId = d.itineraryId;
   const q = d.query;

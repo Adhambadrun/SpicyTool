@@ -295,7 +295,7 @@ class Flybasis(BaseProvider):
             first_event.set()
 
         @client.on("disconnect")
-        async def _on_disconnect():
+        async def _on_disconnect(*_args):
             # The server closes the stream when it is done pushing frames —
             # treat that as the completion signal rather than waiting idle.
             stream_closed.set()
@@ -314,13 +314,17 @@ class Flybasis(BaseProvider):
                 timeout=self.timeout,
             )
             # Wait for the first frame, the stream closing, or the deadline.
+            waiters = [
+                asyncio.ensure_future(first_event.wait()),
+                asyncio.ensure_future(stream_closed.wait()),
+            ]
             try:
-                await asyncio.wait_for(
-                    asyncio.first_completed(first_event.wait(), stream_closed.wait()),
-                    timeout=self.timeout,
+                await asyncio.wait(
+                    waiters, timeout=self.timeout, return_when=asyncio.FIRST_COMPLETED
                 )
-            except asyncio.TimeoutError:
-                pass
+            finally:
+                for w in waiters:
+                    w.cancel()
             # Keep collecting while the server still streams; stop as soon as it
             # closes the stream or after a short quiet period (no end event in
             # the spec, so an idle drain bounds the wait without truncating).

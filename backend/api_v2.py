@@ -1,6 +1,8 @@
 """v2 aggregation API: providers, telemetry, cache stats, search + stream."""
 from __future__ import annotations
 
+from datetime import datetime, timedelta
+
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
@@ -16,10 +18,10 @@ router = APIRouter(prefix="/api/v2")
 SSE_HEADERS = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
 
 _NOTE = (
-    "Third-party adapters stay disabled until the operator supplies their own "
-    "credential (issued directly by that provider) via the matching env var. "
-    "The first-party SpicyToolEngine is always on: points and taxes are "
-    "chart-accurate, seat availability is modeled, not live."
+    "Only live providers are searched. Third-party adapters stay disabled until "
+    "the operator supplies their own credential (issued directly by that "
+    "provider) via the matching env var. The first-party SpicyToolEngine returns "
+    "modeled sample data and is OFF unless SPICYTOOL_MODELED_ENGINE=1 is set."
 )
 
 
@@ -30,17 +32,20 @@ def _search_query(
     cabin: str,
     passengers: int,
     max_stops: int,
+    return_date: str | None = None,
 ) -> SearchQuery | JSONResponse:
+    """Validate and build the base query. Multi-airport lists are kept on the
+    returned query as ``origins`` / ``destinations`` attributes."""
     origins = parse_airports(origin, "origin")
     if isinstance(origins, str):
         return JSONResponse({"detail": origins}, status_code=400)
     destinations = parse_airports(destination, "destination")
     if isinstance(destinations, str):
         return JSONResponse({"detail": destinations}, status_code=400)
-    err = validate(origins, destinations, date, cabin)
+    err = validate(origins, destinations, date, cabin, return_date=return_date)
     if err:
         return JSONResponse({"detail": err}, status_code=400)
-    return SearchQuery(
+    q = SearchQuery(
         origin=origins[0],
         destination=destinations[0],
         date=date,
@@ -48,6 +53,23 @@ def _search_query(
         passengers=passengers,
         max_stops=max_stops,
     )
+    q.origins = origins  # type: ignore[attr-defined]
+    q.destinations = destinations  # type: ignore[attr-defined]
+    return q
+
+
+def _return_window(return_date: str | None, return_flex: int, date: str) -> list[str] | None:
+    """Return dates to search: the picked date ± N days, never before departure."""
+    if not return_date:
+        return None
+    base = datetime.strptime(return_date, "%Y-%m-%d").date()
+    n = max(0, min(3, return_flex))
+    out = []
+    for i in range(-n, n + 1):
+        d = (base + timedelta(days=i)).isoformat()
+        if d >= date:
+            out.append(d)
+    return out or [return_date]
 
 
 def _list_param(raw: str | None) -> list[str] | None:
@@ -103,11 +125,24 @@ async def search(
     passengers: int = Query(1, ge=1, le=9),
     max_stops: int = Query(1, ge=0, le=1),
     providers: str | None = None,
+    return_date: str | None = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    return_flex: int = Query(0, ge=0, le=3),
 ):
-    q = _search_query(origin, destination, date, cabin, passengers, max_stops)
+    q = _search_query(origin, destination, date, cabin, passengers, max_stops, return_date)
     if isinstance(q, JSONResponse):
         return q
-    return await aggregator.aggregate(q, aggregator.select(_list_param(providers)))
+    selected = aggregator.select(_list_param(providers))
+    if return_date or len(q.origins) > 1 or len(q.destinations) > 1:  # type: ignore[attr-defined]
+        # multi-airport / round-trip: drain the streaming pipeline, return its final event
+        last = None
+        async for event in aggregator.aggregate_stream(
+            q, selected,
+            origins=q.origins, destinations=q.destinations,  # type: ignore[attr-defined]
+            return_dates=_return_window(return_date, return_flex, date),
+        ):
+            last = event
+        return last
+    return await aggregator.aggregate(q, selected)
 
 
 @router.get("/search/stream")
@@ -120,8 +155,10 @@ async def search_stream(
     passengers: int = Query(1, ge=1, le=9),
     max_stops: int = Query(1, ge=0, le=1),
     providers: str | None = None,
+    return_date: str | None = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    return_flex: int = Query(0, ge=0, le=3),
 ):
-    q = _search_query(origin, destination, date, cabin, passengers, max_stops)
+    q = _search_query(origin, destination, date, cabin, passengers, max_stops, return_date)
     if isinstance(q, JSONResponse):
         return q
 
@@ -129,7 +166,9 @@ async def search_stream(
         import json as _json
 
         async for event in aggregator.aggregate_stream(
-            q, aggregator.select(_list_param(providers))
+            q, aggregator.select(_list_param(providers)),
+            origins=q.origins, destinations=q.destinations,  # type: ignore[attr-defined]
+            return_dates=_return_window(return_date, return_flex, date),
         ):
             if await request.is_disconnected():
                 break

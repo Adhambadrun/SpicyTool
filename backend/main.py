@@ -19,6 +19,7 @@ from adapters.programs import PROGRAM_ADAPTERS
 from core import auth, geo
 from core.http_engine import get_engine
 from core.redis_cache import award_cache
+from providers.local_engine import MODELED_ENGINE_FLAG, modeled_engine_enabled
 from services import orchestrator
 from services.transfer_calculator import program_inventory
 
@@ -46,6 +47,20 @@ app.add_middleware(
 
 # Login enforcement: on by default; set AUTH_ENFORCE=0 to disable (tests only).
 AUTH_ENFORCE = os.getenv("AUTH_ENFORCE", "1") not in ("0", "false", "no")
+
+
+def require_modeled_engine() -> None:
+    """The v1 engine routes return modeled sample itineraries, never live
+    availability. They stay off unless the operator opts in explicitly."""
+    if modeled_engine_enabled():
+        return
+    raise HTTPException(
+        status_code=503,
+        detail=(
+            "The modeled first-party engine is disabled so only live provider "
+            f"data is served. Set {MODELED_ENGINE_FLAG}=1 to enable it for demos."
+        ),
+    )
 
 
 def require_auth(request: Request) -> None:
@@ -134,6 +149,7 @@ async def health():
         "status": "ok",
         "airports": len(geo.airport_list()),
         "programs": len(PROGRAM_ADAPTERS),
+        "modeled_engine": modeled_engine_enabled(),
     }
 
 
@@ -167,7 +183,7 @@ def _airport_params(origin: str, destination: str):
     return None, (origins, destinations)
 
 
-@app.get("/api/v1/search", dependencies=[Depends(require_auth)])
+@app.get("/api/v1/search", dependencies=[Depends(require_auth), Depends(require_modeled_engine)])
 async def search(
     origin: str,
     destination: str,
@@ -198,7 +214,7 @@ async def search(
     )
 
 
-@app.get("/api/v1/search/stream", dependencies=[Depends(require_auth)])
+@app.get("/api/v1/search/stream", dependencies=[Depends(require_auth), Depends(require_modeled_engine)])
 async def search_stream(
     request: Request,
     origin: str,
@@ -239,7 +255,7 @@ async def search_stream(
     return EventSourceResponse(gen(), headers=SSE_HEADERS)
 
 
-@app.get("/api/v1/calendar", dependencies=[Depends(require_auth)])
+@app.get("/api/v1/calendar", dependencies=[Depends(require_auth), Depends(require_modeled_engine)])
 async def calendar(
     origin: str,
     destination: str,

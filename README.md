@@ -7,9 +7,13 @@ commercial feeds can drop into unchanged.
 
 **Stack:** Python 3.12 · FastAPI · AsyncIO · HTTPX · Pydantic v2 · sse-starlette · Redis
 
-> **Honest data provenance.** No airline publishes a public award-availability
-> API. Points totals and taxes are **chart-accurate**; **seat availability is
-> modeled, not live**. Always confirm on the airline's own site before booking.
+> **Live data only.** Searches return results exclusively from the live,
+> credentialed providers (Flybasis, AwardTool, PointsYeah, PointsPath). When no
+> provider credential is configured, the UI shows an honest "no live provider
+> connected" state — it never shows sample itineraries. The first-party
+> *modeled* engine (`SpicyToolEngine` + the `/api/v1/search*` routes) is
+> **off by default** and only comes back with `SPICYTOOL_MODELED_ENGINE=1`
+> (demos / offline tests). Always confirm on the airline's own site before booking.
 
 ---
 

@@ -4,6 +4,11 @@ set -u
 cd "$(dirname "$0")"
 PY=.venv/bin/python
 pass=0; fail=0
+# The modeled engine is OFF by default (live-only searches). This sweep exercises the
+# engine itself, so it must be run against a server started with SPICYTOOL_MODELED_ENGINE=1.
+if [ "$(curl -s localhost:8000/api/v1/health | $PY -c 'import json,sys;print(json.load(sys.stdin).get("modeled_engine"))')" != "True" ]; then
+  echo "acceptance_check.sh needs the server started with SPICYTOOL_MODELED_ENGINE=1 (modeled engine is off by default)."; exit 2
+fi
 # In-process session token (shares the server's signing secret; no API backdoor).
 TOKEN=$(cd backend && ../.venv/bin/python -c "from core.auth import issue_token; print(issue_token('adhambadraan@gmail.com'))")
 ok()   { echo -e "\033[92mPASS\033[0m  $1"; pass=$((pass+1)); }
