@@ -342,6 +342,20 @@ print(f"  search unaffected: {a['count']} results, identical ids")
 EOF
 [ $? -eq 0 ] && ok "web context labelled non-award, results untouched" || bad "web context"
 
+echo "== 20. date picker booking window (today .. today+330) =="
+# Boots the real frontend/index.html in jsdom. Skips (does NOT pass) when the
+# harness is unavailable, so a missing dep can never read as a green check.
+if command -v node >/dev/null 2>&1; then
+  ( cd frontend/test && [ -d node_modules/jsdom ] || npm install --silent >/dev/null 2>&1
+    node booking-window.mjs )
+  rc=$?
+  if   [ $rc -eq 0 ];  then ok "booking window: past + >330d faded and unselectable"
+  elif [ $rc -eq 77 ]; then echo "  SKIP (jsdom not installed — cd frontend/test && npm install)"
+  else bad "booking window (see output above)"; fi
+else
+  echo "  SKIP (node not available)"
+fi
+
 echo
 echo "=============================="
 echo -e "ACCEPTANCE: \033[92m$pass passed\033[0m, \033[91m$fail failed\033[0m"

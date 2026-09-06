@@ -1,0 +1,13 @@
+{
+  "name": "spicytool-frontend-tests",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Frontend regression tests for SpicyTool (jsdom). Not deployed.",
+  "scripts": {
+    "test": "node booking-window.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.0"
+  }
+}

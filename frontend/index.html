@@ -189,6 +189,9 @@ button{font-family:inherit}
 .dp-day.dow{width:auto;height:auto;margin:0 0 3px;color:#71717A;font-size:10px;font-weight:600;cursor:default;line-height:14px}
 .dp-day.dow:hover{background:none;color:#71717A}
 .dp-day.other{color:#48484F;pointer-events:none}
+/* outside the booking window: faded, no hover, not clickable */
+.dp-day.off{color:#3A3A40;opacity:.5;pointer-events:none;cursor:default;text-decoration:line-through}
+.dp-day.off:hover{background:none;color:#3A3A40}
 .dp-day.today{background:#27272F;color:#fff;font-weight:600}
 .dp-day.sel,.dp-day.ret{background:#E11D2E;color:#fff;font-weight:600;box-shadow:0 0 0 2px rgba(225,29,46,.4),0 1px 2px 0 rgba(225,29,46,.5)}
 .dp-day.sel:hover,.dp-day.ret:hover{background:#E11D2E;color:#fff}
@@ -1188,7 +1191,10 @@ const esc = (s) => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;","
 /* ============================ state ============================ */
 const state = {
   origins: ["CAI"], destinations: ["LHR"],
-  date: "2026-09-16", returnDate: null, cabin: "business",
+  /* dynamic so the default never ages out of the booking window (shiftISO/todayISO
+     are hoisted function declarations; clampISO is NOT safe here — it reads
+     BOOK_WINDOW_DAYS, a const declared further down the file) */
+  date: shiftISO(todayISO(), 10), returnDate: null, cabin: "business",
   pax: { adults: 1, children: 0, infants: 0 }, flex: 0, retFlex: 0, trip: "oneway",
   hc: true, superHc: false,   /* advanced toggles — include hidden-city/upgrade fares; super hc = deeper hidden-city sweep */   /* flex/retFlex = ±N-day search window around departure/return (not stay length) */
   results: [], routes: [], streaming: false, sort: "best",
@@ -1353,8 +1359,10 @@ let dpMonth = null, dpArm = "dep";
 let dpSnapshot = null;
 function openDP(){
   closeDP(); closeDD();
+  state.date = clampISO(state.date);                       /* a restored/deep-linked date may be stale */
+  if (state.returnDate && !isBookable(state.returnDate)) state.returnDate = null;
   const sel = new Date(state.date + "T12:00:00");
-  dpMonth = new Date(sel.getFullYear(), sel.getMonth(), 1);
+  dpMonth = clampMonth(new Date(sel.getFullYear(), sel.getMonth(), 1));
   dpArm = state.trip === "roundtrip" ? "ret" : "dep";
   dpSnapshot = { date: state.date, returnDate: state.returnDate, flex: state.flex, retFlex: state.retFlex };
   const el = document.createElement("div");
@@ -1370,6 +1378,27 @@ function shiftISO(iso, days){
   d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
 }
+/* ---- booking window -------------------------------------------------------
+   Only today through today + BOOK_WINDOW_DAYS is selectable. Anything earlier
+   (already departed) or later (outside the award calendar) is faded out and
+   disabled, and the month pager cannot go past either edge. */
+const BOOK_WINDOW_DAYS = 330;
+function bookableMin(){ return todayISO(); }
+function bookableMax(){ return shiftISO(todayISO(), BOOK_WINDOW_DAYS); }
+function isBookable(iso){ return !!iso && iso >= bookableMin() && iso <= bookableMax(); }
+function clampISO(iso){
+  if (!iso) return bookableMin();
+  if (iso < bookableMin()) return bookableMin();
+  if (iso > bookableMax()) return bookableMax();
+  return iso;
+}
+function monthOf(iso){ const d = new Date(iso + "T12:00:00"); return new Date(d.getFullYear(), d.getMonth(), 1); }
+function clampMonth(first){
+  const min = monthOf(bookableMin()), max = monthOf(bookableMax());
+  if (first < min) return min;
+  if (first > max) return max;
+  return first;
+}
 function dpGridCells(y, m){
   /* one month grid: day-of-week header, dimmed edge days, today ring, brand-red selection — attached style */
   const first = new Date(y, m, 1).getDay();
@@ -1383,6 +1412,13 @@ function dpGridCells(y, m){
   for (let d = 1; d <= dim; d++){
     const dt = new Date(y, m, d);
     const id = idx(y, m, d);
+    if (!isBookable(id)){
+      /* faded + unselectable: before today, or beyond the 330-day window */
+      const why = id < bookableMin() ? "Date has passed"
+        : `Beyond the ${BOOK_WINDOW_DAYS}-day booking window (last day ${shortDate(bookableMax())})`;
+      cells += `<button type="button" class="dp-day off" data-date="${id}" disabled aria-disabled="true" title="${why}">${d}</button>`;
+      continue;
+    }
     const cls = ["dp-day"];
     if (id === state.date) cls.push("sel");
     else if (state.trip === "roundtrip" && id === state.returnDate) cls.push("ret");
@@ -1401,6 +1437,10 @@ function drawDP(){
   const sel = state.date, ret = state.returnDate;
   const y = dpMonth.getFullYear(), m = dpMonth.getMonth();
   const m2 = new Date(y, m + 1, 1);
+  /* grey out the pager arrows once the booking window is reached */
+  const curFirst = new Date(y, m, 1);
+  const atMin = curFirst <= monthOf(bookableMin());
+  const atMax = curFirst >= monthOf(bookableMax());
   const CAL_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>`;
   const ARROW_L = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>`;
   const ARROW_R = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>`;
@@ -1439,10 +1479,10 @@ function drawDP(){
     ${rt ? `<div class="dp-cols">${depCol}${retCol}</div>` : depCol}
     <div class="dp-months">
       <div class="dp-nav">
-        <button type="button" class="dp-arrow" data-nav="-1" aria-label="Previous month">${ARROW_L}</button>
+        <button type="button" class="dp-arrow" data-nav="-1" aria-label="Previous month"${atMin ? " disabled" : ""}>${ARROW_L}</button>
         <span class="dp-month">${MONTHS[m]} ${y}</span>
         <span class="dp-month">${MONTHS[m2.getMonth()]} ${m2.getFullYear()}</span>
-        <button type="button" class="dp-arrow" data-nav="1" aria-label="Next month">${ARROW_R}</button>
+        <button type="button" class="dp-arrow" data-nav="1" aria-label="Next month"${atMax ? " disabled" : ""}>${ARROW_R}</button>
       </div>
       <div class="dp-grids">
         <div class="dp-grid">${dpGridCells(y, m)}</div>
@@ -1456,6 +1496,7 @@ function drawDP(){
   el.querySelectorAll("[data-date]").forEach(b => b.addEventListener("click", e => {
     e.stopPropagation();
     const iso = b.dataset.date;
+    if (!isBookable(iso)) return;   /* belt and braces: the cell is already disabled */
     if (!rt){ state.date = iso; syncDate(); drawDP(); return; }   /* staged until Set dates */
     if (dpArm === "ret" && iso > state.date){
       state.returnDate = iso; syncDate(); drawDP(); return;       /* staged until Set dates */
@@ -1492,7 +1533,10 @@ function drawDP(){
   }));
   el.querySelectorAll("[data-nav]").forEach(b => b.addEventListener("click", e => {
     e.stopPropagation();
-    dpMonth = new Date(dpMonth.getFullYear(), dpMonth.getMonth() + (+b.dataset.nav), 1); drawDP();
+    const next = new Date(dpMonth.getFullYear(), dpMonth.getMonth() + (+b.dataset.nav), 1);
+    /* never page outside the booking window */
+    if (next < monthOf(bookableMin()) || next > monthOf(bookableMax())) return;
+    dpMonth = next; drawDP();
   }));
   el.querySelectorAll("[data-dp]").forEach(b => b.addEventListener("click", e => {
     e.stopPropagation();
@@ -1600,7 +1644,9 @@ function flexDates(base = state.date, flex = state.flex){
   const out = [];
   for (let i = -n; i <= n; i++){
     const d = shiftISO(base, i);
-    if (d >= todayISO()) out.push(d);
+    /* the ± window is clipped to the booking window too: no searching a date
+       that has passed or one beyond the last selectable day */
+    if (isBookable(d)) out.push(d);
   }
   return out;
 }
@@ -2359,8 +2405,11 @@ function restoreSearch(){
   if (q){
     if (Array.isArray(q.origins) && q.origins.length) state.origins = q.origins.slice(0, MAX_AIRPORTS);
     if (Array.isArray(q.destinations) && q.destinations.length) state.destinations = q.destinations.slice(0, MAX_AIRPORTS);
-    if (q.date) state.date = q.date;
-    state.returnDate = q.returnDate || null;
+    /* a restored/shared link can carry a date that has since passed, or one
+       beyond the booking window — pull it back inside the selectable range */
+    if (q.date) state.date = clampISO(q.date);
+    state.returnDate = (q.returnDate && isBookable(q.returnDate) && q.returnDate >= state.date)
+      ? q.returnDate : null;
     if (q.cabin) state.cabin = q.cabin;
     state.flex = q.flex || 0;
     state.retFlex = q.retFlex || 0;
