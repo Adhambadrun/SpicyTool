@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 PY=.venv/bin/python
 pass=0; fail=0
 # In-process session token (shares the server's signing secret; no API backdoor).
-TOKEN=$(cd backend && ../.venv/bin/python -c "from core.auth import issue_token; print(issue_token('qa@bcflights.com'))")
+TOKEN=$(cd backend && ../.venv/bin/python -c "from core.auth import issue_token; print(issue_token('adhambadraan@gmail.com'))")
 ok()   { echo -e "\033[92mPASS\033[0m  $1"; pass=$((pass+1)); }
 bad()  { echo -e "\033[91mFAIL\033[0m  $1"; fail=$((fail+1)); }
 
@@ -184,7 +184,7 @@ print('pairing totals, mixed programs, sort, validation OK')
 EOF
 [ $? -eq 0 ] && ok "round-trip search + pairing + validation" || bad "round-trip"
 
-echo "== 16. auth: OTP login + protected engine =="
+echo "== 16. auth: owner PIN login + protected engine =="
 TOKEN=$TOKEN $PY - <<'EOF'
 import json, os, urllib.request, urllib.error
 TOKEN = os.environ['TOKEN']
@@ -205,24 +205,26 @@ s, d = call('/api/v1/search?origin=JFK&destination=LHR&date=2026-10-05&token=' +
 assert s == 200, (s, d)
 s, d = call('/api/v1/search?origin=JFK&destination=LHR&date=2026-10-05&token=v1.x.y')
 assert s == 401, s
-s, d = call('/api/v1/auth/request-otp', 'POST', {'email': 'someone@gmail.com'})
-assert s == 400 and 'bcflights.com' in d['detail'], (s, d)
-s, d = call('/api/v1/auth/verify-otp', 'POST', {'email': 'qa@bcflights.com', 'code': '000000'})
-assert s == 400, (s, d)
-s, d = call('/api/v1/auth/request-otp', 'POST', {'email': 'qa@bcflights.com'})
-assert s in (200, 503), (s, d)
-if s == 503:
-    assert 'email service' in d['detail'].lower(), d
-    print('OTP send blocked from this host (no egress):', d['detail'][:60], '...')
-else:
-    assert d['ok'] is True and d['expires_in'] == 600, d
-    s2, d2 = call('/api/v1/auth/request-otp', 'POST', {'email': 'qa@bcflights.com'})
-    assert s2 in (400, 503), (s2, d2)
+s, d = call('/api/v1/auth/check', 'POST', {'email': 'someone@gmail.com'})
+assert s == 403 and 'not authorized' in d['detail'], (s, d)
+s, d = call('/api/v1/auth/check', 'POST', {'email': 'adhambadraan@icloud.com'})
+assert s == 200 and d['ok'] is True, (s, d)
+s, d = call('/api/v1/auth/check', 'POST', {'email': 'adhambadraan@gmail.com'})
+assert s == 200 and d['ok'] is True, (s, d)
+s, d = call('/api/v1/auth/login', 'POST', {'email': 'adhambadraan@gmail.com', 'pin': '000000'})
+assert s == 401, (s, d)
+s, d = call('/api/v1/auth/login', 'POST', {'email': 'someone@gmail.com', 'pin': '141220'})
+assert s == 403, (s, d)
+s, d = call('/api/v1/auth/login', 'POST', {'email': 'adhambadraan@gmail.com', 'pin': '141220'})
+assert s == 200 and d['ok'] is True and d['token'].startswith('v1.'), (s, d)
+assert d['expires_in'] == 12 * 3600, d
+s, d = call('/api/v1/auth/session?token=' + d['token'])
+assert d['valid'] is True and d['email'] == 'adhambadraan@gmail.com', d
 s, d = call('/api/v1/auth/session?token=' + TOKEN)
-assert d['valid'] is True and d['email'] == 'qa@bcflights.com', d
-print('401 enforcement, domain restriction, OTP rejection, session check OK')
+assert d['valid'] is True and d['email'] == 'adhambadraan@gmail.com', d
+print('401 enforcement, two-email allowlist, PIN rejection/acceptance, session check OK')
 EOF
-[ $? -eq 0 ] && ok "auth: OTP login + protected engine" || bad "auth"
+[ $? -eq 0 ] && ok "auth: owner PIN login + protected engine" || bad "auth"
 
 echo "== 17. new carrier network + ticket types =="
 TOKEN=$TOKEN $PY - <<'EOF'

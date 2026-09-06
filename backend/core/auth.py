@@ -1,12 +1,17 @@
-"""Email-OTP authentication + stateless HMAC sessions.
+"""PIN authentication + stateless HMAC sessions.
 
-Flow: a user enters their name@bcflights.com address, we send a 6-digit OTP
-via the Resend API, they verify it and receive a stateless HMAC session
-token. Tokens are signed with a per-install secret; the client keeps them in
-sessionStorage so closing the tab always ends the session.
+Flow: the owner signs in with one of the two authorized addresses
+(adhambadraan@icloud.com / adhambadraan@gmail.com) and the account PIN —
+no email codes and no verification step. A correct PIN issues a stateless
+HMAC session token signed with a per-install secret; the client keeps it
+in sessionStorage so closing the tab always ends the session.
 
-Everything is in-memory on purpose (single-process deployment); the OTP store
-is small, short-lived and rate-limited.
+Failed PIN attempts are rate-limited in memory (single-process deployment):
+5 wrong tries lock the address out for 60 seconds.
+
+Configure via the environment (or backend/.env, git-ignored):
+  LOGIN_PIN               the account PIN (default 141220)
+  ALLOWED_LOGIN_EMAILS    comma-separated authorized addresses
 """
 from __future__ import annotations
 
@@ -20,8 +25,6 @@ import secrets
 import time
 from pathlib import Path
 
-import httpx
-
 try:  # optional: load backend/.env (git-ignored) for local runs
     from dotenv import load_dotenv
 
@@ -31,20 +34,18 @@ except ImportError:
 
 # ------------------------------------------------------------------ config ---
 
-ALLOWED_DOMAIN = "bcflights.com"
+DEFAULT_ALLOWED_EMAILS = "adhambadraan@icloud.com,adhambadraan@gmail.com"
+ALLOWED_EMAILS = {
+    e.strip().lower()
+    for e in os.getenv("ALLOWED_LOGIN_EMAILS", DEFAULT_ALLOWED_EMAILS).split(",")
+    if e.strip()
+}
+LOGIN_PIN = os.getenv("LOGIN_PIN", "141220").strip()
 EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+$")
 
-OTP_TTL_SECONDS = 600        # a code is valid for 10 minutes
-OTP_RESEND_COOLDOWN = 60     # seconds between sends to the same address
-OTP_MAX_ATTEMPTS = 5         # wrong tries before the code is invalidated
+PIN_MAX_ATTEMPTS = 5         # wrong tries before the address is locked out
+PIN_LOCKOUT_SECONDS = 60     # lockout duration
 SESSION_TTL_HOURS = 12       # session token lifetime
-
-# Resend delivery credential — set RESEND_API_KEY in the environment or in
-# backend/.env (git-ignored). Never hardcode it here: GitHub push protection
-# blocks commits that contain live API keys.
-RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
-RESEND_FROM = os.getenv("RESEND_FROM", "SpicyTool <noreply@bcflights.com>")
-RESEND_API_URL = "https://api.resend.com/emails"
 
 _SECRET_FILE = Path(__file__).resolve().parent.parent / "data" / ".auth_secret"
 
@@ -66,94 +67,41 @@ def _secret() -> bytes:
     return key
 
 
-# --------------------------------------------------------------- OTP store ---
+# ------------------------------------------------------------- PIN attempts ---
 
-# email -> {"code": str, "expires": float, "attempts": int, "sent": float}
-_OTPS: dict[str, dict] = {}
+# email -> {"fails": int, "locked_until": float}
+_FAILS: dict[str, dict] = {}
 
 
 def validate_email(email: str) -> bool:
     email = (email or "").strip().lower()
-    return bool(EMAIL_RE.match(email)) and email.endswith("@" + ALLOWED_DOMAIN)
+    return bool(EMAIL_RE.match(email)) and email in ALLOWED_EMAILS
 
 
-async def _send_email(to: str, subject: str, text: str) -> tuple[bool, str]:
-    """Send an email through Resend. Returns (ok, error_detail)."""
-    if not RESEND_API_KEY:
-        return False, "Email delivery is not configured on the server."
-    payload = {"from": RESEND_FROM, "to": [to], "subject": subject, "text": text}
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.post(
-                RESEND_API_URL,
-                json=payload,
-                headers={"Authorization": f"Bearer {RESEND_API_KEY}"},
-            )
-    except httpx.HTTPError:
-        return (
-            False,
-            "Could not reach the email service (api.resend.com). "
-            "Check the server's network access and try again.",
-        )
-    if resp.status_code in (200, 201):
-        return True, ""
-    detail = ""
-    try:
-        detail = resp.json().get("message", "")
-    except Exception:
-        pass
-    return False, f"Email service rejected the request ({resp.status_code}){': ' + detail if detail else ''}"
+def verify_pin(email: str, pin: str) -> tuple[str | None, str, int]:
+    """Check the account PIN. Returns (token, error, retry_after).
 
-
-async def request_otp(email: str) -> tuple[bool, str, int]:
-    """Generate + email a 6-digit code. Returns (ok, error, retry_after)."""
-    email = email.strip().lower()
-    entry = _OTPS.get(email)
-    now = time.time()
-    if entry and now - entry["sent"] < OTP_RESEND_COOLDOWN:
-        return False, "A code was just sent. Please wait before requesting another.", int(
-            OTP_RESEND_COOLDOWN - (now - entry["sent"])
-        ) + 1
-    code = f"{secrets.randbelow(1000000):06d}"
-    ok, err = await _send_email(
-        email,
-        "Your SpicyTool verification code",
-        f"Your SpicyTool verification code is {code}.\n\n"
-        f"It expires in {OTP_TTL_SECONDS // 60} minutes. "
-        "If you did not request it, you can ignore this email.",
-    )
-    if not ok:
-        return False, err, 0
-    _OTPS[email] = {"code": code, "expires": now + OTP_TTL_SECONDS, "attempts": 0, "sent": now}
-    _gc_otps()
-    return True, "", OTP_RESEND_COOLDOWN
-
-
-def _gc_otps() -> None:
-    now = time.time()
-    for k in [k for k, v in _OTPS.items() if v["expires"] + 60 < now]:
-        _OTPS.pop(k, None)
-
-
-def verify_otp(email: str, code: str) -> str | None:
-    """Check a code; returns a session token, or None when invalid."""
+    token is set on success; otherwise error describes the failure and
+    retry_after (seconds) is set while the address is locked out.
+    """
     email = (email or "").strip().lower()
-    code = (code or "").strip()
-    entry = _OTPS.get(email)
-    if not entry or not code:
-        return None
+    pin = (pin or "").strip()
     now = time.time()
-    if now > entry["expires"]:
-        _OTPS.pop(email, None)
-        return None
-    if entry["attempts"] >= OTP_MAX_ATTEMPTS:
-        _OTPS.pop(email, None)
-        return None
-    if not hmac.compare_digest(entry["code"], code):
-        entry["attempts"] += 1
-        return None
-    _OTPS.pop(email, None)
-    return issue_token(email)
+    entry = _FAILS.get(email)
+    if entry and entry.get("locked_until", 0) > now:
+        return None, "Too many attempts — try again in a moment.", int(entry["locked_until"] - now) + 1
+    if not email or not pin:
+        return None, "Enter your email and PIN.", 0
+    if not hmac.compare_digest(LOGIN_PIN, pin):
+        entry = _FAILS.setdefault(email, {"fails": 0, "locked_until": 0.0})
+        entry["fails"] += 1
+        if entry["fails"] >= PIN_MAX_ATTEMPTS:
+            entry["locked_until"] = now + PIN_LOCKOUT_SECONDS
+            entry["fails"] = 0
+            return None, "Too many attempts — try again in a minute.", PIN_LOCKOUT_SECONDS
+        return None, "Incorrect PIN. Try again.", 0
+    _FAILS.pop(email, None)
+    return issue_token(email), "", 0
 
 
 # ---------------------------------------------------------------- sessions ---

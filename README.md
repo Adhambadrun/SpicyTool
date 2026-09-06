@@ -55,19 +55,20 @@ The UI is a pixel-faithful implementation of the repository's Stitch mockups
   tile, "$X Off Retail" savings badge, dashed timeline expansion and the
   `w-80` price-breakdown popover with the red **Get VI\*** CTA.
 - **Login screen** follows `code 3.html` (dark variant, matching the app's
-  dark-only runtime) with the v1.0 OTP redesign: `#111215` page, red
+  dark-only runtime) with the v1.1 PIN redesign: `#111215` page, red
   announcement banner ("Welcome to SpicyTool v1.0! SpicyTool Exclusive
   features are now live!"), `#18191d` card showing **only the logo** (72px,
-  centered), the word "SpicyTool" over an **animated red-glow underline**,
-  then a two-step form — email (`name@bcflights.com`, validated) → **Send
-  Code** → 6-digit OTP input with **Verify & Sign In**, resend link (60-s
-  cooldown) and "use a different email". No theme toggle (dark-only runtime),
-  no demo path: every sign-in goes through the real Resend OTP flow.
+  centered), the word "SpicyTool" with **Spicy in pulsing red glow and Tool
+  in white** (no underline — removed at the owner's request), then a
+  two-step form — email (owner addresses only) → **Continue** → masked
+  6-digit **PIN** input with **Sign In** and "use a different email".
+  No theme toggle (dark-only runtime), no demo path: every sign-in goes
+  through the real server-side PIN check.
 - **Real logo** — the SpicyTool mark (`logo.png` in the repo root, uploaded
   by the owner) is cropped to the artwork, rendered at 144px and inlined as
   an optimized PNG data URI: 72px in the login hero, 32px in both app
   headers.
-- **Live sign-in session** — the app opens on the OTP login; a verified
+- **Live sign-in session** — the app opens on the PIN login; a verified
   session (sessionStorage token, dies with the tab) unlocks the app, swaps
   the avatar to the `code 5` gradient-ring initials and offers Sign out
   (which clears the session server-acknowledged and returns to login). A
@@ -107,16 +108,18 @@ the itinerary page.
 
 - **84 airports** (real coordinates), **39 carriers** with real hubs,
   **10 loyalty programs** with real award-chart shapes and transfer partners.
-- **Email-OTP login** — sign-in is restricted to `name@bcflights.com`
-  addresses; a 6-digit code is delivered by the **Resend** API (10-min expiry,
-  60-s resend cooldown, 5-attempt limit) and exchanged for a stateless
-  HMAC-signed session token. The client keeps the session in
+- **Owner PIN login — no OTP, no verification** — sign-in is restricted to
+  exactly two addresses (`adhambadraan@icloud.com` /
+  `adhambadraan@gmail.com`, the owner's accounts; configurable via
+  `ALLOWED_LOGIN_EMAILS`). Step 1 checks the address; step 2 accepts the
+  6-digit account **PIN** (`141220` by default, set via `LOGIN_PIN`) and
+  issues a stateless HMAC-signed session token. Wrong PINs are rate-limited
+  (5 attempts → 60-s lockout per address). The client keeps the session in
   `sessionStorage`, so closing the tab always ends it — reopening requires
-  email + OTP again. Engine routes (`/api/v1/search*`, `/api/v1/calendar`)
-  reject unauthenticated calls with `401` (`AUTH_ENFORCE=0` disables this for
-  local testing only). **Note:** this dev sandbox has no outbound network
-  access to `api.resend.com`, so OTP delivery returns a clear `503` here;
-  deployed instances deliver normally.
+  email + PIN again. Engine routes (`/api/v1/search*`, `/api/v1/calendar`)
+  reject unauthenticated calls with `401` (`AUTH_ENFORCE=0` disables this
+  for local testing only). Email delivery (Resend) is no longer part of the
+  login flow.
 - **Ticket types** — every result carries a deterministic ticket type with a
   points multiplier so the Tickets filter and result badges are meaningful:
   `award` (chart price), `hc` hidden-city (×0.82, 1+ stops), `upg`
@@ -185,8 +188,8 @@ the itinerary page.
 | Path | What it does |
 |---|---|
 | `GET /` | the frontend (same origin as the API) |
-| `POST /api/v1/auth/request-otp` | email a 6-digit code (bcflights.com only, Resend delivery) |
-| `POST /api/v1/auth/verify-otp` | exchange the code for a session token |
+| `POST /api/v1/auth/check` | step 1: is the address one of the two owner emails? |
+| `POST /api/v1/auth/login` | step 2: email + PIN → session token (5 wrong tries → 60-s lockout) |
 | `GET /api/v1/auth/session` | validate a token |
 | `POST /api/v1/auth/logout` | client discards the session token |
 | `GET /api/v1/health` | `{status, airports: 84, programs: 10}` |
@@ -202,7 +205,7 @@ the itinerary page.
 | `GET /api/v2/search/stream` | SSE `start → data* → complete` |
 
 🔒 = requires the session token (`Authorization: Bearer …` header or
-`?token=` for `EventSource`). The token is minted only through the OTP flow;
+`?token=` for `EventSource`). The token is minted only through the PIN flow;
 tests mint tokens in-process against the same per-install signing secret
 (`backend/data/.auth_secret`, auto-generated, git-ignored; override with
 `AUTH_SECRET`).
@@ -228,8 +231,8 @@ departure date"`.
 | `REDIS_URL` | `redis://localhost:6379/0` | cache; falls back to memory if unreachable |
 | `CACHE_TTL` | `2700` | seconds, clamped to the 30–60 min band |
 | `PROVIDER_TIMEOUT` | `3.5` | per-request budget for third-party providers |
-| `RESEND_API_KEY` | *(blank — required)* | Resend API key for OTP email delivery (set it in `backend/.env`, git-ignored, or the deployment environment; never commit it — GitHub blocks secret pushes) |
-| `RESEND_FROM` | `SpicyTool <noreply@bcflights.com>` | OTP sender address |
+| `LOGIN_PIN` | `141220` | the account PIN for the two owner emails (set it in `backend/.env`, git-ignored) |
+| `ALLOWED_LOGIN_EMAILS` | `adhambadraan@icloud.com,adhambadraan@gmail.com` | comma-separated; the only addresses that can sign in |
 | `AUTH_SECRET` | *(generated file)* | HMAC secret for session tokens |
 | `AUTH_ENFORCE` | `1` | `0` disables login enforcement (local tests only) |
 

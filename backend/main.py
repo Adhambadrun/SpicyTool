@@ -64,45 +64,40 @@ def require_auth(request: Request) -> None:
 # ------------------------------------------------------------------ auth ----
 
 
-class OTPRequest(BaseModel):
+class LoginCheck(BaseModel):
     email: str
 
 
-class OTPVerify(BaseModel):
+class LoginPin(BaseModel):
     email: str
-    code: str
+    pin: str
 
 
-@app.post("/api/v1/auth/request-otp")
-async def request_otp(body: OTPRequest):
+@app.post("/api/v1/auth/check")
+async def auth_check(body: LoginCheck):
+    """Step 1 of the two-step login: is this address authorized?"""
     email = body.email.strip().lower()
     if not auth.validate_email(email):
         return JSONResponse(
-            {"detail": "Enter your work email (name@bcflights.com)."}, status_code=400
+            {"detail": "This email is not authorized to sign in."}, status_code=403
         )
-    ok, error, retry_after = await auth.request_otp(email)
-    if not ok:
-        status = 503 if "reach the email service" in error else 400
-        return JSONResponse(
-            {"detail": error, "retry_after": retry_after}, status_code=status
-        )
-    return {
-        "ok": True,
-        "email": email,
-        "expires_in": auth.OTP_TTL_SECONDS,
-        "cooldown": auth.OTP_RESEND_COOLDOWN,
-    }
+    return {"ok": True, "email": email}
 
 
-@app.post("/api/v1/auth/verify-otp")
-async def verify_otp(body: OTPVerify):
+@app.post("/api/v1/auth/login")
+async def auth_login(body: LoginPin):
+    """Step 2: email + account PIN -> stateless HMAC session token."""
     email = body.email.strip().lower()
-    token = auth.verify_otp(email, body.code)
-    if not token:
+    if not auth.validate_email(email):
         return JSONResponse(
-            {"detail": "That code is not valid (or it expired). Request a new one."},
-            status_code=400,
+            {"detail": "This email is not authorized to sign in."}, status_code=403
         )
+    token, error, retry_after = auth.verify_pin(email, body.pin)
+    if not token:
+        payload = {"detail": error}
+        if retry_after:
+            payload["retry_after"] = retry_after
+        return JSONResponse(payload, status_code=429 if retry_after else 401)
     return {
         "ok": True,
         "email": email,

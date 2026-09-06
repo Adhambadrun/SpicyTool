@@ -56,7 +56,11 @@ button{font-family:inherit}
 .brand{display:flex;align-items:center;gap:12px;cursor:pointer}
 .logo{width:32px;height:32px;border-radius:8px;box-shadow:0 4px 6px -1px rgba(225,29,46,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .wordmark{font-size:20px;font-weight:700;letter-spacing:-.025em;color:#fff;display:flex;align-items:center}
-.wordmark em{font-style:normal;color:var(--brand)}
+/* brand word: Spicy glows red, Tool stays white — everywhere */
+.wm-s{color:var(--brand);animation:wm-glow 2.6s ease-in-out infinite}
+.wm-t{font-style:normal;color:#fff}
+@keyframes wm-glow{0%,100%{text-shadow:0 0 3px rgba(225,29,46,.35),0 0 10px rgba(225,29,46,.15)}50%{text-shadow:0 0 6px rgba(225,29,46,.9),0 0 18px rgba(225,29,46,.55),0 0 40px rgba(225,29,46,.3)}}
+@media (prefers-reduced-motion:reduce){.wm-s{animation:none}}
 .hdr-right{display:flex;align-items:center;gap:14px}
 .pill-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 16px;font-size:14px;font-weight:500;color:#D1D1D6;background:#1E1F23;border:1px solid #2D2F36;border-radius:9999px;cursor:pointer;transition:background .15s,color .15s}
 .pill-btn:hover{background:#27292F;color:#fff}
@@ -175,8 +179,6 @@ button{font-family:inherit}
 .lg-hero{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:26px}
 .lg-hero img{width:72px;height:72px;border-radius:16px;box-shadow:0 8px 28px rgba(0,0,0,.45)}
 .lg-word{font-size:28px;font-weight:800;letter-spacing:-.03em;color:#fff;line-height:1}
-.lg-underline{width:132px;height:3px;margin:10px auto 0;border-radius:2px;background:linear-gradient(90deg,rgba(225,29,46,.25),#E11D2E,rgba(225,29,46,.25));box-shadow:0 0 14px rgba(225,29,46,.85),0 0 30px rgba(225,29,46,.45);animation:lg-glow 2.2s ease-in-out infinite}
-@keyframes lg-glow{0%,100%{box-shadow:0 0 10px rgba(225,29,46,.7),0 0 22px rgba(225,29,46,.35)}50%{box-shadow:0 0 18px rgba(225,29,46,1),0 0 42px rgba(225,29,46,.6)}}
 .lg-otp-row{display:flex;gap:10px}
 .lg-otp-row .lg-input{flex:1;text-align:center;letter-spacing:.35em;font-weight:600}
 .lg-link-row{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;color:#9CA3AF}
@@ -477,7 +479,7 @@ body.in-login{background:#111215}
   <header class="hdr-search">
     <div class="brand" id="brand-home" title="SpicyTool">
       <span class="logo" aria-hidden="true"><img alt="SpicyTool Logo" data-logo class="logo-32"></span>
-      <span class="wordmark">Spicy<em>Tool</em></span>
+      <span class="wordmark"><span class="wm-s">Spicy</span><em class="wm-t">Tool</em></span>
     </div>
     <div class="hdr-right">
       <a class="mp-btn" href="mailto:adhambadraan@gmail.com" title="Support — compose an email to the SpicyTool team">Support</a>
@@ -564,7 +566,7 @@ body.in-login{background:#111215}
     <div class="hdr-in">
       <div class="brand" id="brand-results" title="SpicyTool">
         <span class="logo" aria-hidden="true"><img alt="SpicyTool Logo" data-logo class="logo-32"></span>
-        <span class="wordmark">Spicy<em>Tool</em></span>
+        <span class="wordmark"><span class="wm-s">Spicy</span><em class="wm-t">Tool</em></span>
       </div>
       <div class="hdr-right-res">
         <a class="mp-btn" href="mailto:adhambadraan@gmail.com" title="Support — compose an email to the SpicyTool team">Support</a>
@@ -612,7 +614,7 @@ body.in-login{background:#111215}
   </main>
 </div>
 
-<!-- ================= LOGIN VIEW (code 3, v1.0 — live OTP) ================= -->
+<!-- ================= LOGIN VIEW (code 3, v1.1 — owner PIN login) ================= -->
 <div id="view-login">
   <header class="lg-banner" data-purpose="announcement-banner">
     <p>Welcome to SpicyTool v1.0! SpicyTool Exclusive features are now live!</p>
@@ -622,31 +624,29 @@ body.in-login{background:#111215}
       <div class="lg-hero" data-purpose="login-logo">
         <img alt="SpicyTool Logo" data-logo>
         <div>
-          <div class="lg-word">SpicyTool</div>
-          <div class="lg-underline" data-purpose="wordmark-underline"></div>
+          <div class="lg-word"><span class="wm-s">Spicy</span><em class="wm-t">Tool</em></div>
         </div>
       </div>
 
       <form class="lg-form" id="login-email-form" data-purpose="login-form" novalidate>
         <div>
-          <label class="sr-only" for="login-email">Work email address</label>
-          <input id="login-email" name="email" type="email" class="lg-input" placeholder="name@bcflights.com" autocomplete="email" required>
+          <label class="sr-only" for="login-email">Email address</label>
+          <input id="login-email" name="email" type="email" class="lg-input" placeholder="adhambadraan@icloud.com" autocomplete="email" required>
         </div>
         <div class="lg-err" id="login-err" hidden></div>
-        <button type="submit" class="lg-submit" id="btn-send-otp">Send Code</button>
+        <button type="submit" class="lg-submit" id="btn-send-otp">Continue</button>
       </form>
 
       <form class="lg-form" id="login-otp-form" data-purpose="otp-form" hidden novalidate>
-        <p class="lg-step-note" id="otp-note">We sent a 6-digit code to <b id="otp-email"></b>. It expires in 10 minutes.</p>
+        <p class="lg-step-note" id="otp-note">Enter the 6-digit PIN for <b id="otp-email"></b>.</p>
         <div>
-          <label class="sr-only" for="login-otp">Verification code</label>
-          <input id="login-otp" name="code" type="text" inputmode="numeric" maxlength="6" class="lg-input" placeholder="••••••" autocomplete="one-time-code" required>
+          <label class="sr-only" for="login-otp">Account PIN</label>
+          <input id="login-otp" name="pin" type="password" inputmode="numeric" maxlength="6" class="lg-input" placeholder="••••••" autocomplete="current-password" required>
         </div>
         <div class="lg-err" id="otp-err" hidden></div>
-        <button type="submit" class="lg-submit" id="btn-verify">Verify &amp; Sign In</button>
+        <button type="submit" class="lg-submit" id="btn-verify">Sign In</button>
         <div class="lg-link-row">
           <button type="button" class="lg-link" id="btn-otp-back">Use a different email</button>
-          <button type="button" class="lg-link" id="btn-otp-resend">Resend code</button>
         </div>
       </form>
     </div>
@@ -763,7 +763,6 @@ const AUTH = {
   get user(){ try { return JSON.parse(sessionStorage.getItem("st_session") || "null"); } catch { return null; } },
   set user(v){ try { v ? sessionStorage.setItem("st_session", JSON.stringify(v)) : sessionStorage.removeItem("st_session"); } catch {} },
 };
-let otpCooldownTimer = null;
 /* fetch wrapper: attaches the bearer token; a 401 drops back to the login view */
 async function api(path, opts){
   const o = Object.assign({}, opts || {});
@@ -1544,20 +1543,10 @@ function showSearchView(){ $("view-search").hidden = false; $("view-results").hi
 function showResultsView(){ $("view-search").hidden = true; $("view-results").hidden = false; document.body.classList.add("in-results"); window.scrollTo(0,0); }
 let prevView = "view-search";
 let loginEmail = "";
-function startOtpCooldown(secs){
-  stopOtpCooldown();
-  const btn = $("btn-otp-resend"); if (!btn) return;
-  let left = Math.max(0, secs|0);
-  const render = () => { btn.textContent = left > 0 ? `Resend code (${left}s)` : "Resend code"; btn.disabled = left > 0; };
-  render();
-  if (left > 0) otpCooldownTimer = setInterval(() => { left--; render(); if (left <= 0) stopOtpCooldown(); }, 1000);
-}
-function stopOtpCooldown(){ if (otpCooldownTimer){ clearInterval(otpCooldownTimer); otpCooldownTimer = null; } }
 function showLoginView(){
   prevView = "view-search";
   $("view-search").hidden = true; $("view-results").hidden = true; $("view-login").hidden = false;
   document.body.classList.remove("in-results"); document.body.classList.add("in-login");
-  stopOtpCooldown();
   $("login-otp-form").hidden = true; $("login-email-form").hidden = false;
   $("login-err").hidden = true; $("otp-err").hidden = true;
   setTimeout(() => { const i = $("login-email"); if (i) i.focus(); }, 50);
@@ -1746,6 +1735,10 @@ function itineraryHTML(r){
     .it-brand{display:flex;align-items:center;gap:10px}
     .it-brand img{width:36px;height:36px;border-radius:12px;object-fit:contain;box-shadow:0 4px 6px -1px rgba(127,29,29,.2)}
     .it-brand b{font-size:20px;font-weight:800;letter-spacing:-.025em;color:#fff}
+    .wm-s{color:#E11D2E;animation:wm-glow 2.6s ease-in-out infinite}
+    .wm-t{font-style:normal;color:#fff}
+    @keyframes wm-glow{0%,100%{text-shadow:0 0 3px rgba(225,29,46,.35),0 0 10px rgba(225,29,46,.15)}50%{text-shadow:0 0 6px rgba(225,29,46,.9),0 0 18px rgba(225,29,46,.55),0 0 40px rgba(225,29,46,.3)}}
+    @media (prefers-reduced-motion:reduce){.wm-s{animation:none}}
     .it-live{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:#FF4D5E;background:rgba(225,29,46,.15);border:1px solid rgba(225,29,46,.3);padding:2px 10px;border-radius:9999px}
     .it-live i{width:6px;height:6px;border-radius:9999px;background:#E11D2E;animation:itp 1.4s infinite}
     .it-hdr-r{display:flex;align-items:center;gap:12px}
@@ -1837,7 +1830,7 @@ function itineraryHTML(r){
 <body>
 <div class="it-banner">🌶️ Welcome to SpicyTool v1.0! SpicyTool Exclusive features are now live!<i></i></div>
 <header class="it-hdr"><div class="it-hdr-in">
-  <div class="it-brand"><img alt="SpicyTool Logo" src="${LOGO_SRC}"><b>SpicyTool</b></div>
+  <div class="it-brand"><img alt="SpicyTool Logo" src="${LOGO_SRC}"><b><span class="wm-s">Spicy</span><em class="wm-t">Tool</em></b></div>
   <span class="it-live"><i></i>v1.0 · Live Data</span>
   <div class="it-hdr-r">
     <span class="it-mp" title="Manage broker CPMs in the app">Modify programs <em>${brokerPrograms().length}</em></span>
@@ -1878,7 +1871,7 @@ function itineraryHTML(r){
   <p class="it-note">Cash = miles × your broker CPM + taxes · Retail is a modeled estimate · No bookings are made in this view.</p>
 </main>
 <footer><div class="it-f-in">
-  <div><b>SpicyTool v1.0</b> • Premium Award Flight Analytics</div>
+  <div><b><span class="wm-s">Spicy</span><em class="wm-t">Tool</em> v1.0</b> • Premium Award Flight Analytics</div>
   <p>Award prices modeled by the SpicyTool engine · taxes &amp; carrier fees may fluctuate.</p>
 </div></footer>
 </body>
@@ -2083,34 +2076,33 @@ function init(){
       });
     });
   }
-  /* ---- live OTP login (Resend email delivery, bcflights.com accounts only) ---- */
+  /* ---- PIN login (owner accounts only — no codes, no verification) ---- */
   $("login-email-form").addEventListener("submit", async e => {
     e.preventDefault();
     const input = $("login-email"), err = $("login-err"), btn = $("btn-send-otp");
     const v = input.value.trim().toLowerCase();
-    if (!/^[a-z0-9._%+-]+@bcflights\.com$/.test(v)){
-      err.textContent = "Enter your SpicyTool work email (name@bcflights.com)."; err.hidden = false; input.focus(); return;
+    if (!/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(v)){
+      err.textContent = "Enter a valid email address."; err.hidden = false; input.focus(); return;
     }
-    err.hidden = true; btn.disabled = true; btn.textContent = "Sending…";
+    err.hidden = true; btn.disabled = true; btn.textContent = "Checking…";
     try {
-      const res = await fetch("/api/v1/auth/request-otp", {
+      const res = await fetch("/api/v1/auth/check", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: v }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok){
-        err.textContent = d.detail || "Could not send the code. Try again."; err.hidden = false; return;
+        err.textContent = d.detail || "This email is not authorized to sign in."; err.hidden = false; return;
       }
       loginEmail = v;
       $("otp-email").textContent = v;
       $("login-email-form").hidden = true;
       $("login-otp-form").hidden = false;
       $("login-otp").value = ""; $("login-otp").focus();
-      startOtpCooldown(res.ok ? (d.cooldown || 60) : 0);
     } catch {
       err.textContent = "Network error — check your connection and try again."; err.hidden = false;
     } finally {
-      btn.disabled = false; btn.textContent = "Send Code";
+      btn.disabled = false; btn.textContent = "Continue";
     }
   });
   $("login-email").addEventListener("input", () => { $("login-err").hidden = true; });
@@ -2121,21 +2113,20 @@ function init(){
   $("login-otp-form").addEventListener("submit", async e => {
     e.preventDefault();
     const input = $("login-otp"), err = $("otp-err"), btn = $("btn-verify");
-    const code = input.value.trim();
-    if (code.length !== 6){ err.textContent = "Enter the 6-digit code from the email."; err.hidden = false; input.focus(); return; }
-    err.hidden = true; btn.disabled = true; btn.textContent = "Verifying…";
+    const pin = input.value.trim();
+    if (pin.length !== 6){ err.textContent = "Enter your 6-digit PIN."; err.hidden = false; input.focus(); return; }
+    err.hidden = true; btn.disabled = true; btn.textContent = "Signing in…";
     try {
-      const res = await fetch("/api/v1/auth/verify-otp", {
+      const res = await fetch("/api/v1/auth/login", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: loginEmail, code }),
+        body: JSON.stringify({ email: loginEmail, pin }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok){
-        err.textContent = d.detail || "That code is not valid. Request a new one."; err.hidden = false; input.select(); return;
+        err.textContent = d.detail || "Incorrect PIN. Try again."; err.hidden = false; input.select(); return;
       }
       AUTH.user = { email: d.email, token: d.token, at: Date.now() };
       syncAvatar();
-      stopOtpCooldown();
       $("login-otp-form").hidden = true;
       $("login-email-form").hidden = false;
       $("login-otp").value = ""; $("login-email").value = "";
@@ -2144,30 +2135,13 @@ function init(){
     } catch {
       err.textContent = "Network error — try again."; err.hidden = false;
     } finally {
-      btn.disabled = false; btn.textContent = "Verify & Sign In";
+      btn.disabled = false; btn.textContent = "Sign In";
     }
   });
   $("btn-otp-back").addEventListener("click", () => {
-    stopOtpCooldown();
     $("login-otp-form").hidden = true;
     $("login-email-form").hidden = false;
     $("login-email").focus();
-  });
-  $("btn-otp-resend").addEventListener("click", async () => {
-    const btn = $("btn-otp-resend");
-    if (btn.disabled) return;
-    btn.disabled = true; btn.textContent = "Sending…";
-    try {
-      const res = await fetch("/api/v1/auth/request-otp", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: loginEmail }),
-      });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok){ $("otp-err").textContent = d.detail || "Could not resend."; $("otp-err").hidden = false; startOtpCooldown(d.retry_after || 5); }
-      else { $("otp-err").hidden = true; startOtpCooldown(d.cooldown || 60); }
-    } catch {
-      $("otp-err").textContent = "Network error — try again."; $("otp-err").hidden = false;
-    }
   });
   /* modify programs (code 15) */
   $("mp-open").addEventListener("click", openMP);
