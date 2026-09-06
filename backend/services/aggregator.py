@@ -12,6 +12,7 @@ from typing import AsyncIterator
 
 from providers.awardtool import AwardTool
 from providers.base import BaseProvider, SearchQuery
+from providers.flybasis import Flybasis
 from providers.local_engine import SpicyToolEngine
 from providers.pointspath import PointsPath
 from providers.pointsyeah import PointsYeah
@@ -27,6 +28,7 @@ def registry() -> list[BaseProvider]:
             AwardTool(),
             PointsYeah(),
             PointsPath(),
+            Flybasis(),
             SpicyToolEngine(),
         ]
     return _registry

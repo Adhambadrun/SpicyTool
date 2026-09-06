@@ -9,8 +9,8 @@ TOKEN=$(cd backend && ../.venv/bin/python -c "from core.auth import issue_token;
 ok()   { echo -e "\033[92mPASS\033[0m  $1"; pass=$((pass+1)); }
 bad()  { echo -e "\033[91mFAIL\033[0m  $1"; fail=$((fail+1)); }
 
-echo "== 1. tests_integration.py: 16/16 =="
-if (cd backend && ../.venv/bin/python tests_integration.py | grep -q "All 16 assertions passed"); then ok "16/16 assertions"; else bad "integration tests"; fi
+echo "== 1. tests_integration.py: 22/22 =="
+if (cd backend && ../.venv/bin/python tests_integration.py | grep -q "All 22 assertions passed"); then ok "22/22 assertions"; else bad "integration tests"; fi
 
 echo "== 2. /api/v1/health =="
 h=$(curl -s localhost:8000/api/v1/health)
@@ -69,9 +69,9 @@ import json, urllib.request
 d = json.load(urllib.request.urlopen('http://localhost:8000/api/v2/providers'))
 p = {x['provider']: x for x in d['providers']}
 assert p['SpicyToolEngine']['enabled'] is True
-for name in ('AwardTool', 'PointsPath', 'PointsYeah'):
+for name in ('AwardTool', 'PointsPath', 'PointsYeah', 'Flybasis'):
     assert p[name]['enabled'] is False and p[name]['disabled_reason']
-print("SpicyToolEngine on; 3 gated with reasons")
+print("SpicyToolEngine on; 4 gated with reasons")
 EOF
 [ $? -eq 0 ] && ok "gating correct" || bad "gating"
 
@@ -80,9 +80,9 @@ $PY - <<'EOF'
 import json
 d = json.load(open('/tmp/v2.json'))
 sts = {p['provider']: p for p in d['providers']}
-assert all(sts[n]['ok'] is False and 'env' in (sts[n]['error'] or '').lower() or 'check' in (sts[n]['error'] or '').lower() or 'set the' in (sts[n]['error'] or '').lower() for n in ('AwardTool','PointsPath','PointsYeah'))
+assert all(sts[n]['ok'] is False and 'env' in (sts[n]['error'] or '').lower() or 'check' in (sts[n]['error'] or '').lower() or 'set the' in (sts[n]['error'] or '').lower() for n in ('AwardTool','PointsPath','PointsYeah','Flybasis'))
 assert d['count'] > 0, "request itself failed"
-print("3x ok:false + actionable reason; aggregate still returned", d['count'], "results")
+print("4x ok:false + actionable reason; aggregate still returned", d['count'], "results")
 EOF
 [ $? -eq 0 ] && ok "failure isolation" || bad "isolation"
 
@@ -90,7 +90,7 @@ echo "== 9. SSE start -> data per provider -> complete =="
 ev=$(timeout 10 curl -sN 'localhost:8000/api/v2/search/stream?origin=LAX&destination=NRT&date=2026-12-01&cabin=business' | grep -a '^event:' | sed 's/event: //;s/\r//' | tr '\n' ' ' | sed 's/ *$//')
 echo "  events: $ev"
 case "$ev" in
-  "start data data data data complete") ok "v2 SSE sequence" ;;
+  "start data data data data data complete") ok "v2 SSE sequence" ;;
   *) bad "v2 SSE sequence: $ev" ;;
 esac
 
@@ -127,8 +127,9 @@ grep -q 'gstatic.com/flights/airline_logos/70px' /tmp/index_served.html \
   && grep -q 'pics.avs.io/200/200' /tmp/index_served.html \
   && ok "real airline logos (2 artwork sources + offline brand tile)" || bad "airline logo sources"
 grep -q 'id="view-itinerary"' /tmp/index_served.html \
-  && grep -q 'id="it-search-slot"' /tmp/index_served.html \
-  && ok "itinerary is an in-app view carrying the search bar + dates calendar" || bad "no in-app itinerary"
+  && ! grep -q 'id="it-search-slot"' /tmp/index_served.html \
+  && grep -q 'id="search-slot"' /tmp/index_served.html \
+  && ok "itinerary is an in-app view with NO search bar (search lives on the home screen)" || bad "itinerary / search-bar placement"
 grep -q '#itinerary/' /tmp/index_served.html && ok "itinerary has a real shareable link (#itinerary/<id>)" || bad "no itinerary link"
 grep -q 'document.write' /tmp/index_served.html && bad "itinerary still uses document.write (blank-tab risk)" || ok "no document.write blank tabs"
 

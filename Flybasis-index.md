@@ -1,21 +1,3 @@
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const link = document.querySelector("a");
-    // remove the link from the DOM
-    link.remove();
-  });
-</script>
-
-<div style="display: flex; align-items: center; justify-content: space-between; margin: 20px 0;">
-  <img src="images/black-large.webp" alt="Flybasis Logo" style="width: 100px; margin-right: 20px;">
-
-  <div style="display: flex; gap: 10px;">
-    <a href="https://flybasis.com">Flybasis</a>
-    <a href="/searchapi.docs">WebSocket API</a>
-    <a href="/searchapi.docs/checkout-api">Checkout API</a>
-  </div>
-</div>
-
 # Flybasis WebSocket API Documentation
 
 Welcome to the Flybasis WebSocket API documentation. This API provides real-time communication capabilities for flight search and booking services using WebSocket technology. It is designed to offer seamless and efficient data exchange, ensuring a responsive and interactive user experience. Below, you'll find detailed information on how to connect, authenticate, and interact with the various endpoints available in our API.

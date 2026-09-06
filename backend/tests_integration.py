@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SpicyTool integration tests — 16 assertions, no live network calls.
+"""SpicyTool integration tests — 22 assertions, no live network calls.
 
 Uses httpx.MockTransport for the HTTP-layer tests; everything else exercises
 the real normalization, enrichment and dedupe code paths directly.
@@ -24,6 +24,7 @@ from core.http_engine import (  # noqa: E402
 )
 from core.schema import AwardResult, Layover, Pricing, Route, Segment, TransferPartner  # noqa: E402
 from providers.base import BaseProvider, SearchQuery  # noqa: E402
+from providers.flybasis import Flybasis, normalize_payload  # noqa: E402
 from providers.pointsyeah import PointsYeah  # noqa: E402
 from services.dedupe import dedupe, stats as dedupe_stats  # noqa: E402
 
@@ -392,10 +393,207 @@ def test_dedupe_seats() -> None:
 
 
 # --------------------------------------------------------------------------
+# Flybasis normalization (payload shaped per Flybasis-index.md "data" event)
+# --------------------------------------------------------------------------
+
+# One-way data event: {"data": {"awd": [[flight,...], []]}}.
+_FLYBASIS_ONE_WAY = {
+    "data": {
+        "awd": [
+            [
+                {
+                    "id": "fb_a1",
+                    "legs": [
+                        {
+                            "origin": "JFK",
+                            "destination": "FRA",
+                            "departure": "2026-10-01T18:25:00",
+                            "arrival": "2026-10-02T07:50:00",
+                            "airline": "LH",
+                            "flightNumber": "400",
+                            "cabin": "b",
+                            "duration": 465,
+                            "aircraft": "Boeing 747-8",
+                            "distance": 3863,
+                            "layover": 0,
+                        }
+                    ],
+                    "surcharge": 210.0,
+                    "points": 70000,
+                    "program": "UA",
+                    "basis": {"bookable": True, "cpm": 1.42},
+                }
+            ],
+            [],
+        ]
+    }
+}
+
+
+def _fly_one_way():
+    q = SearchQuery(origin="JFK", destination="FRA", date="2026-10-01", cabin="business")
+    return Flybasis().normalize(_FLYBASIS_ONE_WAY, q)
+
+
+def test_fly_one_way() -> None:
+    """17. One-way Flybasis payload -> 1 AwardResult; program maps UA->UA_MILEAGEPLUS."""
+    res = _fly_one_way()
+    assert len(res) == 1, f"expected 1 result, got {len(res)}"
+    assert res[0].airline_code == "LH", f"expected LH, got {res[0].airline_code}"
+    assert res[0].route.origin == "JFK" and res[0].route.destination == "FRA"
+    assert res[0].pricing.program_code == "UA_MILEAGEPLUS", (
+        f"expected UA_MILEAGEPLUS, got {res[0].pricing.program_code}"
+    )
+    assert res[0].pricing.points == 70000 and res[0].pricing.cash_fees == 210.0
+    return "1 result, UA_MILEAGEPLUS, 70k + $210"
+
+
+def test_fly_seats_from_bookable() -> None:
+    """18. basis.bookable True -> seats_remaining 1; False -> 0."""
+    res = _fly_one_way()
+    assert res[0].seats_remaining == 1, f"expected 1 seat, got {res[0].seats_remaining}"
+    import copy
+    payload = copy.deepcopy(_FLYBASIS_ONE_WAY)
+    payload["data"]["awd"][0][0]["basis"]["bookable"] = False
+    res2 = Flybasis().normalize(payload, SearchQuery(origin="JFK", destination="FRA", date="2026-10-01", cabin="business"))
+    assert res2[0].seats_remaining == 0, "unbookable flight must carry 0 seats"
+    return "bookable=1 / not bookable=0"
+
+
+def test_fly_cabin_mapping() -> None:
+    """19. Cabin codes e/p/b/f map to the canonical cabin classes."""
+    def one(cab_code: str):
+        return {
+            "id": f"fb_{cab_code}",
+            "legs": [
+                {
+                    "origin": "CDG",
+                    "destination": "JFK",
+                    "departure": "2026-10-02T10:00:00",
+                    "arrival": "2026-10-02T13:00:00",
+                    "airline": "AF",
+                    "flightNumber": "6",
+                    "cabin": cab_code,
+                    "duration": 480,
+                    "aircraft": "A350-900",
+                    "distance": 3635,
+                    "layover": 0,
+                }
+            ],
+            "surcharge": 150.0,
+            "points": 50000,
+            "program": "KL",
+            "basis": {"bookable": True, "cpm": 1.4},
+        }
+
+    payload = {
+        "data": {
+            "awd": [
+                [one(c) for c in ("e", "p", "b", "f")],
+                [],
+            ]
+        }
+    }
+    res = Flybasis().normalize(
+        payload,
+        SearchQuery(origin="CDG", destination="JFK", date="2026-10-02", cabin="economy"),
+    )
+    got = {r.cabin_class for r in res}
+    assert got == {"economy", "premium", "business", "first"}, f"got {got}"
+    return f"{sorted(got)}"
+
+
+def test_fly_roundtrip_two_lists() -> None:
+    """20. Round-trip data event: both awd lists normalized (out + return)."""
+    payload = {
+        "data": {
+            "awd": [
+                [
+                    {
+                        "id": "out",
+                        "legs": [
+                            {
+                                "origin": "ORD", "destination": "LHR",
+                                "departure": "2026-10-01T16:00:00", "arrival": "2026-10-02T05:30:00",
+                                "airline": "BA", "flightNumber": "118", "cabin": "b",
+                                "duration": 510, "aircraft": "A380", "distance": 3957, "layover": 0,
+                            }
+                        ],
+                        "surcharge": 180.0, "points": 60000, "program": "AA",
+                        "basis": {"bookable": True, "cpm": 1.4},
+                    }
+                ],
+                [
+                    {
+                        "id": "ret",
+                        "legs": [
+                            {
+                                "origin": "LHR", "destination": "ORD",
+                                "departure": "2026-11-04T12:00:00", "arrival": "2026-11-04T14:30:00",
+                                "airline": "BA", "flightNumber": "119", "cabin": "b",
+                                "duration": 510, "aircraft": "A380", "distance": 3957, "layover": 0,
+                            }
+                        ],
+                        "surcharge": 160.0, "points": 55000, "program": "BA",
+                        "basis": {"bookable": True, "cpm": 1.4},
+                    }
+                ],
+            ]
+        }
+    }
+    res = normalize_payload(payload, SearchQuery(origin="ORD", destination="LHR", date="2026-10-01", cabin="business"))
+    assert len(res) == 2, f"expected 2 results (out+return), got {len(res)}"
+    assert {r.flight_number for r in res} == {"118", "119"}
+    return "out + return normalized"
+
+
+def test_fly_enrichment() -> None:
+    """21. Enrichment attached: retail estimate + transfer partners present."""
+    res = _fly_one_way()
+    r = res[0]
+    assert r.pricing.retail_cash_usd > 0, "retail estimate missing"
+    assert r.pricing.cents_per_point > 0, "cpp missing"
+    # UA MileagePlus transfers from Chase/AMEX/Cap1/Bilt (matrix-driven)
+    assert r.transfer_partners, "expected transfer partners"
+    return f"cpp={r.pricing.cents_per_point}, {len(r.transfer_partners)} banks"
+
+
+def test_fly_skips_bad_flight() -> None:
+    """22. Malformed flight (no legs) is skipped, well-formed ones survive."""
+    payload = {
+        "data": {
+            "awd": [
+                [
+                    {"id": "bad", "legs": [], "points": 1, "program": "UA"},
+                    {
+                        "id": "good",
+                        "legs": [
+                            {
+                                "origin": "JFK", "destination": "LHR",
+                                "departure": "2026-10-01T19:00:00", "arrival": "2026-10-02T07:00:00",
+                                "airline": "VS", "flightNumber": "3", "cabin": "b",
+                                "duration": 420, "aircraft": "A350", "distance": 3442, "layover": 0,
+                            }
+                        ],
+                        "surcharge": 250.0, "points": 47500, "program": "DL",
+                        "basis": {"bookable": True, "cpm": 1.4},
+                    },
+                ],
+                [],
+            ]
+        }
+    }
+    res = Flybasis().normalize(payload, SearchQuery(origin="JFK", destination="LHR", date="2026-10-01", cabin="business"))
+    assert len(res) == 1, f"expected 1 surviving result, got {len(res)}"
+    assert res[0].airline_code == "VS", f"expected VS, got {res[0].airline_code}"
+    return "bad skipped, good kept"
+
+
+# --------------------------------------------------------------------------
 
 
 def main() -> int:
-    print(f"\n{DIM}SpicyTool integration tests — 16 assertions, offline{RESET}\n")
+    print(f"\n{DIM}SpicyTool integration tests — 22 assertions, offline{RESET}\n")
     tests = [
         test_retry,
         test_timeout_isolation,
@@ -413,6 +611,12 @@ def main() -> int:
         test_dedupe_cheapest,
         test_dedupe_provenance,
         test_dedupe_seats,
+        test_fly_one_way,
+        test_fly_seats_from_bookable,
+        test_fly_cabin_mapping,
+        test_fly_roundtrip_two_lists,
+        test_fly_enrichment,
+        test_fly_skips_bad_flight,
     ]
     for i, fn in enumerate(tests, start=1):
         check(i, fn.__doc__.splitlines()[0].strip() if fn.__doc__ else fn.__name__, fn)
