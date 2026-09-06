@@ -228,10 +228,10 @@ always confirm on the airline's own site before booking.
 - **v1 API** — first-party engine: search, SSE streaming search (one event per
   program), airport typeahead, program inventory, 30-day flexible-date
   calendar.
-- **v2 API** — aggregation layer over four providers
-  (`SpicyToolEngine` always on; `AwardTool`, `PointsPath`, `PointsYeah`
-  credential-gated), cross-provider dedupe, provider diagnostics, cache stats,
-  telemetry firewall report.
+- **v2 API** — aggregation layer over five providers
+  (`SpicyToolEngine` always on; `AwardTool`, `PointsPath`, `PointsYeah`,
+  `Flybasis` credential-gated), cross-provider dedupe, provider diagnostics,
+  cache stats, telemetry firewall report.
 - **Streaming everywhere** — results render the millisecond a provider
   resolves; repeat queries are cache hits (~1.7 s → ~0 ms).
 
@@ -282,6 +282,7 @@ departure date"`.
 | `AWARDTOOL_API_KEY` | *(blank)* | enables the AwardTool adapter |
 | `POINTSPATH_API_KEY` | *(blank)* | enables the PointsPath adapter |
 | `POINTSYEAH_API_KEY` | *(blank)* | enables the PointsYeah adapter |
+| `FLYBASIS_API_KEY` | *(blank)* | enables the Flybasis adapter (Socket.IO award feed, see `Flybasis-index.md`) |
 | `REDIS_URL` | `redis://localhost:6379/0` | cache; falls back to memory if unreachable |
 | `CACHE_TTL` | `2700` | seconds, clamped to the 30–60 min band |
 | `PROVIDER_TIMEOUT` | `3.5` | per-request budget for third-party providers |

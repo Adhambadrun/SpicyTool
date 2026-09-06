@@ -71,6 +71,21 @@ caches per query hash.
 - **Authorized commercial option**: [Seats.aero](https://seats.aero) offers a
   licensed **Pro API** for award availability — a natural fit for this
   adapter pattern once you hold a Pro key.
+- **Non-HTTP transports**: the pattern is not limited to REST. The `Flybasis`
+  adapter (`providers/flybasis.py`) implements the same contract over a
+  Socket.IO **WebSocket** stream documented in `Flybasis-index.md` (at the
+  repo root): it connects to `https://enterprise-api.flybasis.com`
+  (`socketio_path=/sockets/v1/stream-flights`, `transports=["websocket"]`),
+  sends the operator credential as the Socket.IO `auth={"token": …}` payload
+  (the HTTP header helpers do not apply), emits one `search` frame per
+  `SearchQuery`, and normalizes the `data` events' `awd` flight lists onto
+  `AwardResult`. Because it is an async WebSocket client it needs
+  `python-socketio` + `websockets` (both in `backend/requirements.txt`), and
+  it imports `socketio` lazily inside `fetch_raw` so the rest of the app runs
+  fine without them. Its normalization is pure `normalize_payload(raw, q)`,
+  covered by the fixture-driven assertions 17–22 in `tests_integration.py`.
+  Credential gating is identical to the HTTP adapters: inert until
+  `FLYBASIS_API_KEY` is set, clear disabled reason otherwise.
 - **Currencies**: use `providers.enrich.to_usd()` so cash fees normalize to
   USD before dedupe compares them.
 - **Tests**: add a fixture-driven case to `tests_integration.py` following
