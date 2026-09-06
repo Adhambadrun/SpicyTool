@@ -24,10 +24,15 @@ import re
 import time
 from pathlib import Path
 
-try:  # optional: load backend/.env (git-ignored) for local runs
+try:  # optional: load .env (git-ignored) for local runs
     from dotenv import load_dotenv
 
-    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+    # Both documented locations are honoured, root first so a repo-root .env
+    # works when the app is started directly (not just via run.sh). Neither
+    # overrides a variable already present in the real environment.
+    _repo_root = Path(__file__).resolve().parent.parent.parent
+    load_dotenv(_repo_root / ".env")
+    load_dotenv(_repo_root / "backend" / ".env")
 except ImportError:
     pass
 
