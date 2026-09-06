@@ -29,6 +29,31 @@ Contact Flybasis to obtain an API token for the WebSocket feed
 
 - Partner/API inquiry: https://flybasis.com (site), or the docs repo
   https://github.com/flybasis/searchapi.docs (auth section).
+
+**Verified contact channels (checked 2026-09-06 — use these, not the site form):**
+
+- `support@flybasis.com` — published on Flybasis' Terms of Service page.
+- `asad@flybasis.com` — GitHub profile email of the maintainer who owns the API
+  docs repo (`github.com/asadukashif`, company `flybasis.com`; he authored the
+  docs commits). Best route for WebSocket API access specifically.
+- `https://github.com/flybasis` — official org (only the docs repo is public).
+
+**What a thorough online search found (and did NOT find):** no public or demo
+token anywhere; no sandbox; no signup/self-serve portal; no RapidAPI listing;
+and GitHub code search shows **zero** third-party integrations of
+`enterprise-api.flybasis.com` — the only public hit is Flybasis' own docs.
+The docs' `YOUR_AUTH_TOKEN` is a placeholder, not a key: it is genuinely
+issued by Flybasis to partners.
+
+**Access request already filed on their behalf (2026-09-06):**
+https://github.com/flybasis/searchapi.docs/issues/1 — a public API-access
+request on the official docs repo asking how to obtain a token, whether a
+sandbox exists, and pricing. Check that thread for a reply before doing
+anything else. (The old `flybasis.com/agency-request` page that advertised
+"utilize our API" for agency accounts now returns 404; the archived copy
+shows it was a travel-agency consolidation application — agency identity and
+volume, not a generic developer signup.)
+
 - The token is what you pass as `auth={"token": "<KEY>"}` when connecting.
 
 The key must be **issued to you directly by Flybasis**. I cannot generate it,
@@ -53,6 +78,12 @@ FLYBASIS_API_KEY = <paste>
 # also SPICYTOOL_PROVIDERS=Flybasis (default) and SPICYTOOL_MODELED_ENGINE=0 (default)
 ```
 
+CI (GitHub Actions → Settings → Secrets and variables → Actions):
+`FLYBASIS_API_KEY` — the installed `.github/workflows/live-check.yml` then runs
+the same live verifier against production on every push and weekly
+(`python tools/verify_flybasis_socket.py --live`). Until the secret exists the
+step is skipped honestly, never faked.
+
 Verify (no auth needed for v2):
 
 ```bash
@@ -65,6 +96,76 @@ errors, the response now carries the **exact** ProviderError
 (`providers[0].error`), e.g. `Flybasis connection failed: <reason>` or
 `Flybasis error event: <message>` — sent as given by the server.
 
+### Option B (advanced): authenticate with your own Flybasis account session
+
+Flybasis' own site (agentsearch.vercel.app) does not use a static key — it
+logs into Supabase and passes the resulting access token to the award socket.
+SpicyTool now supports that exact path. This is **not** a Flybasis-issued API
+token and it is **not** recommended for production:
+
+- It consumes your **personal account** search quota (the account
+  `maxSearchesRemaining` is read from `user.whoami` and surfaced in errors).
+- Automated use may violate Flybasis' terms of service — this is your own
+  account doing your own thing, but be aware.
+- The official `FLYBASIS_API_KEY` path above stays preferred; session mode is
+  used **only when** `FLYBASIS_API_KEY` is blank.
+
+Setup (browser DevTools → Network → `sb.flybasis.com/auth/v1/token`):
+
+```bash
+# backend/.env or deployment env — NEVER commit these values
+FLYBASIS_SUPABASE_URL=https://sb.flybasis.com
+FLYBASIS_SUPABASE_ANON_KEY=<the 'apikey' request header value>
+FLYBASIS_REFRESH_TOKEN=<refresh_token from the request payload>
+# or, instead of a refresh token:
+# FLYBASIS_EMAIL=you@example.com
+# FLYBASIS_PASSWORD=<password>
+```
+
+SpicyTool then exchanges the session for an access token, passes it as
+`auth={"token": …}` to `enterprise-api.flybasis.com/sockets/v1/stream-flights`,
+caches it until ~30s before expiry, and persists Supabase's **rotated**
+refresh token to `backend/data/.flybasis_refresh_token` (gitignored) so
+long-running processes stay valid. Verify before you deploy:
+
+```bash
+cd backend
+FLYBASIS_SUPABASE_URL=… FLYBASIS_SUPABASE_ANON_KEY=… FLYBASIS_REFRESH_TOKEN=… \
+  python3 tools/verify_flybasis_socket.py --live
+# EXPECT: 16 checks (13 offline + session auth + live handshake)
+```
+
+> ⚠️ Do **not** reuse credentials from `agentsearch.vercel.app.har` — that
+> capture contains live third-party session tokens for a real account and is
+> removed from the repo; rotate that account's password now.
+
+### Alternative live source you can get TODAY — Seats.aero
+
+Flybasis is not the only way to get real award availability. The repo now
+ships a full adapter for the **Seats.aero partner API**
+(`backend/providers/seats_aero.py`): cached award availability across ~20
+mileage programs with points, seats, cabins, airlines and flight-level detail
+(OpenAPI: https://developers.seats.aero).
+
+```bash
+# 1. Seats.aero Pro account -> settings -> API tab -> generate API key
+#    (up to 1,000 calls/day; non-commercial unless you have their written
+#     agreement; eligibility is at their sole discretion)
+# 2. Point SpicyTool at it (never commit the key):
+printf 'SEATS_AERO_API_KEY=<your key>\n' >> .env
+SPICYTOOL_PROVIDERS=SeatsAero ./run.sh
+# 3. Verify:  curl http://localhost:8000/api/v2/search?origin=JFK&destination=LHR&date=2026-10-05&cabin=business
+#    EXPECT: providers[] includes SeatsAero with ok == true and count > 0
+```
+
+Why this matters: it is a **legitimate, documented, self-serve** developer
+feed — no invitation, no middleware-hidden token. The one input it also
+requires is a key from *your own* Seats.aero account (identity + paid Pro
+tier, so it cannot be conjured by an agent). AwardSecrets
+(https://awardsecrets.com) is another dev-oriented option ($0.02/search,
+onboarding by email) but returns seat facts **without points pricing**, so it
+does not fill SpicyTool's award-pricing cards.
+
 ### Prove the socket works BEFORE you have a key
 
 `FLYBASIS_BASE_URL` (optional, mirrors `AGENTSEARCH_BASE_URL`) points the award
@@ -72,20 +173,27 @@ socket at any host, so the whole live path can be exercised without a
 credential and without outbound network:
 
 ```bash
-cd backend && ../.venv/bin/python tools/verify_flybasis_socket.py
-# 9 checks over a REAL websocket against tools/flybasis_mock.py: connect + auth
-# payload, the documented `search` body, stops/layover/mixed-cabin/bookability
-# normalization, both directions of a round trip, `error` events surfaced
-# verbatim, a silent upstream failing loudly inside its budget, a rejected
-# token reading as auth failure (never as "no results"), and the provider cache.
+cd backend && python3 tools/verify_flybasis_socket.py
+# 16 checks over REAL websockets/HTTP against tools/flybasis_mock.py +
+# tools/flybasis_supabase_mock.py: connect + auth payload, the documented
+# `search` body, stops/layover/mixed-cabin/bookability normalization, both
+# directions of a round trip, `error` events surfaced verbatim, a silent
+# upstream failing loudly inside its budget, a rejected token reading as auth
+# failure (never as "no results"), the provider cache — and SESSION MODE end
+# to end: Supabase refresh/password -> access token -> socket auth -> flights,
+# token caching, rotated-refresh persistence, quota lookup, rejected-session
+# handling.
 ```
 
-If that passes, the ONLY thing between you and live results is the key — which
-is the answer to "search returns nothing". To confirm a real key on a real
-endpoint, the same checks run against production:
+If that passes, the ONLY thing between you and live results is the credential —
+which is the answer to "search returns nothing". To confirm a real credential
+on a real endpoint, the same checks run against production:
 
 ```bash
-FLYBASIS_API_KEY=<your key> ../.venv/bin/python tools/verify_flybasis_socket.py --live
+# official key, or the Supabase session in Option B:
+FLYBASIS_API_KEY=<your key> python3 tools/verify_flybasis_socket.py --live
+FLYBASIS_REFRESH_TOKEN=… FLYBASIS_SUPABASE_ANON_KEY=… \
+  python3 tools/verify_flybasis_socket.py --live
 ```
 
 ### Also redeploy the web-context connector (free, no keys)

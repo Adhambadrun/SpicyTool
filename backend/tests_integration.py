@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SpicyTool integration tests — 35 assertions, no live network calls.
+"""SpicyTool integration tests — 45 assertions, no live network calls.
 
 Uses httpx.MockTransport for the HTTP-layer tests; everything else exercises
 the real normalization, enrichment and dedupe code paths directly.
@@ -9,9 +9,13 @@ Run:  python3 tests_integration.py   (from backend/)
 from __future__ import annotations
 
 import asyncio
+import copy
+import json
 import os
 import sys
+import tempfile
 import time
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -24,8 +28,9 @@ from core.http_engine import (  # noqa: E402
 )
 from core.schema import AwardResult, Layover, Pricing, Route, Segment, TransferPartner  # noqa: E402
 from providers.base import BaseProvider, SearchQuery  # noqa: E402
-from providers.flybasis import Flybasis, normalize_payload  # noqa: E402
+from providers.flybasis import Flybasis, merge_frames, normalize_payload  # noqa: E402
 from providers.pointsyeah import PointsYeah  # noqa: E402
+from providers.seats_aero import SeatsAero  # noqa: E402
 from services import agentsearch  # noqa: E402
 from services.dedupe import dedupe, stats as dedupe_stats  # noqa: E402
 
@@ -559,8 +564,46 @@ def test_fly_enrichment() -> None:
     return f"cpp={r.pricing.cents_per_point}, {len(r.transfer_partners)} banks"
 
 
+def test_fly_flat_one_way_awd() -> None:
+    """22. Docs: one-way is "one array of flights" — flat [flight,…] must normalize."""
+    import copy
+
+    # The official sample nests [[outbound…],[return…]]; the docs also say a
+    # one-way reply is a single array of flights. Some replies may arrive flat
+    # at `awd`; either spelling must produce results, never a silent empty.
+    flat = copy.deepcopy(_FLYBASIS_ONE_WAY["data"]["awd"][0])  # [flight]
+    flat.append(copy.deepcopy(flat[0]))
+    flat[1]["id"] = "fb_a2"
+    payload = {"data": {"awd": flat}}
+    res = Flybasis().normalize(
+        payload, SearchQuery(origin="JFK", destination="FRA", date="2026-10-01", cabin="business")
+    )
+    assert len(res) == 2, f"expected 2 results from a flat one-way awd, got {len(res)}"
+    assert {r.id for r in res} != set(), "flat payload produced zero results"
+    return "flat awd -> 2 results, no silent drop"
+
+
+def test_fly_merge_frames_both_shapes() -> None:
+    """23. Socket frame merger keeps nested + flat one-way frames intact."""
+    flight = copy.deepcopy(_FLYBASIS_ONE_WAY["data"]["awd"][0][0])
+    nested = {"data": {"awd": [[flight], []]}}
+    flat = {"data": {"awd": [flight]}}
+    merged = merge_frames([nested, flat])
+    awd = merged["data"]["awd"]
+    assert len(awd) == 2, "merger must always emit the nested [outbound, return] form"
+    assert len(awd[0]) == 2, f"expected 2 outbound flights, got {len(awd[0])}"
+    assert awd[1] == [], "no return flights may be invented"
+    # Normalization of the merged payload must yield exactly those 2 flights.
+    res = Flybasis().normalize(
+        merged,
+        SearchQuery(origin="JFK", destination="FRA", date="2026-10-01", cabin="business"),
+    )
+    assert len(res) == 2, f"expected 2 normalized results, got {len(res)}"
+    return "nested + flat frames merged, no loss"
+
+
 def test_fly_skips_bad_flight() -> None:
-    """22. Malformed flight (no legs) is skipped, well-formed ones survive."""
+    """24. Malformed flight (no legs) is skipped, well-formed ones survive."""
     payload = {
         "data": {
             "awd": [
@@ -643,7 +686,7 @@ _AGENTSEARCH_LOOSE = {
 
 
 def test_as_documented_schema_roundtrip():
-    """23. The documented /v1/search body normalizes with meta provenance intact."""
+    """25. The documented /v1/search body normalizes with meta provenance intact."""
     out = agentsearch.normalize_search(_AGENTSEARCH_BRAVE, "anthropic claude", took_ms=999)
     assert len(out["results"]) == 2, out
     a, b = out["results"]
@@ -660,7 +703,7 @@ def test_as_documented_schema_roundtrip():
 
 
 def test_as_normalizes_mixed_field_names():
-    """24. link/description spellings and missing position still normalize."""
+    """26. link/description spellings and missing position still normalize."""
     out = agentsearch.normalize_search(_AGENTSEARCH_LOOSE, "jfk lhr")
     a = out["results"][0]
     assert a["url"] == "https://www.example.com/x"
@@ -671,7 +714,7 @@ def test_as_normalizes_mixed_field_names():
 
 
 def test_as_extracts_nested_and_empty_payloads():
-    """25. Nested {web:{results}} is found; junk payloads yield zero results."""
+    """27. Nested {web:{results}} is found; junk payloads yield zero results."""
     nested = {"web": {"results": [{"title": "T", "url": "https://a.io/x"}]}}
     assert len(agentsearch.normalize_search(nested, "q")["results"]) == 1
     for junk in ({}, {"results": []}, None, "nope", {"results": [{"a": 1}]}):
@@ -679,7 +722,7 @@ def test_as_extracts_nested_and_empty_payloads():
 
 
 def test_as_key_detection_and_flybasis_gate():
-    """26. A RapidAPI-shaped key routes to AgentSearch, never the award socket."""
+    """28. A RapidAPI-shaped key routes to AgentSearch, never the award socket."""
     # Synthetic, RapidAPI-shaped value — never a real credential.
     rapid = "0123456789msh0123456789abcdefp012345jsn0123456789ab"
     assert agentsearch.looks_like_rapidapi_key(rapid)
@@ -703,7 +746,7 @@ def test_as_key_detection_and_flybasis_gate():
 
 
 def test_as_search_over_mock_transport():
-    """27. Live-shaped GET: RapidAPI headers sent, payload normalized."""
+    """29. Live-shaped GET: RapidAPI headers sent, payload normalized."""
     seen = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -727,7 +770,7 @@ def test_as_search_over_mock_transport():
 
 
 def test_as_surfaces_auth_and_rate_errors():
-    """28. 401/429 become actionable ProviderErrors, never silent empties."""
+    """30. 401/429 become actionable ProviderErrors, never silent empties."""
     from core.http_engine import ProviderError
 
     for code, needle in ((401, "rejected"), (403, "rejected"), (429, "rate limit")):
@@ -748,7 +791,7 @@ def test_as_surfaces_auth_and_rate_errors():
 
 
 def test_as_context_is_never_award_data():
-    """29. web_context via AgentSearch stays labelled is_award_data=false."""
+    """31. web_context via AgentSearch stays labelled is_award_data=false."""
     from services import web_context
 
     engine = HttpEngine(timeout=2.0)
@@ -770,7 +813,7 @@ def test_as_context_is_never_award_data():
 
 
 def test_as_answer_and_fetch_endpoints():
-    """30. instant_answer hits /v1/answer and fetch_url hits /v1/fetch."""
+    """32. instant_answer hits /v1/answer and fetch_url hits /v1/fetch."""
     seen = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -811,7 +854,7 @@ def test_as_answer_and_fetch_endpoints():
 
 
 def test_as_answer_falls_back_to_serp():
-    """31. An empty /v1/answer falls back to the top organic result."""
+    """33. An empty /v1/answer falls back to the top organic result."""
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/v1/answer":
             return httpx.Response(200, json={"meta": {}, "heading": "", "text": ""})
@@ -832,7 +875,7 @@ def test_as_answer_falls_back_to_serp():
 
 
 def test_as_engine_rebuilt_per_event_loop():
-    """32. The pooled client is rebuilt when the event loop changes."""
+    """34. The pooled client is rebuilt when the event loop changes."""
     # Regression: a pool bound to a closed loop raised "Event loop is closed"
     # on the next request, which broke every call after the first asyncio.run().
     def handler(request: httpx.Request) -> httpx.Response:
@@ -858,7 +901,7 @@ def test_as_engine_rebuilt_per_event_loop():
 
 
 def test_as_base_url_override():
-    """33. AGENTSEARCH_BASE_URL points the client at a self-hosted upstream."""
+    """35. AGENTSEARCH_BASE_URL points the client at a self-hosted upstream."""
     for var in ("AGENTSEARCH_BASE_URL", "AGENTSEARCH_SCHEME", "AGENTSEARCH_HOST"):
         os.environ.pop(var, None)
     try:
@@ -903,7 +946,7 @@ _AGENTSEARCH_LIVE_CAPTURE = {
 
 
 def test_as_real_captured_response():
-    """34. A REAL production response normalizes with zero loss."""
+    """36. A REAL production response normalizes with zero loss."""
     raw = _AGENTSEARCH_LIVE_CAPTURE
     out = agentsearch.normalize_search(raw, "spicytool.vercel.app", took_ms=999)
     assert len(out["results"]) == len(raw["results"]), "rows were dropped"
@@ -927,8 +970,180 @@ def test_as_real_captured_response():
     assert all(r["url"] and r["title"] for r in out["results"])
 
 
+# --------------------------------------------------------------------------
+# Seats.aero partner API (cached award availability)
+# --------------------------------------------------------------------------
+
+# One documented cached-search item, fields verbatim from the OpenAPI example
+# (SFO->JFK, American, business available at 33,000 miles + a flight-level
+# trip so segments/times/stops/layover are exercised).
+_SEATS_ITEM = {
+    "ID": "2QSaUXJ0ZuSVqgrRWqkSlXhnVbS",
+    "RouteID": "2HmSwbzAS9SnEdtIsf3nkjozpX1",
+    "Route": {
+        "ID": "2HmSwbzAS9SnEdtIsf3nkjozpX1",
+        "OriginAirport": "SFO",
+        "OriginRegion": "North America",
+        "DestinationAirport": "JFK",
+        "DestinationRegion": "North America",
+        "NumDaysOut": 75,
+        "Distance": 2582,
+        "Source": "american",
+    },
+    "Date": "2023-08-11",
+    "ParsedDate": "2023-08-11T00:00:00Z",
+    "YAvailable": True,
+    "WAvailable": False,
+    "JAvailable": True,
+    "FAvailable": True,
+    "YMileageCost": "12500",
+    "WMileageCost": "0",
+    "JMileageCost": "33000",
+    "FMileageCost": "33000",
+    "YRemainingSeats": 0,
+    "WRemainingSeats": 0,
+    "JRemainingSeats": 7,
+    "FRemainingSeats": 4,
+    "YAirlines": "AA, B6",
+    "WAirlines": "",
+    "JAirlines": "AA, B6",
+    "FAirlines": "AA",
+    "YDirect": True,
+    "WDirect": False,
+    "JDirect": True,
+    "FDirect": True,
+    "Source": "american",
+    "CreatedAt": "2023-05-29T08:37:32.218426Z",
+    "UpdatedAt": "2023-07-10T13:52:23.343425Z",
+    "AvailabilityTrips": [
+        {
+            "ID": "trip-1",
+            "AvailabilitySegments": [
+                {
+                    "FlightNumber": "AA47", "Distance": 2582,
+                    "FareClass": "I", "AircraftName": "77W", "AircraftCode": "77W",
+                    "OriginAirport": "SFO", "DestinationAirport": "JFK",
+                    "DepartsAt": "2023-08-11T18:30:00Z", "ArrivesAt": "2023-08-12T06:35:00Z",
+                    "Order": 0,
+                }
+            ],
+            "TotalDuration": 725, "Stops": 0, "Carriers": "AA",
+            "RemainingSeats": 7, "MileageCost": 33000, "TotalTaxes": 45.25,
+            "FlightNumbers": "AA47", "DepartsAt": "2023-08-11T18:30:00Z",
+            "Cabin": "business", "ArrivesAt": "2023-08-12T06:35:00Z",
+            "Source": "american",
+        }
+    ],
+}
+
+_SEATS_PAYLOAD = {"data": [_SEATS_ITEM]}
+
+
+def _sa_q(**over):
+    return SearchQuery(
+        origin=over.get("origin", "SFO"),
+        destination=over.get("destination", "JFK"),
+        date=over.get("date", "2023-08-11"),
+        cabin=over.get("cabin", "business"),
+    )
+
+
+def test_sa_normalize_documented() -> None:
+    """37. Documented cached-search item -> AwardResult: points, seats, taxes, program."""
+    res = SeatsAero().normalize(_SEATS_PAYLOAD, _sa_q())
+    assert len(res) == 1, f"expected 1 result, got {len(res)}"
+    r = res[0]
+    assert r.source_provider == "SeatsAero"
+    assert r.route.origin == "SFO" and r.route.destination == "JFK"
+    assert r.route.stops == 0 and r.route.duration_minutes == 725
+    assert r.pricing.points == 33000, f"expected J cost 33000, got {r.pricing.points}"
+    assert abs(r.pricing.cash_fees - 45.25) < 0.005, r.pricing.cash_fees
+    assert r.seats_remaining == 7
+    assert r.pricing.program_code == "AA_AADVANTAGE", r.pricing.program_code
+    assert r.airline_code == "AA"
+    assert r.cabin_class == "business"
+    assert r.route.segments[0].flight_number == "AA47"
+    assert r.route.segments[0].aircraft == "77W"
+    assert r.route.segments[0].departure_time == "2023-08-11T18:30"
+    return "33,000 AA, 7 seats, $45.25, 1 segment"
+
+
+def test_sa_cabin_filter_and_skip() -> None:
+    """38. Only the requested cabin is read; unavailable/zero-cost rows are skipped."""
+    # Business search must ignore the lower (Y) cost and use J. A row where
+    # the requested cabin is unavailable or has no cost is not a result.
+    import copy
+    payload = {"data": [copy.deepcopy(_SEATS_ITEM)]}
+    # Economy: Y available, cost 12500 -> one result.
+    res_eco = SeatsAero().normalize(payload, _sa_q(cabin="economy"))
+    assert len(res_eco) == 1 and res_eco[0].pricing.points == 12500
+    # First: cost present -> one result.
+    res_first = SeatsAero().normalize(payload, _sa_q(cabin="first"))
+    assert len(res_first) == 1 and res_first[0].pricing.points == 33000
+    # Premium: W not available -> skipped.
+    assert SeatsAero().normalize(payload, _sa_q(cabin="premium")) == []
+    bad = copy.deepcopy(_SEATS_ITEM)
+    bad["JAvailable"] = False
+    assert SeatsAero().normalize({"data": [bad]}, _sa_q()) == []
+    return "cabin-aware; unavailable rows never become results"
+
+
+def test_sa_program_and_enrichment() -> None:
+    """39. Program slugs map to canonical codes; enrichment attaches partners."""
+    item = dict(_SEATS_ITEM)
+    item["Source"] = "aeroplan"
+    res = SeatsAero().normalize({"data": [item]}, _sa_q())
+    assert res[0].pricing.program_code == "AC_AEROPLAN", res[0].pricing.program_code
+    assert res[0].pricing.cents_per_point > 0
+    assert res[0].transfer_partners, "expected transfer partners"
+    return "AC_AEROPLAN + cpp/partners"
+
+
+def test_sa_request_shape_and_errors() -> None:
+    """40. Real request shape (header + query) and 401/429 become ProviderErrors."""
+    from core.http_engine import ProviderError
+
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["url"] = str(request.url)
+        seen["headers"] = dict(request.headers)
+        return httpx.Response(200, json=_SEATS_PAYLOAD)
+
+    os.environ[SeatsAero.env_key] = "seats-key"
+    engine = HttpEngine(timeout=2.0)
+    engine.client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    try:
+        raw = asyncio.run(SeatsAero().fetch_raw(_sa_q(), engine))
+    finally:
+        await_engine = None
+        os.environ.pop(SeatsAero.env_key, None)
+    assert "https://seats.aero/partnerapi/search" in seen["url"], seen["url"]
+    assert "origin_airport=SFO" in seen["url"] and "destination_airport=JFK" in seen["url"]
+    assert "start_date=2023-08-11" in seen["url"] and "end_date=2023-08-11" in seen["url"]
+    assert "cabins=business" in seen["url"] and "include_trips=true" in seen["url"]
+    assert seen["headers"]["partner-authorization"] == "Bearer seats-key", seen["headers"]
+    assert isinstance(raw, dict) and len(raw["data"]) == 1
+
+    # 401/403 -> rejected; 429 -> rate limit; never a silent empty list.
+    for code, needle in ((401, "rejected"), (403, "rejected"), (429, "rate limit")):
+        eng = HttpEngine(timeout=2.0)
+        eng.client = httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda r, c=code: httpx.Response(c, text="no"))
+        )
+        os.environ[SeatsAero.env_key] = "bad"
+        try:
+            asyncio.run(SeatsAero().fetch_raw(_sa_q(), eng))
+            raise AssertionError(f"HTTP {code} should raise")
+        except ProviderError as exc:
+            assert needle in str(exc).lower(), (code, str(exc))
+        finally:
+            os.environ.pop(SeatsAero.env_key, None)
+    return "GET /search, Partner-Authorization Bearer, errors surfaced"
+
+
 def test_provider_cache_key_distinguishes_round_trip() -> None:
-    """35. A round trip never shares a cache slot with its own outbound leg."""
+    """41. A round trip never shares a cache slot with its own outbound leg."""
     from providers.base import SearchQuery
 
     one_way = SearchQuery(origin="JFK", destination="LHR", date="2026-10-05",
@@ -945,8 +1160,176 @@ def test_provider_cache_key_distinguishes_round_trip() -> None:
     return "one-way key byte-identical; round trip keyed apart"
 
 
+# --------------------------------------------------------------------------
+# Flybasis session auth (Supabase, via MockTransport — no live network)
+# --------------------------------------------------------------------------
+
+_SESSION_KEYS = (
+    "FLYBASIS_SUPABASE_URL",
+    "FLYBASIS_SUPABASE_ANON_KEY",
+    "FLYBASIS_REFRESH_TOKEN",
+    "FLYBASIS_EMAIL",
+    "FLYBASIS_PASSWORD",
+    "FLYBASIS_REFRESH_FILE",
+    "FLYBASIS_API2_URL",
+)
+
+
+def _session_snapshot() -> dict[str, str | None]:
+    return {k: os.environ.get(k) for k in _SESSION_KEYS}
+
+
+def _session_restore(snap: dict[str, str | None]) -> None:
+    for k, v in snap.items():
+        if v is None:
+            os.environ.pop(k, None)
+        else:
+            os.environ[k] = v
+
+
+def _session_engine(handler) -> HttpEngine:
+    engine = HttpEngine(timeout=2.0)
+    engine.client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    return engine
+
+
+def test_session_refresh_exchange_and_cache():
+    """42. refresh_token grant: exchange once, cache the access token."""
+    from providers import flybasis_session
+
+    calls = {"token": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path.endswith("/auth/v1/token"), request.url
+        assert "grant_type=refresh_token" in str(request.url), request.url
+        assert request.headers.get("apikey") == "anon-key", request.headers
+        body = request.read()
+        assert b"verify-refresh" in body, body
+        calls["token"] += 1
+        return httpx.Response(200, json={
+            "access_token": "access-1",
+            "token_type": "bearer",
+            "expires_in": 3600,
+            "refresh_token": "rotated-refresh",
+        })
+
+    snap = _session_snapshot()
+    fd, store = tempfile.mkstemp(); os.close(fd)
+    os.environ["FLYBASIS_SUPABASE_URL"] = "http://supabase.test"
+    os.environ["FLYBASIS_SUPABASE_ANON_KEY"] = "anon-key"
+    os.environ["FLYBASIS_REFRESH_TOKEN"] = "verify-refresh"
+    os.environ["FLYBASIS_REFRESH_FILE"] = store
+    engine = _session_engine(handler)
+    try:
+        async def run():
+            first = await flybasis_session.access_token(engine)
+            second = await flybasis_session.access_token(engine)
+            return first, second
+        first, second = asyncio.run(run())
+        assert calls["token"] == 1, f"expected 1 exchange, saw {calls['token']}"
+        assert first == second == "access-1"
+        # Rotated refresh token is persisted where the process can find it again.
+        assert Path(store).read_text(encoding="utf-8").strip() == "rotated-refresh"
+        return "1 exchange; token cached; rotated refresh persisted"
+    finally:
+        flybasis_session.reset_cache()
+        _session_restore(snap)
+        Path(store).unlink(missing_ok=True)
+
+
+def test_session_rejected_login_is_actionable():
+    """43. HTTP 400 from Supabase -> actionable ProviderError, never silent."""
+    from core.http_engine import ProviderError
+    from providers import flybasis_session
+
+    engine = _session_engine(
+        lambda r: httpx.Response(400, json={"error": "invalid_grant", "hint": "bad"})
+    )
+    snap = _session_snapshot()
+    os.environ["FLYBASIS_SUPABASE_URL"] = "http://supabase.test"
+    os.environ["FLYBASIS_SUPABASE_ANON_KEY"] = "anon-key"
+    os.environ["FLYBASIS_REFRESH_TOKEN"] = "bad-refresh"
+    try:
+        asyncio.run(flybasis_session.access_token(engine))
+        raise AssertionError("rejected login must raise")
+    except ProviderError as exc:
+        assert "rejected" in str(exc).lower(), str(exc)
+        return "provides the 'rejected' fix-it signal"
+    finally:
+        flybasis_session.reset_cache()
+        _session_restore(snap)
+
+
+def test_session_password_grant_and_quota():
+    """44. email/password grant + whoami quota lookup."""
+    from providers import flybasis_session
+
+    body_seen = {}
+    calls = {"token": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/auth/v1/token"):
+            assert "grant_type=password" in str(request.url), request.url
+            body_seen.update(json.loads(request.read()))
+            calls["token"] += 1
+            return httpx.Response(200, json={
+                "access_token": "access-pass",
+                "expires_in": 3600,
+                "refresh_token": "rotated-pass",
+            })
+        assert request.url.path.endswith("/trpc/user.whoami"), request.url
+        assert request.headers.get("authorization") == "Bearer access-pass", request.headers
+        return httpx.Response(200, json=[{"result": {"data": {
+            "email": "me@example.com",
+            "permissions": ["canMax"],
+            "maxSearchesRemaining": 7,
+        }}}])
+
+    snap = _session_snapshot()
+    fd, store = tempfile.mkstemp(); os.close(fd)
+    os.environ["FLYBASIS_SUPABASE_URL"] = "http://supabase.test"
+    os.environ["FLYBASIS_SUPABASE_ANON_KEY"] = "anon-key"
+    os.environ["FLYBASIS_REFRESH_FILE"] = store
+    os.environ["FLYBASIS_EMAIL"] = "me@example.com"
+    os.environ["FLYBASIS_PASSWORD"] = "pw"
+    engine = _session_engine(handler)
+    try:
+        remaining = asyncio.run(flybasis_session.searches_remaining(engine))
+        assert remaining == 7, remaining
+        assert body_seen.get("email") == "me@example.com", body_seen
+        assert body_seen.get("password") == "pw", body_seen
+        return "password grant authenticated; quota read from whoami"
+    finally:
+        flybasis_session.reset_cache()
+        _session_restore(snap)
+        Path(store).unlink(missing_ok=True)
+
+
+def test_session_unconfigured_is_actionable():
+    """45. No session credential -> clear ProviderError, provider stays inert."""
+    from core.http_engine import ProviderError
+    from providers import flybasis_session
+    from providers.flybasis import Flybasis
+
+    snap = _session_snapshot()
+    os.environ.pop("FLYBASIS_API_KEY", None)
+    try:
+        assert Flybasis().enabled is False, "provider must stay inert without either credential"
+        reason = Flybasis().disabled_reason() or ""
+        assert "FLYBASIS_REFRESH_TOKEN" in reason or "FLYBASIS_API_KEY" in reason, reason
+        try:
+            asyncio.run(flybasis_session.access_token())
+            raise AssertionError("unconfigured session must raise")
+        except ProviderError as exc:
+            assert "not configured" in str(exc).lower(), str(exc)
+        return "inert provider + actionable reason"
+    finally:
+        flybasis_session.reset_cache()
+        _session_restore(snap)
+
+
 def main() -> int:
-    print(f"\n{DIM}SpicyTool integration tests — 35 assertions, offline{RESET}\n")
+    print(f"\n{DIM}SpicyTool integration tests — 45 assertions, offline{RESET}\n")
     tests = [
         test_retry,
         test_timeout_isolation,
@@ -969,6 +1352,8 @@ def main() -> int:
         test_fly_cabin_mapping,
         test_fly_roundtrip_two_lists,
         test_fly_enrichment,
+        test_fly_flat_one_way_awd,
+        test_fly_merge_frames_both_shapes,
         test_fly_skips_bad_flight,
         test_as_documented_schema_roundtrip,
         test_as_normalizes_mixed_field_names,
@@ -982,7 +1367,15 @@ def main() -> int:
         test_as_engine_rebuilt_per_event_loop,
         test_as_base_url_override,
         test_as_real_captured_response,
+        test_sa_normalize_documented,
+        test_sa_cabin_filter_and_skip,
+        test_sa_program_and_enrichment,
+        test_sa_request_shape_and_errors,
         test_provider_cache_key_distinguishes_round_trip,
+        test_session_refresh_exchange_and_cache,
+        test_session_rejected_login_is_actionable,
+        test_session_password_grant_and_quota,
+        test_session_unconfigured_is_actionable,
     ]
     for i, fn in enumerate(tests, start=1):
         check(i, fn.__doc__.splitlines()[0].strip() if fn.__doc__ else fn.__name__, fn)

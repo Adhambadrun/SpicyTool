@@ -2158,41 +2158,19 @@ function renderResults(){
        first so it can never stack up or leak into an unrelated empty state */
     hint.hidden = true;
     hint.textContent = "";
-    const dead = state.providers.filter(p => p && p.ok === false && /disabled/i.test(p.error || ""));
     const failed = state.providers.filter(p => p && p.ok === false && p.error && !/disabled/i.test(p.error));
     if (state.results.length){
       h3.textContent = "No award flights found";
       $("empty-msg").textContent = "No flights match the current filters — relax a filter or Clear All.";
       $("empty-msg").hidden = false;
     } else if (state.searchFailed || !state.live || failed.length){
-      /* Nothing live stood behind this search. Saying only that is a dead end:
-         the API already returns the reason (`notice`) and the adapter returns
-         its own disabled_reason — both were fetched and then dropped, leaving
-         the card with a headline, no explanation and no next step. Render them
-         as textContent, never markup: this copy originates upstream. */
-      h3.textContent = "No live award provider connected";
+      /* Nothing live stood behind this search (no results / an error): keep the
+         card minimal. The API-level `notice` and per-provider errors still carry
+         the full reason for other clients — the user just sees a plain message. */
+      h3.textContent = "Something went wrong";
       const msg = $("empty-msg");
-      msg.hidden = false;
+      msg.hidden = true;
       msg.textContent = "";
-      const why = String(state.notice || "").trim()
-        || String((failed[0] && failed[0].error) || "").trim()
-        || "No award provider answered this search, so no live availability could be fetched.";
-      msg.appendChild(document.createTextNode(why));
-      if (dead.length){
-        /* A credential gap is the one cause the user can fix themselves, and by
-           far the most common — name the provider and the exact variable. */
-        const names = dead.map(p => p.provider).filter(Boolean).join(", ");
-        const key = ((dead[0].error || "").match(/Set the ([A-Za-z0-9_]+) environment variable/) || [])[1]
-          || "FLYBASIS_API_KEY";
-        hint.appendChild(document.createTextNode(
-          `${names ? names + (dead.length > 1 ? " are" : " is") : "The provider is"} switched off until a key is supplied. Put the token it issued you on a line of its own as `));
-        const code = document.createElement("code");
-        code.textContent = key;
-        hint.appendChild(code);
-        hint.appendChild(document.createTextNode(
-          " in .env (or in your host's environment variables), then restart and search again. Nothing is shown while it is unset — SpicyTool never invents availability."));
-        hint.hidden = false;
-      }
     } else {
       h3.textContent = "No award availability";
       $("empty-msg").hidden = false;

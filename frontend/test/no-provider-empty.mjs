@@ -1,20 +1,15 @@
-// frontend/test/no-provider-empty.mjs — regression test for the "no live award
-// provider connected" empty state.
-//
-// The symptom this locks out: a search with no credential behind it showed a
-// bare headline with the explanation deliberately HIDDEN (#empty-msg hidden),
-// while the API's own `notice` — fetched into state.notice on every stream
-// event — was never rendered anywhere. A user staring at "No live award
-// provider connected" had no reason and no next step.
+// frontend/test/no-provider-empty.mjs — regression test for the no-result /
+// error empty state.
 //
 // What must hold:
-//   1. A disabled provider names the reason (the notice, verbatim) and the
-//      exact variable to set (FLYBASIS_API_KEY) — and it is VISIBLE.
-//   2. Re-renders during a stream never stack duplicate hints.
-//   3. A provider that answered but failed (timeout) surfaces that error and
-//      is NOT told to go hunting for a key.
-//   4. A genuinely-empty live search keeps its "no availability" advice.
-//   5. Upstream copy is rendered as text, never markup (no XSS via error).
+//   1. A search with no results (no live provider, credential gap, timeout, or
+//      any upstream failure) shows ONLY "Something went wrong" — no verbose
+//      notice, no credential remedy, no hint.
+//   2. Re-renders during a stream never stack duplicate messages/nodes.
+//   3. A provider that answered but failed (timeout) gets the same minimal
+//      message, with no key-hunt hint.
+//   4. A genuinely-empty LIVE search keeps its "no availability" advice.
+//   5. Upstream copy is never rendered as markup / content is cleared (no XSS).
 //
 // Boots the REAL frontend/index.html in jsdom and drives the actual
 // runSearch()/renderResults() code through a scripted EventSource.
@@ -116,21 +111,16 @@ setTimeout(async () => {
   w.eval('state.origins = ["JFK"]; state.destinations = ["LHR"]; state.date = "2026-10-05"; '
        + 'state.trip = "oneway"; state.returnDate = null; state.flex = 0; state.cabin = "business";');
 
-  // ---- 1. credential gap: reason + remedy, both visible -------------------
+  // ---- 1. credential gap / no live provider: minimal message only ----------
   await runSearchWith({});
-  check('headline names the state', text('#empty h3') === 'No live award provider connected', text('#empty h3'));
   check('the empty card itself is visible', visible('#empty'));
-  check('the explanation is NOT hidden', visible('#empty-msg'),
-    d.querySelector('#empty-msg')?.hidden === true ? 'still hidden' : 'shown');
-  check('the API notice is surfaced verbatim', text('#empty-msg') === NOTICE, text('#empty-msg').slice(0, 48) + '…');
-  check('state.notice is actually rendered (was fetched then dropped)',
-    text('#empty-msg').includes('Flybasis search engine only'));
-  check('the remedy is visible', visible('#empty-hint'));
-  check('the remedy names the exact variable', text('#empty-hint').includes('FLYBASIS_API_KEY'), text('#empty-hint').slice(0, 60) + '…');
-  check('the variable is a <code> chip', !!d.querySelector('#empty-hint code'),
-    d.querySelector('#empty-hint code') ? d.querySelector('#empty-hint code').textContent : 'no code element');
-  check('the remedy says restart + re-search', text('#empty-hint').includes('restart'));
-  check('it promises no invented availability', /never invents/i.test(text('#empty-hint')));
+  check('headline says just "Something went wrong"', text('#empty h3') === 'Something went wrong', text('#empty h3'));
+  check('no verbose notice rendered', text('#empty-msg') === '',
+    d.querySelector('#empty-msg')?.textContent === '' ? 'cleared' : text('#empty-msg').slice(0, 48) + '…');
+  check('the explanation pane is hidden', !visible('#empty-msg'),
+    visible('#empty-msg') ? 'still shown' : 'hidden');
+  check('no credential remedy / hint', !visible('#empty-hint'));
+  check('no <code> key chip', d.querySelector('#empty-hint code') === null);
 
   // ---- 2. no stacking across the many re-renders a stream triggers --------
   const stream = sources[sources.length - 1];
@@ -139,21 +129,22 @@ setTimeout(async () => {
   await new Promise((r) => setTimeout(r, 0));
   check('re-renders never stack hint nodes', d.querySelectorAll('#empty-hint').length === 1,
     `${d.querySelectorAll('#empty-hint').length} nodes`);
-  check('hint text is not duplicated by re-renders',
-    (text('#empty-hint').match(/FLYBASIS_API_KEY/g) || []).length === 1,
-    `${(text('#empty-hint').match(/FLYBASIS_API_KEY/g) || []).length} occurrences`);
+  check('message copy is not resurrected by re-renders', text('#empty-msg') === '',
+    text('#empty-msg').slice(0, 48) + '…');
+  check('headline survives re-renders unchanged', text('#empty h3') === 'Something went wrong', text('#empty h3'));
 
-  // ---- 3. provider answered but failed: its error, not key advice --------
+  // ---- 3. provider answered but failed: same minimal message --------------
   await runSearchWith({
     notice: null,
     providers: [{ provider: 'Flybasis', ok: false, cached: false, latency_ms: 6000, count: 0,
                   error: 'Timeout: Flybasis did not respond within 6s' }],
   });
-  check('an upstream failure is shown verbatim', text('#empty-msg') === 'Timeout: Flybasis did not respond within 6s', text('#empty-msg'));
+  check('an error shows the same minimal message', text('#empty h3') === 'Something went wrong', text('#empty h3'));
+  check('no raw upstream error leaked into the card', text('#empty-msg') === '', text('#empty-msg').slice(0, 48) + '…');
   check('no key hunt when the credential is not the problem', !visible('#empty-hint'),
     visible('#empty-hint') ? 'hint wrongly shown' : 'correctly absent');
 
-  // ---- 4. live search, genuinely no availability ------------------------
+  // ---- 4. live search, genuinely no availability --------------------------
   await runSearchWith({
     live: true, live_providers: ['Flybasis'], notice: null,
     providers: [{ provider: 'Flybasis', ok: true, cached: false, latency_ms: 900, count: 0, error: null }],
@@ -162,13 +153,13 @@ setTimeout(async () => {
   check('and is not told a provider is missing', text('#empty-msg').includes('Try nearby dates'), text('#empty-msg').slice(0, 60));
   check('no credential hint here either', !visible('#empty-hint'));
 
-  // ---- 5. upstream copy can never become markup -------------------------
+  // ---- 5. upstream copy can never become markup ---------------------------
   const evil = 'Disabled: see <img src=x onerror="alert(1)"> at javascript:alert(1) — Set the FLYBASIS_API_KEY environment variable';
   await runSearchWith({ notice: `<b>bold</b> ${evil}`, providers: [{ provider: 'Flybasis', ok: false, error: evil, cached: false, latency_ms: 0, count: 0 }] });
   check('an upstream error renders as text, not markup', d.querySelector('#empty img') === null,
     d.querySelector('#empty img') ? 'img element injected' : 'no injected element');
   check('no <b> element from the notice', d.querySelector('#empty-msg b') === null);
-  check('the raw string is still readable', text('#empty-msg').includes('<img src=x'));
+  check('the message stays minimal even with hostile copy', text('#empty-msg') === '', text('#empty-msg').slice(0, 48) + '…');
 
   check('no JS errors while rendering the empty states', errors.length === 0, errors.slice(0, 2).join(' | '));
 

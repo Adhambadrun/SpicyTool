@@ -282,30 +282,39 @@ departure date"`.
 
 ## Verifying live, on GitHub Actions
 
-This sandbox has no general outbound internet (SNI-filtered allowlist), so the
-`--live` check cannot run from here. A GitHub Actions runner *does* have full
-access, and `ci/live-check.workflow.yml` runs the whole suite there — including
-the real call to `agentsearch.p.rapidapi.com`.
+This sandbox has no general outbound internet (SNI-filtered allowlist) and no
+Flybasis credential, so the `--live` check cannot run (or be faked) from here.
+A GitHub Actions runner *does* have full access, and the workflow at
+`ci/live-check.workflow.yml` runs the whole suite — on every push, weekly, and
+manually from the Actions tab — including the real calls to
+`enterprise-api.flybasis.com` and, if configured, `agentsearch.p.rapidapi.com`.
 
-The agent cannot commit it into `.github/workflows/` (GitHub blocks Apps
-without the `workflows` permission), so install it once:
+The workflow never fabricates live results. Each live gate is credential-gated:
+it is **skipped** while its secret is absent and runs *for real* the moment the
+secret exists:
 
 ```bash
-# 1. Add the key as an encrypted secret — NEVER commit it (this repo is public):
-#    Settings -> Secrets and variables -> Actions -> New repository secret
-#    Name: AGENTSEARCH_API_KEY
-
-# 2. Move the workflow into place
-mkdir -p .github/workflows
-git mv ci/live-check.workflow.yml .github/workflows/live-check.yml
-git commit -m "Add AgentSearch live check" && git push
-
-# 3. Actions tab -> "AgentSearch live check" -> Run workflow
+# Settings -> Secrets and variables -> Actions -> New repository secret
+#    Name: FLYBASIS_API_KEY      (REQUIRED for live award results — token issued
+#                                 to you by Flybasis; see FLYBASIS_GO_LIVE.md)
+#    Name: AGENTSEARCH_API_KEY   (OPTIONAL — RapidAPI key for web context only;
+#                                 never an award feed)
 ```
 
-The live steps skip (rather than fail) when the secret is absent, so forks stay
-green. With the secret set, the job fails loudly on a rejected key, an exhausted
-quota, or upstream schema drift — an ongoing contract test against the real API.
+**Install it (one-time, owner only):** GitHub refuses pushes from a GitHub App
+without the `workflows` permission, so the App cannot move this file into
+`.github/workflows/` itself:
+
+```bash
+mkdir -p .github/workflows
+git mv ci/live-check.workflow.yml .github/workflows/live-check.yml
+git commit -m "Install live-check workflow" && git push
+```
+
+With a secret set, the gate fails loudly on a rejected key, an exhausted quota,
+or upstream schema drift — an ongoing contract test against the real API. The
+local, keyless suite (all offline gates above plus the Flybasis mock socket) is
+what runs green in CI before any live credential exists.
 
 ## Verifying the AgentSearch integration
 
@@ -334,7 +343,8 @@ dev-only — the app never imports it.
 | `AWARDTOOL_API_KEY` | *(blank)* | enables the AwardTool adapter |
 | `POINTSPATH_API_KEY` | *(blank)* | enables the PointsPath adapter |
 | `POINTSYEAH_API_KEY` | *(blank)* | enables the PointsYeah adapter |
-| `FLYBASIS_API_KEY` | *(blank)* | enables the Flybasis adapter (Socket.IO award feed, see `Flybasis-index.md`). Issued **by Flybasis** to the operator — see [`FLYBASIS_GO_LIVE.md`](FLYBASIS_GO_LIVE.md) for the exact steps, verification, and a copy-paste prompt for the next chat. |
+| `SEATS_AERO_API_KEY` | *(blank)* | enables the **Seats.aero** partner API (`SPICYTOOL_PROVIDERS=SeatsAero`): cached award availability for ~20 mileage programs — points, seats, cabins, airlines, flights. Key from [seats.aero/settings](https://seats.aero/settings) (API tab; Pro account, up to 1,000 calls/day, non-commercial unless you have a written agreement). `SEATS_AERO_BASE_URL` overrides the host for tests/mocks. |
+| `FLYBASIS_API_KEY` | *(blank)* | enables the Flybasis adapter (Socket.IO award feed, see `Flybasis-index.md`). Issued **by Flybasis** to the operator — see [`FLYBASIS_GO_LIVE.md`](FLYBASIS_GO_LIVE.md) for the exact steps, verification, and a copy-paste prompt for the next chat. |\n| `FLYBASIS_SUPABASE_URL` · `FLYBASIS_SUPABASE_ANON_KEY` · `FLYBASIS_REFRESH_TOKEN` (or `FLYBASIS_EMAIL`+`FLYBASIS_PASSWORD`) | *(blank)* | **Session mode (advanced):** used only when `FLYBASIS_API_KEY` is blank. Same feed via your own Flybasis account session — Supabase exchange → access token → socket auth. Consumes your account quota and may conflict with Flybasis ToS; see [`FLYBASIS_GO_LIVE.md`](FLYBASIS_GO_LIVE.md) § Option B. Never commit these. |
 | `AGENTSEARCH_API_KEY` | *(blank)* | RapidAPI key for the [AgentSearch](https://rapidapi.com) web-search API. **Web context only — not an award feed.** When set it becomes the preferred backend for the "Web context" panel (`/api/v2/context`), with the keyless FlyBasis Search MCP connector as automatic fallback. If `FLYBASIS_API_KEY` is set to a RapidAPI-shaped key (`…msh…jsn…`) it is used here automatically and is **not** dialled at the Flybasis award socket. |
 | `AGENTSEARCH_PROVIDER` | `brave` | SERP provider AgentSearch proxies (`brave` or `serper`) |
 | `AGENTSEARCH_MCP_URL` | *(blank)* | optional MCP fallback, e.g. `https://agentsearch-mcp.vercel.app/mcp` — same 3-tool surface as the keyless FlyBasis connector |

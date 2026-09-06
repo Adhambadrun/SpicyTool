@@ -68,9 +68,17 @@ caches per query hash.
   (`SEATSFEED_API_KEY=…`). Adapters never hardcode credentials and never
   forge headers — bearer/API-key schemes only, with a single honest
   self-identifying User-Agent.
-- **Authorized commercial option**: [Seats.aero](https://seats.aero) offers a
-  licensed **Pro API** for award availability — a natural fit for this
-  adapter pattern once you hold a Pro key.
+- **Live option without Flybasis access**: the repo ships
+  `providers/seats_aero.py` — a full adapter for the [Seats.aero partner
+  API](https://developers.seats.aero) (cached award availability, ~20 mileage
+  programs; `SEATS_AERO_API_KEY` from the API tab of your Seats.aero Pro
+  account, `Partner-Authorization: Bearer`, up to 1,000 calls/day,
+  non-commercial unless you have written agreement). Enable with
+  `SPICYTOOL_PROVIDERS=SeatsAero` (or `all`). It is **not** in the default
+  relay: the production default stays Flybasis, so nothing is silently mixed.
+- **Authorized commercial option**: [Seats.aero](https://seats.aero) also
+  offers licensed **Pro API** access for award availability — a natural fit
+  for this adapter pattern once you hold a key.
 - **Non-HTTP transports**: the pattern is not limited to REST. The `Flybasis`
   adapter (`providers/flybasis.py`) implements the same contract over a
   Socket.IO **WebSocket** stream documented in `Flybasis-index.md` (at the
@@ -85,7 +93,12 @@ caches per query hash.
   fine without them. Its normalization is pure `normalize_payload(raw, q)`,
   covered by the fixture-driven assertions 17–22 in `tests_integration.py`.
   Credential gating is identical to the HTTP adapters: inert until
-  `FLYBASIS_API_KEY` is set, clear disabled reason otherwise.
+  `FLYBASIS_API_KEY` is set, clear disabled reason otherwise. Second credential
+  path: `providers/flybasis_session.py` exchanges the operator's own Flybasis
+  account session (Supabase `auth/v1/token` — refresh token or email/password)
+  for the socket's `auth={"token": …}`, caches it, persists Supabase's rotated
+  refresh token, and reads `maxSearchesRemaining` from `user.whoami`. Used only
+  when the API key is blank; see `FLYBASIS_GO_LIVE.md` § Option B.
 - **Currencies**: use `providers.enrich.to_usd()` so cash fees normalize to
   USD before dedupe compares them.
 - **Tests**: add a fixture-driven case to `tests_integration.py` following
