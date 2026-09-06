@@ -117,7 +117,15 @@ button{font-family:inherit}
 .date-field{cursor:pointer}
 .date-val{font-size:14px;font-weight:500;color:#fff;display:flex;align-items:center;gap:8px;flex:1;min-width:0}
 
-/* advanced toggles — code 7/12: pt-4 border-t-[#1F1F24] text-xs */
+/* advanced toggles — code 7/12: pt-4 border-t-[#1F1F24] text-xs (dashed divider, round check pills) */
+.adv{margin-top:20px;padding-top:18px;border-top:1px dashed #2A2A31;display:flex;flex-direction:column;gap:14px;font-size:14px;color:#D1D1D6}
+.adv-opt{display:inline-flex;align-items:center;gap:12px;cursor:pointer;background:none;border:none;padding:0;color:#8E8E93;font:inherit;text-align:left;transition:color .15s}
+.adv-opt:hover{color:#D1D1D6}
+.adv-opt.on{color:#fff}
+.adv-dot{width:22px;height:22px;border-radius:9999px;border:2px solid #4A4A52;background:transparent;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,border-color .15s}
+.adv-dot svg{width:12px;height:12px;opacity:0;transition:opacity .15s}
+.adv-opt.on .adv-dot{background:var(--brand);border-color:var(--brand);color:#fff}   /* both toggles: brand red when checked */
+.adv-opt.on .adv-dot svg{opacity:1}
 /* search CTA — Search sits on the RIGHT-HAND side of the card (image-1 style); full-width pill on mobile */
 .cta{width:100%;padding:12px 40px;background:var(--brand);color:#fff;border:none;border-radius:9999px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 10px 15px -3px rgba(225,29,46,.3);transition:background .15s,transform .1s;align-self:flex-end;margin-top:20px}
 .cta:hover{background:var(--brand-hover)}
@@ -126,8 +134,7 @@ button{font-family:inherit}
 .cta:disabled{opacity:.5;cursor:wait}
 
 /* promo card — code 12: .promo-card-glow border-[#232328] rounded-2xl p-7 */
-.promo{margin-top:24px;width:100%;border:1px solid #232328;border-radius:16px;padding:28px;position:relative;overflow:hidden;background:radial-gradient(circle at 85% 100%,rgba(225,29,46,.12) 0%,transparent 65%),#141417}
-@media(min-width:768px){.promo{width:60%}}
+.promo{margin-top:24px;width:100%;border:1px solid #232328;border-radius:16px;padding:28px;position:relative;overflow:hidden;background:radial-gradient(circle at 85% 100%,rgba(225,29,46,.12) 0%,transparent 65%),#141417}   /* same width as the search card */
 .promo h2{font-size:24px;line-height:1.2;font-weight:700;color:#fff;margin-bottom:24px;max-width:384px;position:relative;z-index:1}
 @media(min-width:768px){.promo h2{font-size:30px}}
 .promo-cta{padding:10px 24px;border-radius:9999px;background:var(--brand);color:#fff;font-size:14px;font-weight:600;border:none;cursor:pointer;box-shadow:0 10px 15px -3px rgba(225,29,46,.25);position:relative;z-index:1;transition:background .15s}
@@ -165,6 +172,10 @@ button{font-family:inherit}
 .dp-chip:hover{background:#282830;color:#fff}
 .dp-chip.on{background:rgba(225,29,46,.15);border-color:rgba(225,29,46,.4);color:#E11D2E;font-weight:600}
 .dp-chip.on:hover{background:rgba(225,29,46,.22)}
+.dp-chip[disabled]{opacity:.4;cursor:default}
+.dp-chip[disabled]:hover{background:#202025;color:#8E8E93}
+.dp-flex-hint{align-self:center;font-size:11px;color:#8E8E93;white-space:nowrap}
+.dp-day.flex{box-shadow:inset 0 0 0 1px rgba(225,29,46,.45);color:#fff}
 .dp-months{margin-top:16px}
 .dp-nav{display:grid;grid-template-columns:auto 1fr 1fr auto;align-items:center;gap:10px;margin-bottom:8px}
 .dp-month{font-size:12px;font-weight:600;color:#fff;text-align:center;white-space:nowrap}
@@ -230,7 +241,7 @@ button{font-family:inherit}
 .bt-published{color:#CBD5E1;background:rgba(148,163,184,.12);border-color:rgba(148,163,184,.35)}
 .bt-consolidator{color:#F9A8D4;background:rgba(236,72,153,.12);border-color:rgba(236,72,153,.35)}
 .bt-basis{color:#FCA5A5;background:rgba(225,29,46,.12);border-color:rgba(225,29,46,.4)}
-/* passengers + flexibility stepper panels */
+/* passengers stepper panel */
 .pax-panel{min-width:300px}
 .pax-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 8px}
 .pax-row + .pax-row{border-top:1px solid var(--pop-border)}
@@ -241,11 +252,6 @@ button{font-family:inherit}
 .pax-step:hover{border-color:#4A4F5C}
 .pax-step[disabled]{opacity:.35;cursor:default}
 .pax-n{min-width:18px;text-align:center;font-size:14px;font-weight:600;color:#fff;font-family:ui-monospace,monospace}
-.flex-panel{min-width:280px;padding:4px}
-.flex-ctl{display:flex;align-items:center;justify-content:center;gap:14px;padding:12px 8px 8px}
-.flex-val{min-width:92px;text-align:center;font-size:16px;font-weight:700;color:#fff}
-.flex-val small{display:block;font-size:10.5px;font-weight:500;color:#8E97A8;letter-spacing:.04em;text-transform:uppercase}
-.flex-note{font-size:11.5px;color:#8E97A8;text-align:center;padding:0 10px 10px}
 /* support button */
 a.mp-btn{text-decoration:none}
 
@@ -361,6 +367,10 @@ a.mp-btn{text-decoration:none}
 .pp-airline{width:28px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
 .pp-taxes{color:#9FA9BA}
 .pp-note{font-size:11px;color:#838C9E;margin-top:8px}
+/* live search status line (above skeletons) */
+.live-status{display:flex;align-items:center;gap:10px;font-size:13px;color:#8E97AA;padding:2px 4px 6px}
+.live-spin{width:14px;height:14px;border-radius:9999px;border:2px solid #2A2E3A;border-top-color:#34D399;animation:spin .8s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
 /* skeletons + empty */
 .sk-card{background:var(--r-card);border:1px solid var(--r-border);border-radius:12px;padding:20px;display:flex;gap:24px;align-items:center;flex-wrap:wrap}
 .sk-block{background:#1D2028;border-radius:8px;animation:pulse 1.6s ease-in-out infinite}
@@ -601,9 +611,6 @@ a.brand:hover .wordmark{opacity:.9}
         <button type="button" class="cabin-btn" id="pax-btn"><b id="pax-val">1 Passenger</b>
           <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 9l-7 7-7-7"/></svg>
         </button>
-        <button type="button" class="cabin-btn" id="flex-btn" title="Search nearby dates — fans out one search per day, ± up to 3 days"><b id="flex-val">Exact Dates</b>
-          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 9l-7 7-7-7"/></svg>
-        </button>
       </div>
 
       <div class="inputs-grid">
@@ -626,6 +633,17 @@ a.brand:hover .wordmark{opacity:.9}
           <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
           <span class="date-val" id="date-val">Sep 16, 2026</span>
         </div>
+      </div>
+
+      <div class="adv" id="adv-toggles">
+        <button type="button" class="adv-opt on" id="adv-hc" role="checkbox" aria-checked="true" title="Include hidden-city and upgrade-award fares in the results">
+          <span class="adv-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
+          <span>Check hidden city and upgrade fares.</span>
+        </button>
+        <button type="button" class="adv-opt hc-super" id="adv-super" role="checkbox" aria-checked="false" title="Deeper hidden-city sweep — also tries one extra beyond-point per route">
+          <span class="adv-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
+          <span>Enable super hc mode</span>
+        </button>
       </div>
 
       <button type="button" class="cta" id="btn-search">Search</button>
@@ -1156,7 +1174,8 @@ const esc = (s) => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;","
 const state = {
   origins: ["CAI"], destinations: ["LHR"],
   date: "2026-09-16", returnDate: null, cabin: "business",
-  pax: { adults: 1, children: 0, infants: 0 }, flex: 0, trip: "oneway",
+  pax: { adults: 1, children: 0, infants: 0 }, flex: 0, retFlex: 0, trip: "oneway",
+  hc: true, superHc: false,   /* advanced toggles — include hidden-city/upgrade fares; super hc = deeper hidden-city sweep */   /* flex/retFlex = ±N-day search window around departure/return (not stay length) */
   results: [], routes: [], streaming: false, sort: "best",
   filters: {
     stops:"any", airline:"", ticket:"", program:"",
@@ -1164,6 +1183,7 @@ const state = {
     depTime:"any", arrTime:"any", duration:"any", dates:"any"
   },
   expanded: null, ppop: null, calendar: [], lastQuery: null, providers: [],
+  live: true, liveProviders: [], notice: null, searchFailed: false,   /* live-provider status from the v2 stream */
   itineraryId: null,          /* the result whose itinerary is open — also the #itinerary/<id> link target */
 };
 /* ---- result shape accessors (one-way AwardResult | round-trip pair) ---- */
@@ -1321,7 +1341,7 @@ function openDP(){
   const sel = new Date(state.date + "T12:00:00");
   dpMonth = new Date(sel.getFullYear(), sel.getMonth(), 1);
   dpArm = state.trip === "roundtrip" ? "ret" : "dep";
-  dpSnapshot = { date: state.date, returnDate: state.returnDate, flex: state.flex };
+  dpSnapshot = { date: state.date, returnDate: state.returnDate, flex: state.flex, retFlex: state.retFlex };
   const el = document.createElement("div");
   el.className = "dp"; el.id = "dp";
   $("f-date").appendChild(el);
@@ -1352,6 +1372,8 @@ function dpGridCells(y, m){
     if (id === state.date) cls.push("sel");
     else if (state.trip === "roundtrip" && id === state.returnDate) cls.push("ret");
     else if (+dt === +today) cls.push("today");
+    /* ring the extra dates the ± window will also search (before AND after the selected day) */
+    if (id !== state.date && id !== state.returnDate && (flexDates().includes(id) || retFlexDates().includes(id))) cls.push("flex");
     cells += `<button type="button" class="${cls.join(" ")}" data-date="${id}">${d}</button>`;
   }
   const trailing = 7 * Math.ceil((first + dim) / 7) - (first + dim);
@@ -1367,15 +1389,18 @@ function drawDP(){
   const CAL_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>`;
   const ARROW_L = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>`;
   const ARROW_R = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>`;
+  /* ±N chips = search-window flexibility, NOT trip length: "Oct 1 + ±2 days" searches Sep 29 … Oct 3 (5 dates). */
   const depChips = `
       <div class="dp-chips">
-        <button type="button" class="dp-chip ${state.flex === 1 ? "on" : ""}" data-flex="1">± 1 day</button>
-        <button type="button" class="dp-chip ${state.flex === 2 ? "on" : ""}" data-flex="2">± 2 day</button>
+        <button type="button" class="dp-chip ${state.flex === 1 ? "on" : ""}" data-flex="1" title="Also search 1 day before and 1 day after departure">± 1 day</button>
+        <button type="button" class="dp-chip ${state.flex === 2 ? "on" : ""}" data-flex="2" title="Also search 2 days before and 2 days after departure">± 2 days</button>
+        ${state.flex > 0 ? `<span class="dp-flex-hint">${flexRangeLabel(sel, state.flex)}</span>` : ""}
       </div>`;
   const retChips = rt ? `
       <div class="dp-chips">
-        <button type="button" class="dp-chip ${ret && ret === shiftISO(sel, 1) ? "on" : ""}" data-ret="1">± 1 day</button>
-        <button type="button" class="dp-chip ${ret && ret === shiftISO(sel, 2) ? "on" : ""}" data-ret="2">± 2 day</button>
+        <button type="button" class="dp-chip ${state.retFlex === 1 ? "on" : ""}" data-ret="1" title="Also search 1 day before and 1 day after return" ${ret ? "" : "disabled"}>± 1 day</button>
+        <button type="button" class="dp-chip ${state.retFlex === 2 ? "on" : ""}" data-ret="2" title="Also search 2 days before and 2 days after return" ${ret ? "" : "disabled"}>± 2 days</button>
+        ${ret && state.retFlex > 0 ? `<span class="dp-flex-hint">${flexRangeLabel(ret, state.retFlex)}</span>` : ""}
       </div>` : "";
   const depCol = `
     <div>
@@ -1434,20 +1459,20 @@ function drawDP(){
   el.querySelectorAll("[data-flex]").forEach(b => b.addEventListener("click", e => {
     e.stopPropagation();
     const v = +b.dataset.flex;
-    state.flex = state.flex === v ? 0 : v;      /* toggle ±1 / ±2 search flexibility */
-    syncFlexLabel(); drawDP();
+    state.flex = state.flex === v ? 0 : v;      /* toggle ±1 / ±2 day window around the departure date */
+    syncDate(); drawDP();
   }));
   el.querySelectorAll("[data-ret]").forEach(b => b.addEventListener("click", e => {
     e.stopPropagation();
+    if (!state.returnDate) return;
     const v = +b.dataset.ret;
-    const target = shiftISO(state.date, v);
-    state.returnDate = (state.returnDate === target) ? null : target;   /* toggle */
+    state.retFlex = state.retFlex === v ? 0 : v;   /* toggle ±1 / ±2 day window around the return date (never changes the date itself) */
     dpArm = "ret"; syncDate(); drawDP();
   }));
   el.querySelectorAll("[data-clear]").forEach(b => b.addEventListener("click", e => {
     e.stopPropagation();
-    if (b.dataset.clear === "dep"){ state.date = todayISO(); state.returnDate = null; dpArm = "ret"; }
-    else { state.returnDate = null; dpArm = "ret"; }
+    if (b.dataset.clear === "dep"){ state.date = todayISO(); state.returnDate = null; state.retFlex = 0; dpArm = "ret"; }
+    else { state.returnDate = null; state.retFlex = 0; dpArm = "ret"; }
     syncDate(); drawDP();
   }));
   el.querySelectorAll("[data-nav]").forEach(b => b.addEventListener("click", e => {
@@ -1457,8 +1482,8 @@ function drawDP(){
   el.querySelectorAll("[data-dp]").forEach(b => b.addEventListener("click", e => {
     e.stopPropagation();
     if (b.dataset.dp === "cancel" && dpSnapshot){
-      state.date = dpSnapshot.date; state.returnDate = dpSnapshot.returnDate; state.flex = dpSnapshot.flex;
-      syncDate(); syncFlexLabel();
+      state.date = dpSnapshot.date; state.returnDate = dpSnapshot.returnDate; state.flex = dpSnapshot.flex; state.retFlex = dpSnapshot.retFlex || 0;
+      syncDate();
     } else {
       syncDate();
     }
@@ -1469,14 +1494,19 @@ function syncPaxLabel(){
   const n = paxTotal(), inf = state.pax.infants;
   $("pax-val").textContent = n === 1 && !inf ? "1 Passenger" : `${n + inf} Passenger${n + inf === 1 ? "" : "s"}`;
 }
-function syncFlexLabel(){
-  $("flex-val").textContent = state.flex > 0 ? `Flexibility ±${state.flex} Days` : "Exact Dates";
+/* "Oct 1 + ±2 days" => "Sep 29 – Oct 3" (the window that will actually be searched) */
+function flexRangeLabel(iso, n){
+  if (!iso || !(n > 0)) return "";
+  return `${shortDate(shiftISO(iso, -n))} – ${shortDate(shiftISO(iso, n))}`;
 }
 function syncDate(){
-  const d = fmtDate(state.date);
-  $("date-val").textContent = state.trip === "roundtrip"
-    ? `${shortDate(state.date)} → ${state.returnDate ? shortDate(state.returnDate) : "Add return"}`
-    : d;
+  const dep = state.flex > 0 ? `${shortDate(state.date)} ±${state.flex}` : (state.trip === "roundtrip" ? shortDate(state.date) : fmtDate(state.date));
+  const ret = state.returnDate ? (state.retFlex > 0 ? `${shortDate(state.returnDate)} ±${state.retFlex}` : shortDate(state.returnDate)) : "Add return";
+  $("date-val").textContent = state.trip === "roundtrip" ? `${dep} → ${ret}` : dep;
+  const parts = [];
+  if (state.flex > 0) parts.push(`Departure: searching ${flexRangeLabel(state.date, state.flex)}`);
+  if (state.trip === "roundtrip" && state.returnDate && state.retFlex > 0) parts.push(`Return: searching ${flexRangeLabel(state.returnDate, state.retFlex)}`);
+  $("f-date").title = parts.join(" · ");
 }
 
 /* ============================ generic dropdowns ============================ */
@@ -1512,6 +1542,23 @@ function openDD(host, items, onPick){
 }
 
 /* ============================ search ============================ */
+/* advanced toggles (code 12): hidden-city/upgrade fares + super hc mode — persisted, sent with every search */
+const ADV_KEY = "st_adv";
+function advQS(){ return `&hidden_city=${state.hc ? 1 : 0}&super_hc=${state.superHc ? 1 : 0}`; }
+function syncAdvToggles(){
+  const hc = $("adv-hc"), su = $("adv-super"); if (!hc || !su) return;
+  hc.classList.toggle("on", !!state.hc); hc.setAttribute("aria-checked", String(!!state.hc));
+  su.classList.toggle("on", !!state.superHc); su.setAttribute("aria-checked", String(!!state.superHc));
+  su.disabled = !state.hc; su.style.opacity = state.hc ? "" : ".45";   /* super hc needs hidden-city fares on */
+  try { localStorage.setItem(ADV_KEY, JSON.stringify({ hc: !!state.hc, superHc: !!state.superHc })); } catch {}
+}
+function loadAdvToggles(){
+  try {
+    const v = JSON.parse(localStorage.getItem(ADV_KEY) || "null");
+    if (v){ state.hc = v.hc !== false; state.superHc = !!v.superHc && state.hc; }
+  } catch {}
+  syncAdvToggles();
+}
 function setTrip(t){
   state.trip = t;
   $("tab-round").classList.toggle("active", t === "roundtrip");
@@ -1530,161 +1577,102 @@ function startSearch(){
   if (state.trip === "roundtrip" && !state.returnDate) return searchError("Select a return date (open the date picker).");
   runSearch();
 }
-function flexDates(){
-  /* ±N days around the selected departure (0 => just the selected date) */
-  const n = Math.max(0, Math.min(3, state.flex|0));
+function flexDates(base = state.date, flex = state.flex){
+  /* Flexibility window: the selected date plus N days BEFORE and N days AFTER it
+     (0 => just the selected date). e.g. Oct 1 with ±2 => Sep 29, Sep 30, Oct 1, Oct 2, Oct 3.
+     This is a search window only — it never changes how long the trip is. */
+  const n = Math.max(0, Math.min(3, flex|0));
   const out = [];
   for (let i = -n; i <= n; i++){
-    const d = shiftISO(state.date, i);
+    const d = shiftISO(base, i);
     if (d >= todayISO()) out.push(d);
   }
   return out;
+}
+function retFlexDates(){
+  if (state.trip !== "roundtrip" || !state.returnDate) return [];
+  /* return window, clipped so a return is never before its departure */
+  return flexDates(state.returnDate, state.retFlex).filter(d => d >= state.date);
 }
 function todayISO(){
   const t = new Date(); t.setHours(12,0,0,0);
   return t.toISOString().slice(0, 10);
 }
 function paxTotal(){ return Math.max(1, (state.pax.adults|0) + (state.pax.children|0)); }
-/* live data: v2 aggregation (providers/ + local_engine) is the source of truth — real external APIs when credentials are set, otherwise chart-accurate local engine. v1 is fallback. */
+/* LIVE DATA ONLY: v2 aggregation streams results from the real, credentialed providers (Flybasis, AwardTool,
+   PointsYeah, PointsPath). The modeled v1 engine is never used as a fallback — if no live provider answers,
+   the user sees an honest empty state instead of sample itineraries. */
+function noteProviders(d){
+  if (!d) return;
+  if (d.providers && Array.isArray(d.providers) && d.providers.length && typeof d.providers[0] === "object") state.providers = d.providers;
+  if (typeof d.live === "boolean") state.live = d.live;
+  if (Array.isArray(d.live_providers)) state.liveProviders = d.live_providers;
+  if ("notice" in d) state.notice = d.notice || null;
+}
+function absorbResults(list){
+  if (!list || !list.length) return false;
+  for (const r of list){
+    for (const leg of (legRet(r) ? [legOut(r), legRet(r)] : [r])){
+      if (!leg || !leg.route) continue;
+      AIRPORT_META[leg.route.origin] = AIRPORT_META[leg.route.origin] || { code:leg.route.origin, city:leg.route.origin };
+      AIRPORT_META[leg.route.destination] = AIRPORT_META[leg.route.destination] || { code:leg.route.destination, city:leg.route.destination };
+    }
+  }
+  const seen = new Set(state.results.map(r => r.id));
+  for (const r of list){ if (!seen.has(r.id)){ seen.add(r.id); state.results.push(r); } }
+  return true;
+}
+function searchOneDate(date){
+  /* one v2 SSE stream for a single departure date; resolves when the server sends `complete` (or fails) */
+  const rt = state.trip === "roundtrip" && state.returnDate;
+  const qsRT = rt ? `&return_date=${state.returnDate}&return_flex=${Math.max(0, Math.min(3, state.retFlex|0))}` : "";
+  const qs = `origin=${state.origins.join(",")}&destination=${state.destinations.join(",")}&date=${date}&cabin=${state.cabin}&passengers=${paxTotal()}&max_stops=1${qsRT}${advQS()}`;
+  return new Promise(resolve => {
+    let es;
+    try { es = new EventSource(`/api/v2/search/stream?${qs}${authQS()}`); } catch { resolve(false); return; }
+    let gotStart = false, finished = false;
+    const finish = ok => { if (finished) return; finished = true; clearTimeout(startTimer); clearTimeout(hardTimer); try { es.close(); } catch {} resolve(ok); };
+    const startTimer = setTimeout(() => { if (!gotStart) finish(false); }, 8000);           /* server unreachable */
+    const hardTimer  = setTimeout(() => finish(gotStart), 45000);                             /* never hang the UI */
+    es.addEventListener("start", e => {
+      gotStart = true;
+      try { const d = JSON.parse(e.data); noteProviders(d); state.routes = (d.query && d.query.routes) || state.routes; } catch {}
+      renderResults();
+    });
+    es.addEventListener("data", e => {
+      gotStart = true;
+      try {
+        const d = JSON.parse(e.data);
+        if (absorbResults(d.results)){ sortResults(); renderResults(); renderFilterBar(); }
+        noteProviders(d);
+      } catch {}
+    });
+    es.addEventListener("complete", e => {
+      try { const d = JSON.parse(e.data); noteProviders(d); absorbResults(d.results); } catch {}
+      finish(true);
+    });
+    es.addEventListener("error", () => { if (!gotStart) finish(false); /* after start: EventSource retries until complete */ });
+  });
+}
 async function runSearch(){
   closeTT(); closeDP(); closeDD();
   showResultsView();
   state.streaming = true; state.results = []; state.routes = []; state.expanded = null; state.ppop = null;
-  state.itineraryId = null;
+  state.itineraryId = null; state.notice = null; state.searchFailed = false;
   state.filters = {
     stops:"any", airline:"", ticket:"", program:"",
     airports:"", cabinF:"any", alliance:"any", premium:"any",
     depTime:"any", arrTime:"any", duration:"any", dates:"any"
   };
-  state.lastQuery = { origins:[...state.origins], destinations:[...state.destinations], date:state.date, cabin:state.cabin, trip:state.trip, returnDate:state.returnDate, flex:state.flex };
+  state.lastQuery = { origins:[...state.origins], destinations:[...state.destinations], date:state.date, cabin:state.cabin, trip:state.trip, returnDate:state.returnDate, flex:state.flex, retFlex:state.retFlex, hc:state.hc, superHc:state.superHc };
   renderResults(); renderFilterBar();
-  if (state.flex > 0){ await flexSearch(); return; }
-  const qsBase = `origin=${state.origins.join(",")}&destination=${state.destinations.join(",")}&date=${state.date}&cabin=${state.cabin}&passengers=${paxTotal()}&max_stops=1`;
-  const qsRT = (state.trip === "roundtrip" && state.returnDate) ? `&return_date=${state.returnDate}` : "";
-  // try v2 stream first (real providers + local engine)
-  const tryV2 = () => new Promise((resolve, reject) => {
-    const urlV2 = `/api/v2/search/stream?${qsBase}${authQS()}`;
-    let es;
-    try { es = new EventSource(urlV2); } catch (e){ reject(e); return; }
-    let gotData = false;
-    let startTimer = setTimeout(() => { /* if no start in 4s, fallback to v1 */ if (!gotData){ es.close(); reject(new Error("v2 timeout")); } }, 4000);
-    es.addEventListener("start", e => {
-      clearTimeout(startTimer);
-      gotData = true;
-      try {
-        const d = JSON.parse(e.data);
-        state.providers = d.providers || d.query?.providers || [];
-        state.routes = (d.query && d.query.routes) || [];
-      } catch {}
-    });
-    es.addEventListener("data", e => {
-      gotData = true;
-      try {
-        const d = JSON.parse(e.data);
-        if (d.results && d.results.length){
-          for (const r of d.results){
-            for (const leg of (legRet(r) ? [legOut(r), legRet(r)] : [r])){
-              AIRPORT_META[leg.route.origin] = AIRPORT_META[leg.route.origin] || { code:leg.route.origin, city:leg.route.origin };
-              AIRPORT_META[leg.route.destination] = AIRPORT_META[leg.route.destination] || { code:leg.route.destination, city:leg.route.destination };
-            }
-          }
-          state.results = state.results.concat(d.results);
-          sortResults(); renderResults(); renderFilterBar();
-        }
-        if (d.providers) state.providers = d.providers;
-      } catch {}
-    });
-    es.addEventListener("complete", e => {
-      clearTimeout(startTimer);
-      try {
-        const d = JSON.parse(e.data);
-        state.streaming = false;
-        if (d.results && d.results.length) state.results = d.results;
-        if (d.providers) state.providers = d.providers;
-        sortResults(); renderResults(); renderFilterBar();
-        persistSearch(); loadCalendar();
-      } catch { state.streaming = false; renderResults(); }
-      es.close(); resolve(true);
-    });
-    es.addEventListener("error", () => {
-      if (!gotData){
-        clearTimeout(startTimer);
-        es.close(); reject(new Error("v2 error"));
-      }
-      // otherwise let it retry; complete will close
-    });
-  });
-
-  const tryV1 = () => {
-    const qs = `${qsBase}${qsRT}`;
-    const url = `/api/v1/search/stream?${qs}${authQS()}`;
-    const es = new EventSource(url);
-    es.addEventListener("start", e => {
-      try { const d = JSON.parse(e.data); state.providers = d.providers; state.routes = (d.query && d.query.routes) || []; } catch {}
-    });
-    es.addEventListener("program", e => {
-      try {
-        const d = JSON.parse(e.data);
-        if (d.results && d.results.length){
-          for (const r of d.results){
-            for (const leg of (legRet(r) ? [legOut(r), legRet(r)] : [r])){
-              AIRPORT_META[leg.route.origin] = AIRPORT_META[leg.route.origin] || { code:leg.route.origin, city:leg.route.origin };
-              AIRPORT_META[leg.route.destination] = AIRPORT_META[leg.route.destination] || { code:leg.route.destination, city:leg.route.destination };
-            }
-          }
-          state.results = state.results.concat(d.results);
-          sortResults(); renderResults();
-        }
-      } catch {}
-    });
-    es.addEventListener("complete", e => {
-      try {
-        const d = JSON.parse(e.data);
-        state.streaming = false;
-        if (d.results && d.results.length) state.results = d.results;
-        sortResults(); renderResults(); renderFilterBar();
-        persistSearch(); loadCalendar();
-      } catch { state.streaming = false; }
-      es.close();
-    });
-    es.addEventListener("error", () => { /* retry until complete */ });
-  };
-
-  try { await tryV2(); }
-  catch { tryV1(); }
-}
-/* flexibility fan-out: one REST search per nearby date, merged + deduped — uses v2 then v1 */
-async function flexSearch(){
+  /* every date in the ± window is a live search of its own; results merge + dedupe by id */
   const dates = flexDates();
-  const qsBaseV2 = `origin=${state.origins.join(",")}&destination=${state.destinations.join(",")}&cabin=${state.cabin}&passengers=${paxTotal()}&max_stops=1`;
-  const qsBaseV1 = qsBaseV2 + (state.trip === "roundtrip" && state.returnDate ? `&return_date=${state.returnDate}` : "");
-  try {
-    // try v2 first for each date
-    const jobsV2 = dates.map(d => fetch(`/api/v2/search?${qsBaseV2}&date=${d}`).then(r => r.ok ? r.json() : null).catch(() => null));
-    let packs = await Promise.all(jobsV2);
-    // if all null, fallback to v1
-    if (packs.every(p => !p || !p.results)){
-      const jobsV1 = dates.map(d => api(`/api/v1/search?${qsBaseV1}&date=${d}`).then(r => r.ok ? r.json() : null).catch(() => null));
-      packs = await Promise.all(jobsV1);
-    }
-    const seen = new Set(); let routes = [];
-    for (const d of packs){
-      if (!d || !d.results) continue;
-      routes = routes.concat(d.query ? d.query.routes : []);
-      for (const r of d.results){
-        for (const leg of (legRet(r) ? [legOut(r), legRet(r)] : [r])){
-          AIRPORT_META[leg.route.origin] = AIRPORT_META[leg.route.origin] || { code:leg.route.origin, city:leg.route.origin };
-          AIRPORT_META[leg.route.destination] = AIRPORT_META[leg.route.destination] || { code:leg.route.destination, city:leg.route.destination };
-        }
-        if (!seen.has(r.id)){ seen.add(r.id); state.results.push(r); }
-      }
-      if (d.providers) state.providers = d.providers;
-    }
-    state.routes = routes;
-  } catch { state.results = []; }
+  const oks = await Promise.all(dates.map(searchOneDate));
+  state.searchFailed = !oks.some(Boolean);
   state.streaming = false;
   sortResults(); renderResults(); renderFilterBar();
-  persistSearch(); loadCalendar();
+  if (state.results.length) persistSearch();
 }
 function sortResults(){
   if (state.sort === "fastest") state.results.sort((a,b) => rDurV(a) - rDurV(b));
@@ -1873,6 +1861,7 @@ function passesFilters(r){
   if (f.stops !== "any" && !legs.every(x => x.route.stops <= +f.stops)) return false;
   if (f.airline && !legs.every(x => x.airline_code === f.airline)) return false;
   if (f.ticket && !legs.every(x => ticketOfLeg(x) === f.ticket)) return false;
+  if (!state.hc && legs.some(x => ticketOfLeg(x) === "hc" || ticketOfLeg(x) === "upg")) return false;   /* "Check hidden city and upgrade fares" off */
   if (f.program && !legs.every(x => x.pricing.program_code === f.program)) return false;
   if (f.airports && !legs.some(x => {
     const all = [x.route.origin, x.route.destination].concat((x.route.layovers||[]).map(l=>l.airport));
@@ -2068,7 +2057,8 @@ function renderResults(){
   const vis = visibleResults();
   $("empty").hidden = true;
   if (state.streaming && state.results.length === 0){
-    host.innerHTML = Array.from({length:4}, (_,i) => `<div class="sk-card">
+    const who = state.liveProviders.length ? `Searching live availability on ${state.liveProviders.join(", ")}…` : "Connecting to live award providers…";
+    host.innerHTML = `<div class="live-status"><span class="live-spin"></span>${esc(who)}</div>` + Array.from({length:4}, (_,i) => `<div class="sk-card">
       <div class="sk-block" style="width:96px;height:44px"></div>
       <div class="sk-block" style="width:140px;height:24px"></div>
       <div class="sk-block" style="flex:1;min-width:180px;height:24px"></div>
@@ -2080,11 +2070,26 @@ function renderResults(){
     host.innerHTML = "";
     const empty = $("empty"); empty.hidden = false; syncItineraryStep();
     const q = state.lastQuery || {};
-    $("empty-msg").textContent = state.results.length
-      ? "No flights match the current filters — relax a filter or Clear All."
-      : q.trip === "roundtrip"
-        ? `No round-trip combinations found for ${shortDate(q.date)} → ${shortDate(q.returnDate)} across ${state.routes.length || 1} route${state.routes.length === 1 ? "" : "s"}. Try other dates, airports or cabin.`
-        : `No award flights found across ${state.routes.length || 1} route${state.routes.length === 1 ? "" : "s"} for this date and cabin. Try nearby dates or other airports.`;
+    const h3 = empty.querySelector("h3");
+    const failed = state.providers.filter(p => p && p.ok === false && p.error && !/disabled/i.test(p.error));
+    if (state.results.length){
+      h3.textContent = "No award flights found";
+      $("empty-msg").textContent = "No flights match the current filters — relax a filter or Clear All.";
+    } else if (state.searchFailed){
+      h3.textContent = "Search service unreachable";
+      $("empty-msg").textContent = "Could not reach the search service. Check that the backend is running and try again.";
+    } else if (!state.live){
+      h3.textContent = "No live award provider connected";
+      $("empty-msg").textContent = state.notice || "Add a provider credential (Flybasis, AwardTool, PointsYeah or PointsPath) on the server to search real availability. Sample data is never shown.";
+    } else if (failed.length){
+      h3.textContent = "Live providers returned errors";
+      $("empty-msg").textContent = failed.map(p => `${p.provider}: ${p.error}`).join(" · ");
+    } else {
+      h3.textContent = "No award availability";
+      $("empty-msg").textContent = q.trip === "roundtrip"
+        ? `${state.liveProviders.join(", ") || "Live providers"} found no award space for ${shortDate(q.date)} → ${shortDate(q.returnDate)} on this route and cabin. Try other dates, airports or cabin.`
+        : `${state.liveProviders.join(", ") || "Live providers"} found no award space on this route for ${shortDate(q.date)} in ${CABIN_LABEL[q.cabin] || q.cabin || "this cabin"}. Try nearby dates (± days in the calendar) or other airports.`;
+    }
     return;
   }
   host.innerHTML = vis.map(r => cardHTML(r, r.id === state.expanded)).join("");
@@ -2093,16 +2098,6 @@ function renderResults(){
   if (popR){ const card = host.querySelector(`[data-id="${popR.id}"]`); if (card) card.insertAdjacentHTML("beforeend", ppopHTML(popR)); }
 }
 
-/* ============================ calendar ============================ */
-async function loadCalendar(){
-  if (!state.lastQuery) return;
-  const q = state.lastQuery;
-  try {
-    const res = await api(`/api/v1/calendar?origin=${q.origins.join(",")}&destination=${q.destinations.join(",")}&start_date=${q.date}&days=14&cabin=${q.cabin}`);
-    const d = await res.json();
-    state.calendar = d.calendar || [];
-  } catch { state.calendar = []; }
-}
 
 /* ============================ view wiring (hash-routed: #results, #itinerary/<id>) ============================ */
 let lastSetHash = null;
@@ -2335,6 +2330,7 @@ function restoreSearch(){
   if (!d) return false;
   state.results = d.results;
   state.providers = d.providers || [];
+  state.live = true;
   state.lastQuery = d.query || null;
   if (d.itineraryId) state.itineraryId = d.itineraryId;
   const q = d.query;
@@ -2345,9 +2341,13 @@ function restoreSearch(){
     state.returnDate = q.returnDate || null;
     if (q.cabin) state.cabin = q.cabin;
     state.flex = q.flex || 0;
+    state.retFlex = q.retFlex || 0;
+    if (typeof q.hc === "boolean") state.hc = q.hc;
+    if (typeof q.superHc === "boolean") state.superHc = q.superHc;
+    syncAdvToggles();
     setTrip(q.trip === "roundtrip" ? "roundtrip" : "oneway");
     $("cabin-val").textContent = CABIN_LABEL[state.cabin] || state.cabin;
-    renderField("origin"); renderField("destination"); syncPaxLabel(); syncFlexLabel();
+    renderField("origin"); renderField("destination"); syncPaxLabel();
   }
   /* city names for the restored itinerary (AIRPORT_META is only filled during a live search) */
   for (const r of state.results){
@@ -2603,30 +2603,21 @@ function init(){
       syncPaxLabel();
     });
   });
-  $("flex-btn").addEventListener("click", e => {
+  /* advanced toggles */
+  $("adv-hc").addEventListener("click", e => {
     e.stopPropagation();
-    const el = document.createElement("div");
-    el.className = "dd flex-panel";
-    el.innerHTML = `
-      <div class="flex-ctl">
-        <button type="button" class="pax-step" data-fl="-1" aria-label="Fewer flexible days" ${state.flex <= 0 ? "disabled" : ""}>−</button>
-        <div class="flex-val"><span id="flex-n">±${state.flex}</span><small>Days</small></div>
-        <button type="button" class="pax-step" data-fl="1" aria-label="More flexible days" ${state.flex >= 3 ? "disabled" : ""}>+</button>
-      </div>
-      <div class="flex-note">Searches every date within ±${state.flex === 0 ? 0 : state.flex} day${state.flex === 1 ? "" : "s"} of your departure — ${state.flex === 0 ? "exact dates only." : flexDates().length + " date" + (flexDates().length === 1 ? "" : "s") + " in total."}</div>`;
-    placeDD(el, $("flex-btn").parentElement);
-    el.addEventListener("mousedown", e => e.preventDefault());
-    el.addEventListener("click", e => {
-      e.stopPropagation();
-      const b = e.target.closest("[data-fl]"); if (!b) return;
-      state.flex = Math.max(0, Math.min(3, state.flex + (+b.dataset.fl)));
-      $("flex-n").textContent = "±" + state.flex;
-      el.querySelector("[data-fl='-1']").disabled = state.flex <= 0;
-      el.querySelector("[data-fl='1']").disabled = state.flex >= 3;
-      el.querySelector(".flex-note").textContent = `Searches every date within ±${state.flex} day${state.flex === 1 ? "" : "s"} of your departure — ${state.flex === 0 ? "exact dates only." : flexDates().length + " date" + (flexDates().length === 1 ? "" : "s") + " in total."}`;
-      syncFlexLabel();
-    });
+    state.hc = !state.hc;
+    if (!state.hc) state.superHc = false;
+    syncAdvToggles();
+    if (state.results.length){ renderResults(); renderFilterBar(); }   /* re-filter an open result set live */
   });
+  $("adv-super").addEventListener("click", e => {
+    e.stopPropagation();
+    if (!state.hc) return;
+    state.superHc = !state.superHc;
+    syncAdvToggles();
+  });
+  loadAdvToggles();
   /* trip tabs — round-trip combines both one-way legs (mixed programs allowed) */
   $("tab-round").addEventListener("click", e => { e.stopPropagation(); setTrip("roundtrip"); openDP(); });
   $("tab-oneway").addEventListener("click", e => { e.stopPropagation(); setTrip("oneway"); closeDP(); });

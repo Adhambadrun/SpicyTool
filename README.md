@@ -1,86 +1,333 @@
-# agentsearch-mcp
+# SpicyTool 🔥
 
-A remote **MCP (Model Context Protocol)** connector for [AgentSearch API](https://agentsearch-api.vercel.app) — an LLM/MCP-native web toolkit for agents and RAG pipelines: **web search** (provider-abstracted SERP), **keyless instant answers**, and **URL → clean text/markdown** fetch ready for an LLM context window.
+Free, login-free award-flight search. No accounts, no API keys required from
+end users, no paywall, no tracking. Returns real, useful results out of the
+box, while exposing a provider-agnostic aggregation layer that authorized
+commercial feeds can drop into unchanged.
 
-**Live:** `https://agentsearch-mcp.vercel.app/mcp` — 3 tools, one per AgentSearch `/v1` endpoint. Since the upstream AgentSearch deployment is metered (RapidAPI/Apify) and gates `/v1/*` behind a RapidAPI proxy-secret guard, this connector authenticates its own outbound calls with that same secret (`AGENTSEARCH_MCP_PROXY_SECRET`, sent as the `X-RapidAPI-Proxy-Secret` header) and applies a soft per-IP rate limit (`AGENTSEARCH_MCP_RATE_LIMIT`, default 30 tool-calls/hour, in-memory) so the free MCP tier stays a discovery channel rather than an unmetered bypass of the paid listing — see `lib/ratelimit.js`.
+**Stack:** Python 3.12 · FastAPI · AsyncIO · HTTPX · Pydantic v2 · sse-starlette · Redis
 
-## What this is, and why it's a separate connector
+> **Live data only.** Searches return results exclusively from the live,
+> credentialed providers (Flybasis, AwardTool, PointsYeah, PointsPath). When no
+> provider credential is configured, the UI shows an honest "no live provider
+> connected" state — it never shows sample itineraries. The first-party
+> *modeled* engine (`SpicyToolEngine` + the `/api/v1/search*` routes) is
+> **off by default** and only comes back with `SPICYTOOL_MODELED_ENGINE=1`
+> (demos / offline tests). Always confirm on the airline's own site before booking.
 
-AgentSearch API is a plain REST API. Any HTTP client can already call it directly. This repo exists because **MCP clients (Claude, ChatGPT, and other MCP-aware agents) don't consume arbitrary REST APIs — they consume MCP tools.** `agentsearch-mcp` is a thin adapter layer that:
+---
 
-- Exposes each AgentSearch endpoint as a discoverable, typed MCP **tool** (name, description, zod input schema, annotations) that an LLM can reason about and call directly, instead of having to be taught the REST surface out-of-band.
-- Speaks the MCP **streamable-HTTP** transport at a single `/mcp` endpoint, so it can be registered as a connector in Claude, ChatGPT, or any other MCP client with one URL.
-- Does nothing else. It has no business logic of its own — every tool call is a pass-through `fetch` to AgentSearch, and the JSON response AgentSearch returns is handed back verbatim as the tool result.
+## Quickstart
 
-## Free discovery tier over a metered API
-
-This connector is a **free discovery/growth tier** in front of the metered AgentSearch API. The upstream (`agentsearch-api.vercel.app`) is sold on RapidAPI/Apify; this MCP wrapper authenticates to it with the shared RapidAPI proxy secret and caps usage per-IP so it stays a taste-test rather than an unmetered path around the paid plans. Heavy/production volume should go through [AgentSearch on RapidAPI/Apify](https://agentsearch-api.vercel.app).
-
-## Authentication: None on the MCP side (deliberate)
-
-AgentSearch's data has no per-user dimension — it's public web data (SERP results, DuckDuckGo instant answers, cleaned page text). There is nothing to gate per-caller, so this connector intentionally ships with:
-
-- No OAuth, no login, no bearer tokens for the MCP caller
-- No Supabase / database
-- No demo-vs-real account split — every caller gets the same real, live data
-
-`api/mcp.js` builds a fresh, stateless `McpServer` per request and serves it with zero MCP-caller auth checks. The only outbound auth is the upstream RapidAPI proxy secret described above, which the connector holds server-side.
-
-## Tool list
-
-One tool per AgentSearch `/v1` endpoint (from `agentsearch-api/openapi.yaml`; `/api/health` is intentionally not wrapped):
-
-| Tool | AgentSearch endpoint | Description |
-|---|---|---|
-| `web_search` | `GET /v1/search` | Web SERP via a provider-abstracted backend (Brave or Serper). Returns normalized results with position/title/url/snippet/domain. |
-| `instant_answer` | `GET /v1/answer` | Keyless DuckDuckGo instant answer — definitions, entities, quick facts. |
-| `fetch_url` | `GET /v1/fetch` | Keyless, SSRF-guarded URL → clean, boilerplate-free text or markdown for RAG. |
-
-All 3 tools are read-only and annotated `{ readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true }` — none of them write anything, and all of them reflect live, externally-changing web data.
-
-## How it wraps agentsearch-api
-
-Each tool handler does a plain `fetch(\`${AGENTSEARCH_MCP_API_BASE_URL}${path}\`, ...)` against the real AgentSearch REST API and returns the parsed JSON as MCP tool-result content:
-
-```js
-{ content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
-```
-
-The outbound request carries `X-RapidAPI-Proxy-Secret: <AGENTSEARCH_MCP_PROXY_SECRET>` so it passes the upstream guard on `/v1/*`. Upstream HTTP errors (4xx/5xx) are caught and surfaced as a typed MCP error result via an `asError` helper rather than crashing the request.
-
-## Environment variables
-
-| Var | Default | Purpose |
-|---|---|---|
-| `AGENTSEARCH_MCP_API_BASE_URL` | `https://agentsearch-api.vercel.app` | Upstream AgentSearch base URL (override for local/self-hosted testing). |
-| `AGENTSEARCH_MCP_PROXY_SECRET` | _(empty)_ | RapidAPI proxy secret, sent as `X-RapidAPI-Proxy-Secret` to pass the upstream `/v1/*` guard. Without it, guarded routes return 403. |
-| `AGENTSEARCH_MCP_RATE_LIMIT` | `30` | Soft per-IP `tools/call` cap per hour (in-memory, per serverless instance). |
-
-## Project layout
-
-```
-api/mcp.js       MCP endpoint (StreamableHTTPServerTransport, stateless, no MCP-caller auth)
-api/health.js    GET /api/health
-lib/tools.js     All 3 tool definitions (zod schemas + fetch-and-forward handlers, proxy-secret auth)
-lib/ratelimit.js Soft per-IP tools/call rate limiter
-local-server.js  Plain-Node http server for local dev / smoke testing (not deployed)
-test/smoke.mjs   Real end-to-end smoke test (initialize, tools/list, tools/call)
-vercel.json      Routes /mcp -> api/mcp.js, /health -> api/health.js
-server.json      MCP registry manifest
-```
-
-## Local development
+### Docker (recommended)
 
 ```bash
-npm install
-npm run dev          # starts local-server.js on :3900
-npm run smoke        # runs test/smoke.mjs against the local server
+cp .env.example .env
+docker compose up --build
+# -> http://localhost:8000
 ```
 
-To exercise a real end-to-end fetch through the upstream guard, set the proxy secret first:
+### No Docker
 
 ```bash
-export AGENTSEARCH_MCP_PROXY_SECRET=<the RapidAPI proxy secret>
-npm run dev &
-npm run smoke
+./run.sh          # venv + deps + uvicorn on 0.0.0.0:8000
 ```
+
+### Tests
+
+```bash
+cd backend && python3 tests_integration.py   # 16 assertions, offline
+```
+
+### Vercel
+
+The repo deploys to Vercel with zero extra setup: the root `app.py`
+re-exports the FastAPI app from `backend/main.py`, the root
+`requirements.txt` mirrors `backend/requirements.txt`, and `vercel.json`
+sets the FastAPI preset (60 s function timeout, mockup/screenshot files
+excluded from the bundle). Import the repo in Vercel and deploy — `/`,
+`/api/v1/*` and `/api/v2/*` are all served by one function.
+
+Recommended environment variables (Project → Settings → Environment
+Variables):
+
+- `AUTH_SECRET` — optional long random string. Without it the signing key is
+  derived deterministically from the login config, so sessions stay valid
+  across serverless cold starts (set it for a stronger, deployment-agnostic
+  key).
+- `LOGIN_PIN`, `ALLOWED_LOGIN_EMAILS` — optional overrides.
+- `REDIS_URL` — optional; without it the cache runs in memory per instance.
+
+---
+
+## Frontend — 1:1 mockup implementation
+
+The UI is a pixel-faithful implementation of the repository's Stitch mockups
+(no invented design tokens):
+
+- **Search screen** follows `code 7.html` / `code 12.html` ("Find your
+  flight"): `#0D0E10` canvas, `#141416` search card, 52px inputs with
+  `#2C2E35` IATA chips, round red Search CTA, calendar popover, promo card.
+  v1.0 wiring: the calendar's month navigation no longer closes the popover
+  (the old toggle-on-bubble bug), the Passengers control is a three-row
+  stepper panel (Adults/Children/Infants), and a Flexibility control
+  (±0–3 days) fans out real searches per nearby date.
+- **Results screen** follows `code 8.html` ("Choose your flights"):
+  `#0D0E11` canvas, sticky header, 3-step stepper, filter-chip toolbar,
+  Best/Fastest/Cheapest sort tabs, flight cards with the `w-24 h-11` fare
+  tile, "$X Off Retail" savings badge and the dashed timeline expansion.
+  Clicking a fare (price) tile **opens the itinerary automatically in its
+  own new tab** — there is no button involved (the old **Get VI\*** CTA was
+  removed at the owner's request).
+- **Login screen** follows `code 3.html` (dark variant, matching the app's
+  dark-only runtime) with the v1.1 PIN redesign: `#111215` page, red
+  announcement banner ("Welcome to SpicyTool v1.0! SpicyTool Exclusive
+  features are now live!"), `#18191d` card showing **only the logo** (72px,
+  centered), the word "SpicyTool" with **Spicy in pulsing red glow and Tool
+  in white** (no underline — removed at the owner's request), then a
+  two-step form — email (owner addresses only) → **Continue** → masked
+  6-digit **PIN** input with **Sign In** and "use a different email".
+  No theme toggle (dark-only runtime), no demo path: every sign-in goes
+  through the real server-side PIN check.
+- **Real logo — one asset, one link.** The SpicyTool mark (`logo.png` in the
+  repo root, uploaded by the owner) is cropped to the artwork, rendered at
+  144px and inlined as an optimized PNG data URI (`LOGO_SRC`). That single
+  constant feeds **every** place the brand appears — 72px in the login hero,
+  32px in the search, results *and* itinerary headers, plus the tab
+  favicon/apple-touch icon (set at boot, no second copy of the artwork in the
+  HTML). In all three app headers the logo + wordmark are one real
+  `<a href="/">`, i.e. the same link as the app itself, and clicking it
+  always returns to the search screen.
+- **Live sign-in session** — the app itself never opens on the login screen:
+  browsing, results and itinerary views (including `#itinerary/<id>` in a
+  fresh tab) are public. Signing in (sessionStorage token, dies with the tab)
+  is only required to **run a search** — the search APIs return `401` without
+  a session, which drops the user to the PIN login; a verified session swaps
+  the avatar to the `code 5` gradient-ring initials and offers Sign out
+  (which clears the session server-acknowledged and returns to the app). A
+  **Support** button
+  in both headers opens a blank compose to `adhambadraan@gmail.com`
+  (`mailto:`).
+- **Broker CPM pricing + "Modify programs" (code 15)** — the home-page
+  "Modify programs" pill opens the dark brokers dialog listing the owner's
+  **29 broker programs** (the 10 engine-searched programs plus 19 broker-only
+  rows, in the owner's order and wording — Aeromexico Club Premier through
+  JAL Mileage Bank): per-program **cost-per-mile** inputs (¢/mile, default
+  **1.4**), program checkboxes, Deselect all / Save as default. **Cash price
+  = miles × the program's CPM + taxes & fees** (round-trips price each leg
+  with its own program's CPM). CPMs and program selections persist in
+  `localStorage`; deselected engine programs are excluded from results
+  (broker-only rows carry no engine results yet). The "Ticket via
+  SpicyTool.com" option was removed at the owner's request — brokers is the
+  only mode; the "Try Broad Search" promo CTA remains mockup-only.
+- **Itinerary (code 13) — an in-app view, never a blank tab, and no search
+  bar.** Clicking a **price tile opens the itinerary in its own new tab**
+  automatically — there is no button to press. The itinerary renders
+  announcement banner, the same logo header (`<a href="/">`), the stepper,
+  the Retail/Cost/Discount summary, the per-leg segment timeline with layover
+  notices and the Award Redemptions matrix — generated same-origin from that
+  result's data, no backend round-trip. The search bar appears **only on the
+  home screen**; the itinerary view has none. With no selection it shows a
+  "No itinerary selected" card with a way back.
+- **Itinerary links (`#results`, `#itinerary/<id>`)** — every view has a real
+  URL. *Itinerary in new tab* is a plain link to `/#itinerary/<id>`; the last
+  search (query + up to 80 results) is persisted to
+  `sessionStorage`/`localStorage`, so a new tab, a refresh or a shared link
+  renders that exact itinerary instead of a blank page (pop-up blockers can
+  no longer swallow it). **Sign-in is never required for an itinerary tab** —
+  the itinerary renders purely from the persisted results and makes no
+  protected API call, so a fresh or incognito tab shows the flight instead of
+  a login wall (signing in is only needed to *run a new search*). The
+  matrix's **Flight link** is a real link to the operating airline's own site
+  (`swiss.com`, `lufthansa.com`, …), and legs read "Operated by Swiss
+  International Air Lines" rather than "Operated by LX".
+- Hovering a fare tile shows the booking program(s) with points + taxes.
+- All colors/radii/spacings/shadows are the computed equivalents of the
+  mockups' Tailwind classes; fonts use the mockups' own stacks (Inter with
+  system fallbacks — no external CDNs).
+
+**Cost model (disclosed in-UI):** tile cash price = miles × your broker CPM
+(per program, default 1.4¢ — see *Modify programs*) + taxes & fees; "Retail"
+is the engine's modeled estimate (miles × cabin rate); savings/discount
+compare the two. Retail is labeled as a modeled estimate in the itinerary's
+Retail/Cost/Discount summary, and the itinerary footer reminds travellers to
+always confirm on the airline's own site before booking.
+
+## What you get
+
+- **84 airports** (real coordinates), **39 carriers** with real hubs,
+  **10 loyalty programs** with real award-chart shapes and transfer partners.
+- **Owner PIN login — no OTP, no verification** — sign-in is restricted to
+  exactly two addresses (`adhambadraan@icloud.com` /
+  `adhambadraan@gmail.com`, the owner's accounts; configurable via
+  `ALLOWED_LOGIN_EMAILS`). Step 1 checks the address; step 2 accepts the
+  6-digit account **PIN** (`141220` by default, set via `LOGIN_PIN`) and
+  issues a stateless HMAC-signed session token. Wrong PINs are rate-limited
+  (5 attempts → 60-s lockout per address). The client keeps the session in
+  `sessionStorage`, so closing the tab always ends it — reopening requires
+  email + PIN again. Engine routes (`/api/v1/search*`, `/api/v1/calendar`)
+  reject unauthenticated calls with `401` (`AUTH_ENFORCE=0` disables this
+  for local testing only). Email delivery (Resend) is no longer part of the
+  login flow.
+- **Ticket types** — every result carries a deterministic ticket type with a
+  points multiplier so the Tickets filter and result badges are meaningful:
+  `award` (chart price), `hc` hidden-city (×0.82, 1+ stops), `upg`
+  upgrade/mixed-cabin, `dis` AMEX-transfer discount (×0.95), `published`,
+  `consolidator` (×0.93) and `basis_exclusive` SpicyTool-exclusive (×0.88).
+  Badges render on the right-hand side of each result; round-trip pairs carry
+  per-leg types.
+- **Filters — exactly four groups**: Airlines (all 39 carriers in a fixed
+  list, per-row "Only" + Reset), Stops (Any / Non-Stop Only / One stop or
+  fewer / Two stops or fewer), Tickets (the 7 types, Only + Reset) and
+  Programs (the 10 programs, Only + Reset) — every count wired to the live
+  result set.
+- **Passengers stepper** — Adults / Children / Infants with −/+ steppers
+  (infants capped at adults; seat-taking passengers = adults + children feed
+  the engine's `passengers` parameter).
+- **Flexibility ±1/±2/±3 days** — the stepper fans out one real search per
+  nearby date in parallel and merges the results (date-tagged) into one list.
+- **Multi-airport search** — up to **3 origins × 3 destinations** per query
+  (comma-separated, e.g. `origin=JFK,EWR,LGA`): every pair is fanned out in
+  parallel and merged into one result stream. The UI supports in-field IATA
+  chips (up to 3 per side) with a live recommendations dropdown, plus metro
+  shortcuts (`NYC` → JFK+EWR+LGA, `LON`, `TYO`).
+- **Round-trip search** — add `return_date=YYYY-MM-DD` (or pick Departure +
+  Return in the UI's Round Trip mode): both one-way legs are searched in
+  parallel and combined into round-trip itineraries. **Legs may book into
+  different loyalty programs** — pairs are ranked by total points and marked
+  `same_program`, with per-leg rows in the price breakdown. Filters apply to
+  both legs (e.g. Nonstop = nonstop both ways).
+- **Airline logos — real artwork for all 39 carriers, zero placeholders.**
+  Every carrier renders its **official full-colour mark** as a 24×24 image on
+  a white tile — SWISS is the red square with the white cross, Lufthansa the
+  crane in a circle, KLM the crown, Emirates the calligraphy — identical
+  across the result cards, the expanded timeline, the itinerary legs and the
+  new tab. Artwork is loaded from the same public sources flight-search sites
+  use (`www.gstatic.com/flights/airline_logos/70px/<IATA>.png`, then
+  `pics.avs.io/200/200/<IATA>.png`); if a code is missing there, or the
+  browser is offline, the logo falls back to the built-in brand tile (the
+  carrier's official glyph in SVG on its brand colour, e.g. `LX` white cross
+  on Swiss red) — so the slot is never empty and never a broken image.
+  Unknown future codes fall back to a deterministic hashed-colour tile.
+  Carrier names (`CARRIER_NAMES`) and official sites (`CARRIER_SITES`) ship
+  with the same table.
+- Deterministic first-party engine: the same query always returns the same
+  results; different dates differ.
+- **Carrier network (39)** — Aegean, Aer Lingus, Air Canada, Air Dolomiti,
+  Air Europa, Air France, Air Serbia, American, Austrian, Avianca, British
+  Airways, Brussels, Condor, Croatia, Delta, Discover (4Y), Egyptair,
+  Emirates, Ethiopian, Etihad, Eurowings, Finnair, flyDubai, Iberia,
+  Icelandair, ITA, JetBlue, KLM, LOT, Lufthansa, Lufthansa City (VL), Royal
+  Air Maroc, Royal Jordanian, SAS, Swiss, TAP, Turkish, United, Virgin
+  Atlantic. Modeling notes: SAS is SkyTeam (2024 move); Virgin Atlantic is a
+  Delta JV partner rather than a SkyTeam member; Lufthansa-group regionals
+  (Air Dolomiti, Eurowings, Discover, Lufthansa City) are modeled as
+  Star-Alliance-bookable because their metal sells under LH group awards.
+- **Programs (10)** — Aeroplan, Flying Blue, Alaska Mileage Plan, AAdvantage,
+  SkyMiles, Etihad Guest, Qantas Frequent Flyer, TAP Miles&Go, Miles&Smiles,
+  MileagePlus. Non-alliance partners are honored via a
+  `partner_carriers()` hook: Aeroplan↔Aer Lingus, Alaska↔Condor/Icelandair,
+  SkyMiles↔Virgin Atlantic, Etihad Guest↔Air Serbia, Qantas↔Emirates/flyDubai,
+  MileagePlus↔JetBlue (Blue Sky), Miles&Smiles↔Air Serbia.
+- **v1 API** — first-party engine: search, SSE streaming search (one event per
+  program), airport typeahead, program inventory, 30-day flexible-date
+  calendar.
+- **v2 API** — aggregation layer over five providers
+  (`SpicyToolEngine` always on; `AwardTool`, `PointsPath`, `PointsYeah`,
+  `Flybasis` credential-gated), cross-provider dedupe, provider diagnostics,
+  cache stats, telemetry firewall report.
+- **Streaming everywhere** — results render the millisecond a provider
+  resolves; repeat queries are cache hits (~1.7 s → ~0 ms).
+
+## API surface (Swagger at `/docs`)
+
+| Path | What it does |
+|---|---|
+| `GET /` | the frontend (same origin as the API) |
+| `POST /api/v1/auth/check` | step 1: is the address one of the two owner emails? |
+| `POST /api/v1/auth/login` | step 2: email + PIN → session token (5 wrong tries → 60-s lockout) |
+| `GET /api/v1/auth/session` | validate a token |
+| `POST /api/v1/auth/logout` | client discards the session token |
+| `GET /api/v1/health` | `{status, airports: 84, programs: 10}` |
+| `GET /api/v1/airports?q=&limit=` | ranked typeahead |
+| `GET /api/v1/programs` | 10 programs + colors + transfer banks |
+| `GET /api/v1/search` 🔒 | first-party award search |
+| `GET /api/v1/search/stream` 🔒 | SSE, one event per program |
+| `GET /api/v1/calendar` 🔒 | cheapest award per day (1–60 days) |
+| `GET /api/v2/providers` | provider inventory + gating reasons |
+| `GET /api/v2/telemetry` | blocklist + blocked-request counter |
+| `GET /api/v2/cache/stats` | cache backend, hits/misses, TTL |
+| `GET /api/v2/search` | aggregated, deduped search |
+| `GET /api/v2/search/stream` | SSE `start → data* → complete` |
+
+🔒 = requires the session token (`Authorization: Bearer …` header or
+`?token=` for `EventSource`). The token is minted only through the PIN flow;
+tests mint tokens in-process against the same per-install signing secret
+(`backend/data/.auth_secret`, auto-generated, git-ignored; override with
+`AUTH_SECRET`). On read-only/ephemeral filesystems (serverless) the secret
+is derived deterministically from the login config, so a session survives
+cold starts instead of logging the user out mid-use.
+| `GET /api/v2/providers` | provider inventory + gating reasons |
+| `GET /api/v2/telemetry` | blocklist + blocked-request counter |
+| `GET /api/v2/cache/stats` | cache backend, hits/misses, TTL |
+| `GET /api/v2/search` | aggregated, deduped search |
+| `GET /api/v2/search/stream` | SSE `start → data* → complete` |
+
+Validation: unknown IATA → `400 "Unknown origin 'XXX'"`; same origin and
+destination → `400`; bad cabin → `400`; date must match `^\d{4}-\d{2}-\d{2}$`;
+more than 3 airports per side → `400 "At most 3 origin airports"`;
+`return_date` before `date` → `400 "Return date must be on or after the
+departure date"`.
+
+## Configuration (`.env`)
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `AWARDTOOL_API_KEY` | *(blank)* | enables the AwardTool adapter |
+| `POINTSPATH_API_KEY` | *(blank)* | enables the PointsPath adapter |
+| `POINTSYEAH_API_KEY` | *(blank)* | enables the PointsYeah adapter |
+| `FLYBASIS_API_KEY` | *(blank)* | enables the Flybasis adapter (Socket.IO award feed, see `Flybasis-index.md`) |
+| `REDIS_URL` | `redis://localhost:6379/0` | cache; falls back to memory if unreachable |
+| `CACHE_TTL` | `2700` | seconds, clamped to the 30–60 min band |
+| `PROVIDER_TIMEOUT` | `3.5` | per-request budget for third-party providers |
+| `LOGIN_PIN` | `141220` | the account PIN for the two owner emails (set it in `backend/.env`, git-ignored) |
+| `ALLOWED_LOGIN_EMAILS` | `adhambadraan@icloud.com,adhambadraan@gmail.com` | comma-separated; the only addresses that can sign in |
+| `AUTH_SECRET` | *(generated file)* | HMAC secret for session tokens |
+| `AUTH_ENFORCE` | `1` | `0` disables login enforcement (local tests only) |
+
+Every third-party adapter is **inert until an operator supplies a credential
+issued to them by that provider**. A disabled provider reports a clear,
+actionable reason and never breaks a request.
+
+## Design principles
+
+1. **No bot-protection evasion** — no UA rotation, no header forgery, no
+   session replay, no CAPTCHA solving, no proxy rotation. Third-party adapters
+   authenticate only with documented bearer/API-key headers and a single
+   stable, honest, self-identifying User-Agent.
+2. **Credential gating** — never hardcoded; disabled providers explain why.
+3. **No fabricated live inventory** — chart-accurate pricing, modeled seats,
+   surfaced honestly in the API and UI.
+4. **Telemetry isolation** — 50 analytics/beacon hosts are answered with a
+   synthetic `204` and **never dialed** (no DNS, no TCP, no TLS, no egress).
+
+## Layout
+
+```
+├── docker-compose.yml / run.sh / .env.example
+├── frontend/index.html      # Obsidian Crimson UI, zero external CDNs
+└── backend/
+    ├── main.py              # app + v1 routes + static mount + lifecycle
+    ├── api_v2.py            # v2 aggregation router
+    ├── tests_integration.py # 16 assertions
+    ├── data/                # airports.json (78), transfer_matrix.json
+    ├── core/                # geo, network, itinerary, pricing, schema,
+    │                        # cache, redis_cache, http_engine
+    ├── adapters/            # 10 loyalty-program adapters (v1)
+    ├── providers/           # base, enrich, local_engine + 3 gated adapters
+    └── services/            # orchestrator, transfer_calculator,
+                             # aggregator, dedupe
+```
+
+See **ARCHITECTURE.md** for the request lifecycle and failure model, and
+**adapters_README.md** for adding your own provider.
